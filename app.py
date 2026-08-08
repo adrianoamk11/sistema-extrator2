@@ -111,11 +111,11 @@ EMPRESA_SELECIONADA = st.radio(
 )
 
 if EMPRESA_SELECIONADA == "Lider Franquia":
-    ASAAS_API_KEY = st.secrets["ASAAS_FRANQUIA_API_KEY"]
-    ASAAS_BASE_URL = st.secrets["ASAAS_FRANQUIA_BASE_URL"].rstrip("/")
+    ASAAS_API_KEY = st.secrets["ASAAS_LIDER_FRANQUIA_API_KEY"]
 else:
-    ASAAS_API_KEY = st.secrets["ASAAS_SERVICOS_API_KEY"]
-    ASAAS_BASE_URL = st.secrets["ASAAS_SERVICOS_BASE_URL"].rstrip("/")
+    ASAAS_API_KEY = st.secrets["ASAAS_LIDER_SERVICOS_API_KEY"]
+
+ASAAS_BASE_URL = st.secrets["ASAAS_PRODUCAO_BASE_URL"].rstrip("/")
 
 def proximo_dia_10():
     hoje = date.today()
