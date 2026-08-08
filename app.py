@@ -119,7 +119,14 @@ else:
     ASAAS_API_KEY = st.secrets["ASAAS_LIDER_SERVICOS_API_KEY"]
 
 ASAAS_BASE_URL = st.secrets["ASAAS_PRODUCAO_BASE_URL"].rstrip("/")
+emitir_nota_apos_pagamento = False
 
+if EMPRESA_SELECIONADA == "Lider Franquia":
+    emitir_nota_apos_pagamento = st.checkbox(
+        "Emitir nota fiscal de Royalties após o pagamento",
+        value=False,
+        help="Quando marcado, o sistema preparará a NFS-e de Royalties para emissão após a confirmação do pagamento."
+    )
 def proximo_dia_10():
     hoje = date.today()
 
