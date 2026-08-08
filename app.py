@@ -1361,8 +1361,7 @@ else:
                     help="Esta descrição será enviada ao Asaas junto com a cobrança."
                 )
 
-                st.markdown("#### Cobrança Asaas — Sandbox")
-
+                st.markdown(f"#### Cobrança Asaas — {EMPRESA_SELECIONADA}")
                 col_venc, col_botao = st.columns([2, 1])
 
                 vencimento = col_venc.date_input(
