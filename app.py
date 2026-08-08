@@ -440,7 +440,7 @@ def emitir_boleto_asaas(
     # o padrão de notificações definido pela Líder.
     padronizar_notificacoes_asaas(customer_id)
 
-       descricao_final = str(descricao_boleto or "").strip()
+    descricao_final = str(descricao_boleto or "").strip()
 
     if not descricao_final:
         descricao_final = (
