@@ -102,12 +102,16 @@ PERCENTUAL_ROYALTIES = 0.04
 # ASAAS - SELEÇÃO DA EMPRESA
 # ============================================================
 
-st.subheader("Empresa")
+st.write("Selecione a empresa que deseja utilizar:")
 
-EMPRESA_SELECIONADA = st.selectbox(
-    "Selecione a empresa que deseja utilizar:",
-    ["Lider Franquia", "Lider Serviços"]
-)
+col_empresa, _ = st.columns([1, 5])
+
+with col_empresa:
+    EMPRESA_SELECIONADA = st.selectbox(
+        "Empresa",
+        ["Lider Franquia", "Lider Serviços"],
+        label_visibility="collapsed"
+    )
 
 if EMPRESA_SELECIONADA == "Lider Franquia":
     ASAAS_API_KEY = st.secrets["ASAAS_LIDER_FRANQUIA_API_KEY"]
