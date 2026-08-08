@@ -1387,7 +1387,7 @@ else:
                         key=f"emitir_nota_{indice}"
                     )
                 else:
-        emitir_nota_apos_pagamento = False
+                    emitir_nota_apos_pagamento = False
                 clicou_emitir_boleto = col_botao.button(
                     "💳 Emitir boleto",
                     key=chave_boleto,
