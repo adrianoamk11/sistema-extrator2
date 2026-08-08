@@ -99,10 +99,23 @@ st.divider()
 PERCENTUAL_ROYALTIES = 0.04
 
 # ============================================================
-# ASAAS - SANDBOX
+# ASAAS - SELEÇÃO DA EMPRESA
 # ============================================================
-ASAAS_API_KEY = st.secrets["ASAAS_API_KEY"]
-ASAAS_BASE_URL = st.secrets["ASAAS_BASE_URL"].rstrip("/")
+
+st.subheader("Empresa")
+
+EMPRESA_SELECIONADA = st.radio(
+    "Selecione a empresa que deseja utilizar:",
+    ["Lider Franquia", "Lider Serviços"],
+    horizontal=True
+)
+
+if EMPRESA_SELECIONADA == "Lider Franquia":
+    ASAAS_API_KEY = st.secrets["ASAAS_FRANQUIA_API_KEY"]
+    ASAAS_BASE_URL = st.secrets["ASAAS_FRANQUIA_BASE_URL"].rstrip("/")
+else:
+    ASAAS_API_KEY = st.secrets["ASAAS_SERVICOS_API_KEY"]
+    ASAAS_BASE_URL = st.secrets["ASAAS_SERVICOS_BASE_URL"].rstrip("/")
 
 def proximo_dia_10():
     hoje = date.today()
