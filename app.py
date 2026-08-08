@@ -448,7 +448,7 @@ def emitir_boleto_asaas(
             f"Faturamento {formatar_moeda(faturamento)}"
         )
 
-           external_reference = criar_referencia_externa(
+    external_reference = criar_referencia_externa(
         nome_arquivo,
         valor_cobranca,
         vencimento,
@@ -458,7 +458,7 @@ def emitir_boleto_asaas(
     if emitir_nota:
         external_reference = f"{external_reference}|NFSE|"
 
-    existente = buscar_cobranca_existente(external_reference)
+     existente = buscar_cobranca_existente(external_reference)
     if existente:
         return {
             "novo": False,
