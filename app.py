@@ -423,7 +423,8 @@ def emitir_boleto_asaas(
     faturamento,
     valor_cobranca,
     vencimento,
-    descricao_boleto
+    descricao_boleto,
+    emitir_nota=False
 ):
     cliente, numero_box = localizar_cliente_asaas_por_box(nome_arquivo)
     customer_id = cliente.get("id")
@@ -447,12 +448,15 @@ def emitir_boleto_asaas(
             f"Faturamento {formatar_moeda(faturamento)}"
         )
 
-    external_reference = criar_referencia_externa(
+       external_reference = criar_referencia_externa(
         nome_arquivo,
         valor_cobranca,
         vencimento,
         descricao_final
     )
+
+    if emitir_nota:
+        external_reference = f"{external_reference}|NFSE|"
 
     existente = buscar_cobranca_existente(external_reference)
     if existente:
@@ -1396,19 +1400,20 @@ else:
                     disabled=valor_final_boleto <= 0
               )
                 if clicou_emitir_boleto:
-                    try:
-                        with st.spinner("Gerando boleto no Asaas Sandbox..."):
-                            boleto = emitir_boleto_asaas(
-                                arquivo.name,
-                                faturamento,
-                                valor_final_boleto,
-                                vencimento,
-                                descricao_boleto
-                            )
-                
-                        st.session_state[f"resultado_boleto_{indice}"] = boleto
-                
-                    except Exception as erro_boleto:
+    try:
+        with st.spinner("Gerando boleto no Asaas Sandbox..."):
+            boleto = emitir_boleto_asaas(
+                arquivo.name,
+                faturamento,
+                valor_final_boleto,
+                vencimento,
+                descricao_boleto,
+                emitir_nota_após_pagamento
+            )
+
+        st.session_state[f"resultado_boleto_{indice}"] = boleto
+
+    except Exception as erro_boleto:
                         st.error(
                             f"Não foi possível emitir o boleto: {erro_boleto}"
                         )
