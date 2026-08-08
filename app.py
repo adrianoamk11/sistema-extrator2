@@ -1376,12 +1376,8 @@ else:
                     f"boleto_{indice}_"
                     + re.sub(r"[^a-zA-Z0-9_]", "_", arquivo.name)
                 )
-               chave_boleto = (
-    f"boleto_{indice}_"
-    + re.sub(r"[^a-zA-Z0-9_]", "_", arquivo.name)
-)
 
-if col_botao.button(
+
 
                 if col_botao.button(
                     "💳 Emitir boleto",
