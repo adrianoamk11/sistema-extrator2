@@ -1409,7 +1409,7 @@ else:
                                 valor_final_boleto,
                                 vencimento,
                                 descricao_boleto,
-                                emitir_nota_após_pagamento
+                                emitir_nota_apos_pagamento
                             )
                 
                         st.session_state[f"resultado_boleto_{indice}"] = boleto
