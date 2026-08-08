@@ -1,0 +1,23 @@
+EXTRATOR DE FATURAMENTO - INSTALAÇÃO
+
+1) Instale o Python 3 no computador.
+2) Abra o Prompt de Comando/Terminal dentro desta pasta.
+3) Execute:
+
+   pip install -r requirements.txt
+
+4) Depois execute:
+
+   streamlit run app.py
+
+5) O sistema abrirá no navegador.
+6) Envie o extrato PDF.
+7) Confira as movimentações marcadas.
+8) Clique em "Baixar resultado em Excel".
+
+IMPORTANTE:
+- Esta primeira versão foi desenhada principalmente para extratos em PDF com texto pesquisável.
+- Movimentações claramente identificadas como "Cobrança recebida", "Pix recebido" etc. são marcadas como faturamento.
+- Saldo inicial/final, taxas e tarifas são ignorados.
+- Entradas positivas que o programa não reconhece ficam como REVISAR, para evitar contar transferências internas como faturamento.
+- PDFs que forem apenas imagens digitalizadas podem precisar de OCR em uma próxima versão.
