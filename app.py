@@ -121,12 +121,7 @@ else:
 ASAAS_BASE_URL = st.secrets["ASAAS_PRODUCAO_BASE_URL"].rstrip("/")
 emitir_nota_apos_pagamento = False
 
-if EMPRESA_SELECIONADA == "Lider Franquia":
-    emitir_nota_apos_pagamento = st.checkbox(
-        "Emitir nota fiscal de Royalties após o pagamento",
-        value=False,
-        help="Quando marcado, o sistema preparará a NFS-e de Royalties para emissão após a confirmação do pagamento."
-    )
+
 def proximo_dia_10():
     hoje = date.today()
 
@@ -1411,7 +1406,12 @@ else:
                         st.error(
                             f"Não foi possível emitir o boleto: {erro_boleto}"
                         )
-
+        if EMPRESA_SELECIONADA == "Lider Franquia":
+            emitir_nota_apos_pagamento = st.checkbox(
+                "Emitir nota fiscal de Royalties após o pagamento",
+                value=False,
+                key=f"emitir_nota_{indice}"
+            )
                 boleto_salvo = st.session_state.get(
                     f"resultado_boleto_{indice}"
                 )
