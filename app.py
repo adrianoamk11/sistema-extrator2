@@ -20,7 +20,30 @@ st.set_page_config(
     page_icon="💰",
     layout="wide"
 )
+# =========================
+# LOGIN DO SISTEMA
+# =========================
 
+if "autenticado" not in st.session_state:
+    st.session_state.autenticado = False
+
+if not st.session_state.autenticado:
+    st.title("Acesso ao sistema")
+
+    usuario = st.text_input("Usuário")
+    senha = st.text_input("Senha", type="password")
+
+    if st.button("Entrar"):
+        if (
+            usuario == st.secrets["LOGIN_USUARIO"]
+            and senha == st.secrets["LOGIN_SENHA"]
+        ):
+            st.session_state.autenticado = True
+            st.rerun()
+        else:
+            st.error("Usuário ou senha incorretos.")
+
+    st.stop()
 st.markdown("""
 <style>
 /* Encosta o conteúdo no topo da página */
