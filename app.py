@@ -1406,9 +1406,9 @@ else:
                                 descricao_boleto
                             )
                 
-                    st.session_state[
-                        f"resultado_boleto_{indice}"
-                    ] = boleto
+                        st.session_state[
+                            f"resultado_boleto_{indice}"
+                        ] = boleto
         
                 except Exception as erro_boleto:
                     st.error(
