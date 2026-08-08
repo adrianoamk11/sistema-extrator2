@@ -1395,7 +1395,7 @@ else:
                     use_container_width=True,
                     disabled=valor_final_boleto <= 0
               )
-                if clicou_emitir_boleto:
+               if clicou_emitir_boleto:
                     try:
                         with st.spinner("Gerando boleto no Asaas Sandbox..."):
                             boleto = emitir_boleto_asaas(
@@ -1406,14 +1406,12 @@ else:
                                 descricao_boleto
                             )
                 
-                        st.session_state[
-                            f"resultado_boleto_{indice}"
-                        ] = boleto
-        
-                except Exception as erro_boleto:
-                    st.error(
-                        f"Não foi possível emitir o boleto: {erro_boleto}"
-                    )
+                        st.session_state[f"resultado_boleto_{indice}"] = boleto
+                
+                    except Exception as erro_boleto:
+                        st.error(
+                            f"Não foi possível emitir o boleto: {erro_boleto}"
+                        )
 
                 
                 boleto_salvo = st.session_state.get(
