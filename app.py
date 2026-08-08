@@ -1387,7 +1387,7 @@ else:
                         key=f"emitir_nota_{indice}"
                     )
                 else:
-    emitir_nota_apos_pagamento = False
+        emitir_nota_apos_pagamento = False
                 clicou_emitir_boleto = col_botao.button(
                     "💳 Emitir boleto",
                     key=chave_boleto,
@@ -1396,27 +1396,29 @@ else:
                     disabled=valor_final_boleto <= 0
               )
               if clicou_emitir_boleto:
-            try:
-                with st.spinner("Gerando boleto no Asaas Sandbox..."):
-                    boleto = emitir_boleto_asaas(
-                        arquivo.name,
-                        faturamento,
-                        valor_final_boleto,
-                        vencimento,
-                        descricao_boleto
-                    )
+                try:
+                    with st.spinner("Gerando boleto no Asaas Sandbox..."):
+                        boleto = emitir_boleto_asaas(
+                            arquivo.name,
+                            faturamento,
+                            valor_final_boleto,
+                            vencimento,
+                            descricao_boleto
+                        )
+            
+                    st.session_state[
+                        f"resultado_boleto_{indice}"
+                    ] = boleto
         
-                st.session_state[
-                    f"resultado_boleto_{indice}"
-                ] = boleto
-    
-            except Exception as erro_boleto:
-                st.error(
-                    f"Não foi possível emitir o boleto: {erro_boleto}"
-                )
+                except Exception as erro_boleto:
+                    st.error(
+                        f"Não foi possível emitir o boleto: {erro_boleto}"
+                    )
 
                 
-
+                boleto_salvo = st.session_state.get(
+                    f"resultado_boleto_{indice}"
+                )
                 if boleto_salvo:
                     if boleto_salvo.get("novo"):
                         st.success(
