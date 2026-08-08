@@ -448,7 +448,7 @@ def emitir_boleto_asaas(
             f"Faturamento {formatar_moeda(faturamento)}"
         )
 
-       external_reference = criar_referencia_externa(
+           external_reference = criar_referencia_externa(
         nome_arquivo,
         valor_cobranca,
         vencimento,
