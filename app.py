@@ -104,10 +104,9 @@ PERCENTUAL_ROYALTIES = 0.04
 
 st.subheader("Empresa")
 
-EMPRESA_SELECIONADA = st.radio(
+EMPRESA_SELECIONADA = st.selectbox(
     "Selecione a empresa que deseja utilizar:",
-    ["Lider Franquia", "Lider Serviços"],
-    horizontal=True
+    ["Lider Franquia", "Lider Serviços"]
 )
 
 if EMPRESA_SELECIONADA == "Lider Franquia":
