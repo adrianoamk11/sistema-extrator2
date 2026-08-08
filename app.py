@@ -1371,20 +1371,20 @@ else:
                     format="DD/MM/YYYY",
                     key=f"vencimento_{indice}"
                 )
-emitir_nota_apos_pagamento = False
 
-if EMPRESA_SELECIONADA == "Lider Franquia":
-    emitir_nota_apos_pagamento = st.checkbox(
-        "Emitir nota fiscal automaticamente após o pagamento",
-        value=False,
-        key=f"emitir_nota_{indice}",
-        help="Quando marcado, será preparada a emissão da NFS-e de Royalties após a confirmação do pagamento."
-    )
                 chave_boleto = (
                     f"boleto_{indice}_"
                     + re.sub(r"[^a-zA-Z0-9_]", "_", arquivo.name)
                 )
+           emitir_nota_apos_pagamento = False
 
+          if EMPRESA_SELECIONADA == "Lider Franquia":
+          emitir_nota_apos_pagamento = st.checkbox(
+          "Emitir nota fiscal automaticamente após o pagamento",
+          value=False,
+          key=f"emitir_nota_{indice}",
+          help="Quando marcado, a NFS-e de Royalties será preparada para emissão após a confirmação do pagamento."
+    )
                 if col_botao.button(
                     "💳 Emitir boleto",
                     key=chave_boleto,
