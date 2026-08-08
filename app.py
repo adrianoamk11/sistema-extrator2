@@ -1380,40 +1380,40 @@ else:
                 )
 
 
-if EMPRESA_SELECIONADA == "Lider Franquia":
-    emitir_nota_apos_pagamento = col_botao.checkbox(
-        "Emitir nota fiscal de Royalties após o pagamento",
-        value=False,
-        key=f"emitir_nota_{indice}"
-    )
-else:
+                if EMPRESA_SELECIONADA == "Lider Franquia":
+                    emitir_nota_apos_pagamento = col_botao.checkbox(
+                        "Emitir nota fiscal de Royalties após o pagamento",
+                        value=False,
+                        key=f"emitir_nota_{indice}"
+                    )
+                else:
     emitir_nota_apos_pagamento = False
-clicou_emitir_boleto = col_botao.button(
+                clicou_emitir_boleto = col_botao.button(
                     "💳 Emitir boleto",
                     key=chave_boleto,
                     type="primary",
                     use_container_width=True,
                     disabled=valor_final_boleto <= 0
               )
-if clicou_emitir_boleto:
-                    try:
-                        with st.spinner("Gerando boleto no Asaas Sandbox..."):
-                            boleto = emitir_boleto_asaas(
-                                arquivo.name,
-                                faturamento,
-                                valor_final_boleto,
-                                vencimento,
-                                descricao_boleto
-                            )
-
-                        st.session_state[
-                            f"resultado_boleto_{indice}"
-                        ] = boleto
-
-                    except Exception as erro_boleto:
-                        st.error(
-                            f"Não foi possível emitir o boleto: {erro_boleto}"
-                        )
+              if clicou_emitir_boleto:
+            try:
+                with st.spinner("Gerando boleto no Asaas Sandbox..."):
+                    boleto = emitir_boleto_asaas(
+                        arquivo.name,
+                        faturamento,
+                        valor_final_boleto,
+                        vencimento,
+                        descricao_boleto
+                    )
+        
+                st.session_state[
+                    f"resultado_boleto_{indice}"
+                ] = boleto
+    
+            except Exception as erro_boleto:
+                st.error(
+                    f"Não foi possível emitir o boleto: {erro_boleto}"
+                )
 
                 
 
