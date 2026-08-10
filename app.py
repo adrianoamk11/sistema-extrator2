@@ -1408,12 +1408,12 @@ else:
             )
 
 
-                    if EMPRESA_SELECIONADA == "Lider Franquia":
+        if EMPRESA_SELECIONADA == "Lider Franquia":
             emitir_nota_apos_pagamento = col_botao.checkbox(
                 "Emitir nota fiscal de Royalties após o pagamento",
                 value=False,
                 key=f"emitir_nota_{indice}"
-            )
+        )
         else:
             emitir_nota_apos_pagamento = False
 
@@ -1426,16 +1426,16 @@ else:
         )
 
         if clicou_emitir_boleto:
-                try:
-                    with st.spinner("Gerando boleto no Asaas Sandbox..."):
-                        boleto = emitir_boleto_asaas(
-                            arquivo.name,
-                            faturamento,
-                            valor_final_boleto,
-                            vencimento,
-                            descricao_boleto,
-                            emitir_nota_apos_pagamento
-                        )
+                    try:
+                        with st.spinner("Gerando boleto no Asaas Sandbox..."):
+                            boleto = emitir_boleto_asaas(
+                                arquivo.name,
+                                faturamento,
+                                valor_final_boleto,
+                                vencimento,
+                                descricao_boleto,
+                                emitir_nota_apos_pagamento
+                            )
             
                     st.session_state[f"resultado_boleto_{indice}"] = boleto
                 
