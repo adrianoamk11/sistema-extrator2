@@ -1418,10 +1418,7 @@ else:
             len(selecionadas)
         )
 
-                col_total_boleto.metric(
-    "Total do faturamento",
-    formatar_moeda(faturamento)
-)
+                
                 st.markdown(f"#### Cobrança Asaas — {EMPRESA_SELECIONADA}")
                 col_venc, col_botao = st.columns([2, 1])
                 descricao_boleto = "Royalties"
