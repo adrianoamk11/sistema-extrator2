@@ -1423,7 +1423,7 @@ else:
                             f"e notificações padronizadas com sucesso. "
                             f"ID: {boleto_salvo.get('id', '')}"
                         )
-                                       else:
+                    else:
                         st.info(
                             "ℹ️ Esta cobrança já existia no Asaas. "
                             "O sistema não gerou uma cobrança duplicada."
