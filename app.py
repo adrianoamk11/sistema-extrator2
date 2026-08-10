@@ -1489,9 +1489,9 @@ else:
         # ========================================================
     
     excel_geral = gerar_excel_geral(
-        resumo,
-        detalhes_exportacao
-    )
+    resultados,
+    detalhes_exportacao
+)
     
     st.download_button(
         "📥 Baixar relatório geral em Excel",
