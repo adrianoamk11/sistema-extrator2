@@ -1344,7 +1344,7 @@ else:
                         "O valor adicional não pode ser negativo."
                     )
 
-                faturamento = (
+               
                           st.markdown("#### Adicionar valor ao faturamento")
 
         # Layout organizado
