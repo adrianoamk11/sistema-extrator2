@@ -58,9 +58,6 @@ def webhook_asaas():
         "value": pagamento.get("value"),
         "effectiveDate": date.today().isoformat(),
     }
-
-    
-
     resposta = requests.post(
         f"{ASAAS_BASE_URL}/invoices",
         headers=cabecalhos_asaas(),
@@ -80,7 +77,7 @@ def webhook_asaas():
             "detalhe": resposta.text,
         }), 200
 
-   return jsonify({
+    return jsonify({
         "ok": True,
         "nota": resposta.json(),
     }), 200
