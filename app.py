@@ -1391,7 +1391,7 @@ else:
             )
     
                     
-            st.markdown(f"#### Cobrança Asaas — {EMPRESA_SELECIONADA}")
+        st.markdown(f"#### Cobrança Asaas — {EMPRESA_SELECIONADA}")
             col_venc, col_botao = st.columns([2, 1])
             descricao_boleto = "Royalties"
             vencimento = col_venc.date_input(
@@ -1402,20 +1402,20 @@ else:
                 key=f"vencimento_{indice}"
             )
 
-            chave_boleto = (
-                f"boleto_{indice}_"
-                + re.sub(r"[^a-zA-Z0-9_]", "_", arquivo.name)
-            )
+        chave_boleto = (
+            f"boleto_{indice}_"
+            + re.sub(r"[^a-zA-Z0-9_]", "_", arquivo.name)
+        )
 
 
         if EMPRESA_SELECIONADA == "Lider Franquia":
-            emitir_nota_apos_pagamento = col_botao.checkbox(
-                "Emitir nota fiscal de Royalties após o pagamento",
-                value=False,
-                key=f"emitir_nota_{indice}"
-        )
-        else:
-            emitir_nota_apos_pagamento = False
+                emitir_nota_apos_pagamento = col_botao.checkbox(
+                    "Emitir nota fiscal de Royalties após o pagamento",
+                    value=False,
+                    key=f"emitir_nota_{indice}"
+            )
+            else:
+                emitir_nota_apos_pagamento = False
 
         clicou_emitir_boleto = col_botao.button(
             "💳 Emitir boleto",
