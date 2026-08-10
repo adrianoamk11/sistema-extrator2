@@ -1358,13 +1358,31 @@ else:
                 )
     
                 # Valor final do boleto editável
+                # Atualiza automaticamente quando os royalties mudarem,
+                # mas preserva uma alteração manual feita pelo usuário.
+                chave_valor_boleto = f"valor_final_boleto_{indice}"
+                chave_valor_auto = f"valor_final_boleto_auto_{indice}"
+                novo_valor_auto = round(float(royalties), 2)
+
+                if chave_valor_boleto not in st.session_state:
+                    st.session_state[chave_valor_boleto] = novo_valor_auto
+                elif chave_valor_auto in st.session_state:
+                    valor_atual = float(st.session_state[chave_valor_boleto])
+                    valor_auto_anterior = float(st.session_state[chave_valor_auto])
+
+                    # Se o valor ainda era o automático anterior,
+                    # acompanha o novo cálculo dos royalties.
+                    if abs(valor_atual - valor_auto_anterior) < 0.005:
+                        st.session_state[chave_valor_boleto] = novo_valor_auto
+
+                st.session_state[chave_valor_auto] = novo_valor_auto
+
                 valor_final_boleto = col_esq.number_input(
                     "Valor final do boleto",
                     min_value=0.00,
-                    value=float(royalties),
                     step=0.01,
                     format="%.2f",
-                    key=f"valor_final_boleto_{indice}"
+                    key=chave_valor_boleto
                 )
     
                 # ==========================================
