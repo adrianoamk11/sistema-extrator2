@@ -1391,51 +1391,51 @@ else:
             )
     
                     
-                    st.markdown(f"#### Cobrança Asaas — {EMPRESA_SELECIONADA}")
-                    col_venc, col_botao = st.columns([2, 1])
-                    descricao_boleto = "Royalties"
-                    vencimento = col_venc.date_input(
-                        "Vencimento do boleto",
-                        value=proximo_dia_10(),
-                        min_value=date.today(),
-                        format="DD/MM/YYYY",
-                        key=f"vencimento_{indice}"
+            st.markdown(f"#### Cobrança Asaas — {EMPRESA_SELECIONADA}")
+            col_venc, col_botao = st.columns([2, 1])
+            descricao_boleto = "Royalties"
+            vencimento = col_venc.date_input(
+                "Vencimento do boleto",
+                value=proximo_dia_10(),
+                min_value=date.today(),
+                format="DD/MM/YYYY",
+                key=f"vencimento_{indice}"
+            )
+
+                chave_boleto = (
+                    f"boleto_{indice}_"
+                    + re.sub(r"[^a-zA-Z0-9_]", "_", arquivo.name)
+                )
+
+
+                if EMPRESA_SELECIONADA == "Lider Franquia":
+                    emitir_nota_apos_pagamento = col_botao.checkbox(
+                        "Emitir nota fiscal de Royalties após o pagamento",
+                        value=False,
+                        key=f"emitir_nota_{indice}"
                     )
-    
-                    chave_boleto = (
-                        f"boleto_{indice}_"
-                        + re.sub(r"[^a-zA-Z0-9_]", "_", arquivo.name)
-                    )
-    
-    
-                    if EMPRESA_SELECIONADA == "Lider Franquia":
-                        emitir_nota_apos_pagamento = col_botao.checkbox(
-                            "Emitir nota fiscal de Royalties após o pagamento",
-                            value=False,
-                            key=f"emitir_nota_{indice}"
+                else:
+                    emitir_nota_apos_pagamento = False
+                clicou_emitir_boleto = col_botao.button(
+                "💳 Emitir boleto",
+                key=chave_boleto,
+                type="primary",
+                use_container_width=True,
+                disabled=valor_final_boleto <= 0
+          )
+            if clicou_emitir_boleto:
+                try:
+                    with st.spinner("Gerando boleto no Asaas Sandbox..."):
+                        boleto = emitir_boleto_asaas(
+                            arquivo.name,
+                            faturamento,
+                            valor_final_boleto,
+                            vencimento,
+                            descricao_boleto,
+                            emitir_nota_apos_pagamento
                         )
-                    else:
-                        emitir_nota_apos_pagamento = False
-                    clicou_emitir_boleto = col_botao.button(
-                    "💳 Emitir boleto",
-                    key=chave_boleto,
-                    type="primary",
-                    use_container_width=True,
-                    disabled=valor_final_boleto <= 0
-              )
-                if clicou_emitir_boleto:
-                    try:
-                        with st.spinner("Gerando boleto no Asaas Sandbox..."):
-                            boleto = emitir_boleto_asaas(
-                                arquivo.name,
-                                faturamento,
-                                valor_final_boleto,
-                                vencimento,
-                                descricao_boleto,
-                                emitir_nota_apos_pagamento
-                            )
-                
-                        st.session_state[f"resultado_boleto_{indice}"] = boleto
+            
+                    st.session_state[f"resultado_boleto_{indice}"] = boleto
                 
                     except Exception as erro_boleto:
                         st.error(
