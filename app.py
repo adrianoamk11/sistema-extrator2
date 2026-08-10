@@ -1392,15 +1392,15 @@ else:
     
                     
             st.markdown(f"#### Cobrança Asaas — {EMPRESA_SELECIONADA}")
-                col_venc, col_botao = st.columns([2, 1])
-                descricao_boleto = "Royalties"
-                vencimento = col_venc.date_input(
-                    "Vencimento do boleto",
-                    value=proximo_dia_10(),
-                    min_value=date.today(),
-                    format="DD/MM/YYYY",
-                    key=f"vencimento_{indice}"
-                )
+            col_venc, col_botao = st.columns([2, 1])
+            descricao_boleto = "Royalties"
+            vencimento = col_venc.date_input(
+                "Vencimento do boleto",
+                value=proximo_dia_10(),
+                min_value=date.today(),
+                format="DD/MM/YYYY",
+                key=f"vencimento_{indice}"
+            )
     
             chave_boleto = (
                 f"boleto_{indice}_"
@@ -1414,7 +1414,7 @@ else:
                         value=False,
                         key=f"emitir_nota_{indice}"
                 )
-                else:
+            else:
                     emitir_nota_apos_pagamento = False
     
             clicou_emitir_boleto = col_botao.button(
