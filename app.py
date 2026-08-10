@@ -1408,14 +1408,14 @@ else:
             )
 
 
-                if EMPRESA_SELECIONADA == "Lider Franquia":
-                    emitir_nota_apos_pagamento = col_botao.checkbox(
-                        "Emitir nota fiscal de Royalties após o pagamento",
-                        value=False,
-                        key=f"emitir_nota_{indice}"
-                    )
-                else:
-                    emitir_nota_apos_pagamento = False
+            if EMPRESA_SELECIONADA == "Lider Franquia":
+                emitir_nota_apos_pagamento = col_botao.checkbox(
+                    "Emitir nota fiscal de Royalties após o pagamento",
+                    value=False,
+                    key=f"emitir_nota_{indice}"
+                )
+            else:
+                emitir_nota_apos_pagamento = False
                 clicou_emitir_boleto = col_botao.button(
                 "💳 Emitir boleto",
                 key=chave_boleto,
