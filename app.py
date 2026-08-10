@@ -1488,8 +1488,10 @@ else:
         # DOWNLOAD DO RELATÓRIO GERAL
         # ========================================================
     
-    excel_geral = gerar_excel_geral(
-    resultados,
+    resumo = pd.DataFrame(resultados)
+
+excel_geral = gerar_excel_geral(
+    resumo,
     detalhes_exportacao
 )
     
