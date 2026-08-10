@@ -44,14 +44,14 @@ def webhook_asaas():
     payment_id = pagamento.get("id")
     referencia = pagamento.get("externalReference") or ""
 
-    # Só emite nota para cobranças marcadas pelo sistema.
+        # Só emite nota para cobranças marcadas pelo sistema.
     if "|NFSE|" not in referencia:
         return jsonify({"ok": True, "nota": "nao solicitada"}), 200
 
-        if not payment_id:
-            return jsonify({"erro": "payment id ausente"}), 400
+    if not payment_id:
+        return jsonify({"erro": "payment id ausente"}), 400
 
-        payload_nota = {
+    payload_nota = {
         "payment": payment_id,
         "serviceDescription": "Royalties",
         "observations": "Royalties - Lider Franquia",
@@ -73,6 +73,7 @@ def webhook_asaas():
         headers=cabecalhos_asaas(),
         json=payload_nota,
         timeout=30,
+    )=30,
     )
 
     if not resposta.ok:
