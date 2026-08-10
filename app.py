@@ -1345,7 +1345,7 @@ else:
                     )
 
                
-                          st.markdown("#### Adicionar valor ao faturamento")
+                st.markdown("#### Adicionar valor ao faturamento")
 
         # Layout organizado
         col_esq, col_centro, col_dir = st.columns([0.85, 1.15, 0.75])
