@@ -51,29 +51,22 @@ def webhook_asaas():
     if not payment_id:
         return jsonify({"erro": "payment id ausente"}), 400
 
-    payload_nota = {
+        payload_nota = {
         "payment": payment_id,
         "serviceDescription": pagamento.get("description") or "Royalties",
         "observations": "Royalties - Lider Franquia",
         "value": pagamento.get("value"),
         "effectiveDate": date.today().isoformat(),
     }
-    resposta = requests.post(
-                f"{ASAAS_BASE_URL}/invoices",
-                headers=cabecalhos_asaas(),
-                json=payload_nota,
-                timeout=30,
-    )
-    if not resposta.ok:
-        print("ERRO AO CRIAR NOTA FISCAL NO ASAAS")
-        print("STATUS:", resposta.status_code)
-        print("RESPOSTA:", resposta.text)
 
-        return jsonify({
-            "ok": True,
-            "nota": "falhou",
-            "status_asaas": resposta.status_code,
-            "detalhe": resposta.text,
+    print("PAYLOAD NOTA:", payload_nota, flush=True)
+
+    resposta = requests.post(
+        f"{ASAAS_BASE_URL}/invoices",
+        headers=cabecalhos_asaas(),
+        json=payload_nota,
+        timeout=30,
+    )
         }), 200
     return jsonify({
         "ok": True,
