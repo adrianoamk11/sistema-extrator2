@@ -1298,45 +1298,45 @@ else:
                     .sum()
                 )
 
-        st.markdown("#### Adicionar valor ao faturamento")
+                st.markdown("#### Adicionar valor ao faturamento")
 
-        col_adicional, col_total_boleto = st.columns(2)
+                col_adicional, col_total_boleto = st.columns(2)
 
-        adicional_texto = col_adicional.text_input(
-            "Valor adicional ao faturamento",
-            value="0,00",
-            key=f"adicional_boleto_{indice}",
-            help=(
-                "Digite o valor que deseja acrescentar ao faturamento. "
-                "Os royalties de 4% serão recalculados sobre o novo total."
-            )
-        )
+                adicional_texto = col_adicional.text_input(
+                    "Valor adicional ao faturamento",
+                    value="0,00",
+                    key=f"adicional_boleto_{indice}",
+                    help=(
+                        "Digite o valor que deseja acrescentar ao faturamento. "
+                        "Os royalties de 4% serão recalculados sobre o novo total."
+                    )
+                )
 
-        adicional_boleto = converter_numero(adicional_texto)
+                adicional_boleto = converter_numero(adicional_texto)
 
-        if adicional_boleto is None:
-            adicional_boleto = 0.0
-            col_adicional.warning(
-                "Digite um valor válido, por exemplo: 100,00"
-            )
+                if adicional_boleto is None:
+                    adicional_boleto = 0.0
+                    col_adicional.warning(
+                        "Digite um valor válido, por exemplo: 100,00"
+                    )
 
-        if adicional_boleto < 0:
-            adicional_boleto = 0.0
-            col_adicional.warning(
-                "O valor adicional não pode ser negativo."
-            )
+                if adicional_boleto < 0:
+                    adicional_boleto = 0.0
+                    col_adicional.warning(
+                        "O valor adicional não pode ser negativo."
+                    )
 
-        faturamento = (
-            float(faturamento)
-            + float(adicional_boleto)
-        )
+                faturamento = (
+                    float(faturamento)
+                    + float(adicional_boleto)
+                )
 
-        royalties = (
-            float(faturamento)
-            * PERCENTUAL_ROYALTIES
-        )
+                royalties = (
+                    float(faturamento)
+                    * PERCENTUAL_ROYALTIES
+                )
 
-        valor_final_boleto = float(royalties)
+                valor_final_boleto = float(royalties)
 
                 col1, col2, col3 = st.columns(3)
 
@@ -1359,11 +1359,9 @@ else:
                     "Valor final do boleto",
                     formatar_moeda(valor_final_boleto)
                 )
-
-                descricao_boleto = "Royalties"
                 st.markdown(f"#### Cobrança Asaas — {EMPRESA_SELECIONADA}")
                 col_venc, col_botao = st.columns([2, 1])
-
+                descricao_boleto = "Royalties"
                 vencimento = col_venc.date_input(
                     "Vencimento do boleto",
                     value=proximo_dia_10(),
@@ -1429,8 +1427,78 @@ else:
                         st.info(
                             "ℹ️ Esta cobrança já existia no Asaas. "
                             "O sistema não gerou uma cobrança duplicada."
-                        )
+                                faturamento = (
+                    pd.to_numeric(
+                        selecionadas["Valor"],
+                        errors="coerce"
+                    )
+                    .fillna(0)
+                    .sum()
+                )
 
+                st.markdown("#### Adicionar valor ao faturamento")
+
+                col_adicional, col_total_boleto = st.columns(2)
+
+                adicional_texto = col_adicional.text_input(
+                    "Valor adicional ao faturamento",
+                    value="0,00",
+                    key=f"adicional_boleto_{indice}",
+                    help=(
+                        "Digite o valor que deseja acrescentar ao faturamento. "
+                        "Os royalties de 4% serão recalculados sobre o novo total."
+                    )
+                )
+
+                adicional_boleto = converter_numero(adicional_texto)
+
+                if adicional_boleto is None:
+                    adicional_boleto = 0.0
+                    col_adicional.warning(
+                        "Digite um valor válido, por exemplo: 100,00"
+                    )
+
+                if adicional_boleto < 0:
+                    adicional_boleto = 0.0
+                    col_adicional.warning(
+                        "O valor adicional não pode ser negativo."
+                    )
+
+                faturamento = (
+                    float(faturamento)
+                    + float(adicional_boleto)
+                )
+
+                royalties = (
+                    float(faturamento)
+                    * PERCENTUAL_ROYALTIES
+                )
+
+                valor_final_boleto = float(royalties)
+
+                col1, col2, col3 = st.columns(3)
+
+                col1.metric(
+                    "Entradas consideradas",
+                    len(selecionadas)
+                )
+
+                col2.metric(
+                    "Faturamento",
+                    formatar_moeda(faturamento)
+                )
+
+                col3.metric(
+                    "Royalties 4%",
+                    formatar_moeda(royalties)
+                )
+
+                col_total_boleto.metric(
+                    "Valor final do boleto",
+                    formatar_moeda(valor_final_boleto)
+                )
+
+                descricao_boleto = "Royalties"
                     if boleto_salvo.get("invoiceUrl"):
                         st.link_button(
                             "🔗 Abrir cobrança no Asaas",
