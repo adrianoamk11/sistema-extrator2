@@ -1346,9 +1346,9 @@ else:
                 )
 
                 col2.metric(
-                    "Faturamento",
-                    formatar_moeda(faturamento)
-                )
+    "Valor final do boleto",
+    formatar_moeda(valor_final_boleto)
+)
 
                 col3.metric(
                     "Royalties 4%",
@@ -1356,9 +1356,9 @@ else:
                 )
 
                 col_total_boleto.metric(
-                    "Valor final do boleto",
-                    formatar_moeda(valor_final_boleto)
-                )
+    "Total do faturamento",
+    formatar_moeda(faturamento)
+)
                 st.markdown(f"#### Cobrança Asaas — {EMPRESA_SELECIONADA}")
                 col_venc, col_botao = st.columns([2, 1])
                 descricao_boleto = "Royalties"
@@ -1474,21 +1474,19 @@ else:
 
     col_total1, col_total2 = st.columns(2)
 
-    col_total1.metric(
-        "Faturamento total geral",
-        formatar_moeda(total_faturamento)
-    )
+col_total1.metric(
+    "Faturamento total geral",
+    formatar_moeda(total_faturamento)
+)
 
-    col_total2.metric(
-        "Royalties total geral (4%)",
-        formatar_moeda(total_royalties)
-    )
+col_total2.metric(
+    "Royalties 4% total",
+    formatar_moeda(total_royalties)
+)
 
     # ========================================================
     # DOWNLOAD DO RELATÓRIO GERAL
     # ========================================================
-
-    resumo = pd.DataFrame(resultados)
 
     excel_geral = gerar_excel_geral(
         resumo,
