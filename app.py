@@ -1437,12 +1437,12 @@ else:
                                     emitir_nota_apos_pagamento
                                 )
                 
-                        st.session_state[f"resultado_boleto_{indice}"] = boleto
-                    
-                    except Exception as erro_boleto:
-                        st.error(
-                            f"Não foi possível emitir o boleto: {erro_boleto}"
-                        )
+                            st.session_state[f"resultado_boleto_{indice}"] = boleto
+                        
+                        except Exception as erro_boleto:
+                            st.error(
+                                f"Não foi possível emitir o boleto: {erro_boleto}"
+                            )
 
                 
                 boleto_salvo = st.session_state.get(
