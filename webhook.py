@@ -61,13 +61,25 @@ def webhook_asaas():
 
     print("PAYLOAD NOTA:", payload_nota, flush=True)
 
-    resposta = requests.post(
+        resposta = requests.post(
         f"{ASAAS_BASE_URL}/invoices",
         headers=cabecalhos_asaas(),
         json=payload_nota,
         timeout=30,
     )
+
+    if not resposta.ok:
+        print("ERRO AO CRIAR NOTA FISCAL NO ASAAS")
+        print("STATUS:", resposta.status_code)
+        print("RESPOSTA:", resposta.text)
+
+        return jsonify({
+            "ok": True,
+            "nota": "falhou",
+            "status_asaas": resposta.status_code,
+            "detalhe": resposta.text,
         }), 200
+
     return jsonify({
         "ok": True,
         "nota": resposta.json(),
