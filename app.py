@@ -1298,7 +1298,7 @@ else:
                     .sum()
                 )
 
-                                st.markdown("#### Adicionar valor ao faturamento")
+            st.markdown("#### Adicionar valor ao faturamento")
 
                 col_adicional, col_total_boleto = st.columns(2)
 
