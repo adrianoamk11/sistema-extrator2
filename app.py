@@ -20,6 +20,24 @@ st.set_page_config(
     page_icon="💰",
     layout="wide"
 )
+st.markdown(
+    """
+    <style>
+    div[data-testid="stButton"] button[kind="primary"] {
+        background-color: #16a34a !important;
+        border-color: #16a34a !important;
+        color: white !important;
+    }
+
+    div[data-testid="stButton"] button[kind="primary"]:hover {
+        background-color: #15803d !important;
+        border-color: #15803d !important;
+        color: white !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 # =========================
 # LOGIN DO SISTEMA
 # =========================
@@ -1327,37 +1345,78 @@ else:
                     )
 
                 faturamento = (
-                    float(faturamento)
-                    + float(adicional_boleto)
-                )
+                          st.markdown("#### Adicionar valor ao faturamento")
 
-                royalties = (
-                    float(faturamento)
-                    * PERCENTUAL_ROYALTIES
-                )
+        # Layout organizado
+        col_esq, col_centro, col_dir = st.columns([0.85, 1.15, 0.75])
 
-                valor_final_boleto = float(royalties)
+        # ==========================================
+        # COLUNA ESQUERDA
+        # ==========================================
 
-                col1, col2, col3 = st.columns(3)
+        adicional_texto = col_esq.text_input(
+            "Valor adicional ao faturamento",
+            value="0,00",
+            key=f"adicional_boleto_{indice}",
+            help=(
+                "Digite o valor que deseja acrescentar ao faturamento. "
+                "Os royalties de 4% serão recalculados sobre o novo total."
+            )
+        )
 
-                col1.metric(
-                    "Entradas consideradas",
-                    len(selecionadas)
-                )
+        adicional_boleto = converter_numero(adicional_texto)
 
-                valor_final_boleto = col2.number_input(
-    "Valor final do boleto",
-    min_value=0.00,
-    value=float(royalties),
-    step=0.01,
-    format="%.2f",
-    key=f"valor_final_boleto_{indice}"
-)
+        if adicional_boleto is None:
+            adicional_boleto = 0.0
+            col_esq.warning("Digite um valor válido, por exemplo: 100,00")
 
-                col3.metric(
-                    "Royalties 4%",
-                    formatar_moeda(royalties)
-                )
+        if adicional_boleto < 0:
+            adicional_boleto = 0.0
+            col_esq.warning("O valor adicional não pode ser negativo.")
+
+        # Recalcula faturamento e royalties
+        faturamento = (
+            float(faturamento)
+            + float(adicional_boleto)
+        )
+
+        royalties = (
+            float(faturamento)
+            * PERCENTUAL_ROYALTIES
+        )
+
+        # Valor final do boleto editável
+        valor_final_boleto = col_esq.number_input(
+            "Valor final do boleto",
+            min_value=0.00,
+            value=float(royalties),
+            step=0.01,
+            format="%.2f",
+            key=f"valor_final_boleto_{indice}"
+        )
+
+        # ==========================================
+        # COLUNA CENTRAL
+        # ==========================================
+
+        col_centro.metric(
+            "Total do faturamento",
+            formatar_moeda(faturamento)
+        )
+
+        col_centro.metric(
+            "Royalties 4%",
+            formatar_moeda(royalties)
+        )
+
+        # ==========================================
+        # COLUNA DIREITA
+        # ==========================================
+
+        col_dir.metric(
+            "Entradas consideradas",
+            len(selecionadas)
+        )
 
                 col_total_boleto.metric(
     "Total do faturamento",
