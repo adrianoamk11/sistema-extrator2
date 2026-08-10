@@ -1345,9 +1345,13 @@ else:
                     len(selecionadas)
                 )
 
-                col2.metric(
+                valor_final_boleto = col2.number_input(
     "Valor final do boleto",
-    formatar_moeda(valor_final_boleto)
+    min_value=0.00,
+    value=float(royalties),
+    step=0.01,
+    format="%.2f",
+    key=f"valor_final_boleto_{indice}"
 )
 
                 col3.metric(
