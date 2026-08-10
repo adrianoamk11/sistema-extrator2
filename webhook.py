@@ -59,9 +59,9 @@ def webhook_asaas():
         "effectiveDate": date.today().isoformat(),
     }
 
-    print("PAYLOAD NOTA:", payload_nota, flush=True)
+        print("PAYLOAD NOTA:", payload_nota, flush=True)
 
-        resposta = requests.post(
+    resposta = requests.post(
         f"{ASAAS_BASE_URL}/invoices",
         headers=cabecalhos_asaas(),
         json=payload_nota,
