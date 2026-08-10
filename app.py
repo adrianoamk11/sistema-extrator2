@@ -1488,7 +1488,7 @@ col_total2.metric(
     # DOWNLOAD DO RELATÓRIO GERAL
     # ========================================================
 
-    excel_geral = gerar_excel_geral(
+excel_geral = gerar_excel_geral(
     resumo,
     detalhes_exportacao
 )
