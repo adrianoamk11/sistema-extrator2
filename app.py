@@ -1474,31 +1474,31 @@ else:
 
     col_total1, col_total2 = st.columns(2)
 
-col_total1.metric(
-    "Faturamento total geral",
-    formatar_moeda(total_faturamento)
-)
-
-col_total2.metric(
-    "Royalties 4% total",
-    formatar_moeda(total_royalties)
-)
-
-    # ========================================================
-    # DOWNLOAD DO RELATÓRIO GERAL
-    # ========================================================
-
-excel_geral = gerar_excel_geral(
-    resumo,
-    detalhes_exportacao
-)
-
-st.download_button(
-    "📥 Baixar relatório geral em Excel",
-    data=excel_geral,
-    file_name="relatorio_geral_faturamento.xlsx",
-    mime=(
-        "application/vnd.openxmlformats-officedocument."
-        "spreadsheetml.sheet"
-    ),
-)
+    col_total1.metric(
+        "Faturamento total geral",
+        formatar_moeda(total_faturamento)
+    )
+    
+    col_total2.metric(
+        "Royalties 4% total",
+        formatar_moeda(total_royalties)
+    )
+    
+        # ========================================================
+        # DOWNLOAD DO RELATÓRIO GERAL
+        # ========================================================
+    
+    excel_geral = gerar_excel_geral(
+        resumo,
+        detalhes_exportacao
+    )
+    
+    st.download_button(
+        "📥 Baixar relatório geral em Excel",
+        data=excel_geral,
+        file_name="relatorio_geral_faturamento.xlsx",
+        mime=(
+            "application/vnd.openxmlformats-officedocument."
+            "spreadsheetml.sheet"
+        ),
+    )
