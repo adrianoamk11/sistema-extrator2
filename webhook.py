@@ -58,13 +58,12 @@ def webhook_asaas():
         "value": pagamento.get("value"),
         "effectiveDate": date.today().isoformat(),
     }
-           resposta = requests.post(
-        f"{ASAAS_BASE_URL}/invoices",
-        headers=cabecalhos_asaas(),
-        json=payload_nota,
-        timeout=30,
+    resposta = requests.post(
+                f"{ASAAS_BASE_URL}/invoices",
+                headers=cabecalhos_asaas(),
+                json=payload_nota,
+                timeout=30,
     )
-
     if not resposta.ok:
         print("ERRO AO CRIAR NOTA FISCAL NO ASAAS")
         print("STATUS:", resposta.status_code)
