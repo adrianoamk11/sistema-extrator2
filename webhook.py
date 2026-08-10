@@ -51,12 +51,15 @@ def webhook_asaas():
     if not payment_id:
         return jsonify({"erro": "payment id ausente"}), 400
         
-    payload_nota = {
+        payload_nota = {
         "payment": payment_id,
         "serviceDescription": "Royalties",
         "observations": "Royalties - Lider Franquia",
         "value": pagamento.get("value"),
+        "deductions": 0,
         "effectiveDate": date.today().isoformat(),
+        "municipalServiceCode": "06522",
+        "municipalServiceName": '17.07 - Franquia ("franchising")',
     }
 
     print("PAYLOAD NOTA:", payload_nota, flush=True)
