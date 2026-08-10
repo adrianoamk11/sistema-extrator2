@@ -53,7 +53,7 @@ def webhook_asaas():
 
     payload_nota = {
         "payment": payment_id,
-       "description": pagamento.get("description") or "Royalties",
+        "serviceDescription": pagamento.get("description") or "Royalties",
         "observations": "Royalties - Lider Franquia",
         "value": pagamento.get("value"),
         "effectiveDate": date.today().isoformat(),
