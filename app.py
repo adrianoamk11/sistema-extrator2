@@ -1489,16 +1489,16 @@ col_total2.metric(
     # ========================================================
 
     excel_geral = gerar_excel_geral(
-        resumo,
-        detalhes_exportacao
-    )
+    resumo,
+    detalhes_exportacao
+)
 
-    st.download_button(
-        "📥 Baixar relatório geral em Excel",
-        data=excel_geral,
-        file_name="relatorio_geral_faturamento.xlsx",
-        mime=(
-            "application/vnd.openxmlformats-officedocument."
-            "spreadsheetml.sheet"
-        ),
-    )
+st.download_button(
+    "📥 Baixar relatório geral em Excel",
+    data=excel_geral,
+    file_name="relatorio_geral_faturamento.xlsx",
+    mime=(
+        "application/vnd.openxmlformats-officedocument."
+        "spreadsheetml.sheet"
+    ),
+)
