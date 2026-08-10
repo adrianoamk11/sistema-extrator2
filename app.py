@@ -1319,104 +1319,104 @@ else:
                
                 st.markdown("#### Adicionar valor ao faturamento")
 
-        # Layout organizado
-        col_esq, col_centro, col_dir = st.columns([0.85, 1.15, 0.75])
-
-        # ==========================================
-        # COLUNA ESQUERDA
-        # ==========================================
-
-        adicional_texto = col_esq.text_input(
-            "Valor adicional ao faturamento",
-            value="0,00",
-            key=f"adicional_boleto_{indice}",
-            help=(
-                "Digite o valor que deseja acrescentar ao faturamento. "
-                "Os royalties de 4% serão recalculados sobre o novo total."
+            # Layout organizado
+            col_esq, col_centro, col_dir = st.columns([0.85, 1.15, 0.75])
+    
+            # ==========================================
+            # COLUNA ESQUERDA
+            # ==========================================
+    
+            adicional_texto = col_esq.text_input(
+                "Valor adicional ao faturamento",
+                value="0,00",
+                key=f"adicional_boleto_{indice}",
+                help=(
+                    "Digite o valor que deseja acrescentar ao faturamento. "
+                    "Os royalties de 4% serão recalculados sobre o novo total."
+                )
             )
-        )
-
-        adicional_boleto = converter_numero(adicional_texto)
-
-        if adicional_boleto is None:
-            adicional_boleto = 0.0
-            col_esq.warning("Digite um valor válido, por exemplo: 100,00")
-
-        if adicional_boleto < 0:
-            adicional_boleto = 0.0
-            col_esq.warning("O valor adicional não pode ser negativo.")
-
-        # Recalcula faturamento e royalties
-        faturamento = (
-            float(faturamento)
-            + float(adicional_boleto)
-        )
-
-        royalties = (
-            float(faturamento)
-            * PERCENTUAL_ROYALTIES
-        )
-
-        # Valor final do boleto editável
-        valor_final_boleto = col_esq.number_input(
-            "Valor final do boleto",
-            min_value=0.00,
-            value=float(royalties),
-            step=0.01,
-            format="%.2f",
-            key=f"valor_final_boleto_{indice}"
-        )
-
-        # ==========================================
-        # COLUNA CENTRAL
-        # ==========================================
-
-        col_centro.metric(
-            "Total do faturamento",
-            formatar_moeda(faturamento)
-        )
-
-        col_centro.metric(
-            "Royalties 4%",
-            formatar_moeda(royalties)
-        )
-
-        # ==========================================
-        # COLUNA DIREITA
-        # ==========================================
-
-        col_dir.metric(
-            "Entradas consideradas",
-            len(selecionadas)
-        )
-
-                
-                st.markdown(f"#### Cobrança Asaas — {EMPRESA_SELECIONADA}")
-                col_venc, col_botao = st.columns([2, 1])
-                descricao_boleto = "Royalties"
-                vencimento = col_venc.date_input(
-                    "Vencimento do boleto",
-                    value=proximo_dia_10(),
-                    min_value=date.today(),
-                    format="DD/MM/YYYY",
-                    key=f"vencimento_{indice}"
-                )
-
-                chave_boleto = (
-                    f"boleto_{indice}_"
-                    + re.sub(r"[^a-zA-Z0-9_]", "_", arquivo.name)
-                )
-
-
-                if EMPRESA_SELECIONADA == "Lider Franquia":
-                    emitir_nota_apos_pagamento = col_botao.checkbox(
-                        "Emitir nota fiscal de Royalties após o pagamento",
-                        value=False,
-                        key=f"emitir_nota_{indice}"
+    
+            adicional_boleto = converter_numero(adicional_texto)
+    
+            if adicional_boleto is None:
+                adicional_boleto = 0.0
+                col_esq.warning("Digite um valor válido, por exemplo: 100,00")
+    
+            if adicional_boleto < 0:
+                adicional_boleto = 0.0
+                col_esq.warning("O valor adicional não pode ser negativo.")
+    
+            # Recalcula faturamento e royalties
+            faturamento = (
+                float(faturamento)
+                + float(adicional_boleto)
+            )
+    
+            royalties = (
+                float(faturamento)
+                * PERCENTUAL_ROYALTIES
+            )
+    
+            # Valor final do boleto editável
+            valor_final_boleto = col_esq.number_input(
+                "Valor final do boleto",
+                min_value=0.00,
+                value=float(royalties),
+                step=0.01,
+                format="%.2f",
+                key=f"valor_final_boleto_{indice}"
+            )
+    
+            # ==========================================
+            # COLUNA CENTRAL
+            # ==========================================
+    
+            col_centro.metric(
+                "Total do faturamento",
+                formatar_moeda(faturamento)
+            )
+    
+            col_centro.metric(
+                "Royalties 4%",
+                formatar_moeda(royalties)
+            )
+    
+            # ==========================================
+            # COLUNA DIREITA
+            # ==========================================
+    
+            col_dir.metric(
+                "Entradas consideradas",
+                len(selecionadas)
+            )
+    
+                    
+                    st.markdown(f"#### Cobrança Asaas — {EMPRESA_SELECIONADA}")
+                    col_venc, col_botao = st.columns([2, 1])
+                    descricao_boleto = "Royalties"
+                    vencimento = col_venc.date_input(
+                        "Vencimento do boleto",
+                        value=proximo_dia_10(),
+                        min_value=date.today(),
+                        format="DD/MM/YYYY",
+                        key=f"vencimento_{indice}"
                     )
-                else:
-                    emitir_nota_apos_pagamento = False
-                clicou_emitir_boleto = col_botao.button(
+    
+                    chave_boleto = (
+                        f"boleto_{indice}_"
+                        + re.sub(r"[^a-zA-Z0-9_]", "_", arquivo.name)
+                    )
+    
+    
+                    if EMPRESA_SELECIONADA == "Lider Franquia":
+                        emitir_nota_apos_pagamento = col_botao.checkbox(
+                            "Emitir nota fiscal de Royalties após o pagamento",
+                            value=False,
+                            key=f"emitir_nota_{indice}"
+                        )
+                    else:
+                        emitir_nota_apos_pagamento = False
+                    clicou_emitir_boleto = col_botao.button(
                     "💳 Emitir boleto",
                     key=chave_boleto,
                     type="primary",
