@@ -1426,59 +1426,56 @@ else:
             )
     
             if clicou_emitir_boleto:
-                        try:
-                            with st.spinner("Gerando boleto no Asaas Sandbox..."):
-                                boleto = emitir_boleto_asaas(
-                                    arquivo.name,
-                                    faturamento,
-                                    valor_final_boleto,
-                                    vencimento,
-                                    descricao_boleto,
-                                    emitir_nota_apos_pagamento
-                                )
-                
-                            st.session_state[f"resultado_boleto_{indice}"] = boleto
-                        
-                        except Exception as erro_boleto:
-                            st.error(
-                                f"Não foi possível emitir o boleto: {erro_boleto}"
-                            )
-
-                
-                boleto_salvo = st.session_state.get(
-                    f"resultado_boleto_{indice}"
-                )
-                if boleto_salvo:
-                    if boleto_salvo.get("novo"):
-                        st.success(
-                            f"✅ Boleto criado para "
-                            f"{boleto_salvo.get('clienteNome', '')} "
-                            f"(BOX {boleto_salvo.get('box', '')}) "
-                            f"e notificações padronizadas com sucesso. "
-                            f"ID: {boleto_salvo.get('id', '')}"
-                        )
-                    else:
-                        st.info(
-                            "ℹ️ Esta cobrança já existia no Asaas. "
-                            "O sistema não gerou uma cobrança duplicada."
-                        )
-                               
-
-               
-        
-                    if boleto_salvo.get("invoiceUrl"):
-                        st.link_button(
-                            "🔗 Abrir cobrança no Asaas",
-                            boleto_salvo["invoiceUrl"],
-                            use_container_width=True
+                try:
+                    with st.spinner("Gerando boleto no Asaas..."):
+                        boleto = emitir_boleto_asaas(
+                            arquivo.name,
+                            faturamento,
+                            valor_final_boleto,
+                            vencimento,
+                            descricao_boleto,
+                            emitir_nota_apos_pagamento
                         )
 
-                    if boleto_salvo.get("bankSlipUrl"):
-                        st.link_button(
-                            "📄 Abrir boleto",
-                            boleto_salvo["bankSlipUrl"],
-                            use_container_width=True
-                        )
+                    st.session_state[f"resultado_boleto_{indice}"] = boleto
+
+                except Exception as erro_boleto:
+                    st.error(
+                        f"Não foi possível emitir o boleto: {erro_boleto}"
+                    )
+
+            boleto_salvo = st.session_state.get(
+                f"resultado_boleto_{indice}"
+            )
+
+            if boleto_salvo:
+                if boleto_salvo.get("novo"):
+                    st.success(
+                        f"✅ Boleto criado para "
+                        f"{boleto_salvo.get('clienteNome', '')} "
+                        f"(BOX {boleto_salvo.get('box', '')}) "
+                        f"e notificações padronizadas com sucesso. "
+                        f"ID: {boleto_salvo.get('id', '')}"
+                    )
+                else:
+                    st.info(
+                        "ℹ️ Esta cobrança já existia no Asaas. "
+                        "O sistema não gerou uma cobrança duplicada."
+                    )
+
+                if boleto_salvo.get("invoiceUrl"):
+                    st.link_button(
+                        "🔗 Abrir cobrança no Asaas",
+                        boleto_salvo["invoiceUrl"],
+                        use_container_width=True
+                    )
+
+                if boleto_salvo.get("bankSlipUrl"):
+                    st.link_button(
+                        "📄 Abrir boleto",
+                        boleto_salvo["bankSlipUrl"],
+                        use_container_width=True
+                    )
 
             resultados.append({
                 "Arquivo": arquivo.name,
@@ -1518,9 +1515,9 @@ else:
         formatar_moeda(total_royalties)
     )
     
-        # ========================================================
-        # DOWNLOAD DO RELATÓRIO GERAL
-        # ========================================================
+    # ========================================================
+    # DOWNLOAD DO RELATÓRIO GERAL
+    # ========================================================
     
     resumo = pd.DataFrame(resultados)
 
