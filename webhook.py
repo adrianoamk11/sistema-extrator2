@@ -48,10 +48,10 @@ def webhook_asaas():
     if "|NFSE|" not in referencia:
         return jsonify({"ok": True, "nota": "nao solicitada"}), 200
 
-    if not payment_id:
-        return jsonify({"erro": "payment id ausente"}), 400
-        
-        payload_nota = {
+        if not payment_id:
+            return jsonify({"erro": "payment id ausente"}), 400
+
+    payload_nota = {
         "payment": payment_id,
         "serviceDescription": "Royalties",
         "observations": "Royalties - Lider Franquia",
