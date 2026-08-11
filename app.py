@@ -165,7 +165,7 @@ def extrair_numero_box(texto):
     'mendel box 025 zona norte' -> 25
     """
     texto_norm = normalizar(texto)
-    encontrado = re.search(r"\bbox\s*[-_:]?\s*0*(\d+)\b", texto_norm)
+    encontrado = re.search(r"\bbox\s*[-_:]?\s*0*(\d+)", texto_norm)
 
     if not encontrado:
         return None
