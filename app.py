@@ -1336,8 +1336,8 @@ else:
                     value="0,00",
                     key=f"adicional_boleto_{indice}",
                     help=(
-                        "Digite o valor que deseja acrescentar ao faturamento. "
-                        "Os royalties de 4% serão recalculados sobre o novo total."
+                        "Digite um valor positivo para somar ou negativo para diminuir o faturamento. "
+                        "Ex.: 500,00 soma; -500,00 diminui. Os royalties de 4% serão recalculados sobre o novo total."
                     )
                 )
     
@@ -1347,9 +1347,6 @@ else:
                     adicional_boleto = 0.0
                     col_esq.warning("Digite um valor válido, por exemplo: 100,00")
     
-                if adicional_boleto < 0:
-                    adicional_boleto = 0.0
-                    col_esq.warning("O valor adicional não pode ser negativo.")
     
                 # Recalcula faturamento e royalties
                 faturamento = (
