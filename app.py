@@ -367,14 +367,14 @@ def padronizar_notificacoes_asaas(customer_id):
             })
 
         # 3) Cobrança vencida / atraso:
-        # envia apenas um e-mail para a Líder (provedor) quando o Asaas
+        # envia apenas um e-mail ao CLIENTE quando o Asaas
         # identificar que a cobrança venceu e não foi paga.
         elif evento == "PAYMENT_OVERDUE" and offset_atual == 0:
             config.update({
                 "enabled": True,
-                "emailEnabledForProvider": True,
+                "emailEnabledForProvider": False,
                 "smsEnabledForProvider": False,
-                "emailEnabledForCustomer": False,
+                "emailEnabledForCustomer": True,
                 "smsEnabledForCustomer": False,
                 "phoneCallEnabledForCustomer": False,
                 "whatsappEnabledForCustomer": False,
@@ -1389,6 +1389,11 @@ else:
                     format="%.2f",
                     key=chave_valor_boleto
                 )
+
+                # O valor grande de Royalties acompanha o valor final do boleto.
+                # O cálculo automático de 4% continua sendo usado como valor-base
+                # antes de qualquer ajuste manual.
+                royalties = float(valor_final_boleto)
     
                 # ==========================================
                 # COLUNA CENTRAL
