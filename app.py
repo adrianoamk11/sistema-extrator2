@@ -1370,14 +1370,18 @@ else:
                 novo_valor_auto = round(float(royalties), 2)
 
                 if chave_valor_boleto not in st.session_state:
+                    # Primeira exibição: usa automaticamente 4% do faturamento total.
                     st.session_state[chave_valor_boleto] = novo_valor_auto
-                elif chave_valor_auto in st.session_state:
-                    valor_atual = float(st.session_state[chave_valor_boleto])
-                    valor_auto_anterior = float(st.session_state[chave_valor_auto])
 
-                    # Se o valor ainda era o automático anterior,
-                    # acompanha o novo cálculo dos royalties.
-                    if abs(valor_atual - valor_auto_anterior) < 0.005:
+                elif chave_valor_auto in st.session_state:
+                    valor_auto_anterior = float(
+                        st.session_state[chave_valor_auto]
+                    )
+
+                    # Se o faturamento mudou (inclusive por valor adicional
+                    # ou seleção/desseleção de entradas), recalcula os 4%
+                    # e atualiza também o valor final do boleto.
+                    if abs(novo_valor_auto - valor_auto_anterior) >= 0.005:
                         st.session_state[chave_valor_boleto] = novo_valor_auto
 
                 st.session_state[chave_valor_auto] = novo_valor_auto
