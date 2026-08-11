@@ -366,20 +366,25 @@ def padronizar_notificacoes_asaas(customer_id):
                 "scheduleOffset": offset_atual,
             })
 
-        # 3) Aviso periódico depois do vencimento:
-        # pega a notificação que já possui offset (>0) e muda para 1 dia.
-        elif evento == "PAYMENT_OVERDUE" and offset_atual > 0:
-            config.update({
-                "enabled": True,
-                "emailEnabledForCustomer": True,
-                "scheduleOffset": 1,
-            })
-
-        # Aviso imediato de atraso/falha: desligado.
+        # 3) Cobrança vencida / atraso:
+        # envia apenas um e-mail para a Líder (provedor) quando o Asaas
+        # identificar que a cobrança venceu e não foi paga.
         elif evento == "PAYMENT_OVERDUE" and offset_atual == 0:
             config.update({
+                "enabled": True,
+                "emailEnabledForProvider": True,
+                "smsEnabledForProvider": False,
+                "emailEnabledForCustomer": False,
+                "smsEnabledForCustomer": False,
+                "phoneCallEnabledForCustomer": False,
+                "whatsappEnabledForCustomer": False,
+            })
+
+        # Lembretes periódicos após o vencimento ficam desativados.
+        elif evento == "PAYMENT_OVERDUE" and offset_atual > 0:
+            config.update({
                 "enabled": False,
-                "scheduleOffset": 0,
+                "scheduleOffset": offset_atual,
             })
 
         # Pagamento confirmado e demais eventos ficam desativados.
