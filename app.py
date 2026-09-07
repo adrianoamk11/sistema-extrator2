@@ -2168,7 +2168,41 @@ else:
                 # OUTRO EXTRATO / MAQUININHA
                 # ====================================================
 
-                st.markdown("#### Outro extrato / maquininha")
+                st.markdown(
+                    """
+                    <div style="
+                        background: #f0fdf4;
+                        border: 1px solid #bbf7d0;
+                        border-radius: 12px 12px 0 0;
+                        padding: 14px 18px 8px 18px;
+                        margin-top: 6px;
+                    ">
+                        <div style="font-size: 1.15rem; font-weight: 600; color: #262730;">
+                            Outro extrato / maquininha
+                        </div>
+                        <div style="font-size: 0.9rem; color: #667085; margin-top: 2px;">
+                            Área destinada às entradas de extratos adicionais.
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+                st.markdown(
+                    """
+                    <style>
+                    div[data-testid="stFileUploader"]:has(
+                        input[aria-label="Carregar outro extrato"]
+                    ) {
+                        background: #f0fdf4;
+                        border-left: 1px solid #bbf7d0;
+                        border-right: 1px solid #bbf7d0;
+                        padding: 4px 16px 10px 16px;
+                    }
+                    </style>
+                    """,
+                    unsafe_allow_html=True
+                )
 
                 outros_arquivos = st.file_uploader(
                     "Carregar outro extrato",
@@ -2328,8 +2362,23 @@ else:
                             f"{formatar_moeda(total_outro)}"
                         )
 
-                    col_total_outro, col_ok_outro = st.columns(
-                        [2, 1]
+                    # Fundo verde suave para diferenciar visualmente
+                    # toda a área de cálculo do extrato adicional.
+                    st.markdown(
+                        """
+                        <div style="
+                            background: #f0fdf4;
+                            border-left: 1px solid #bbf7d0;
+                            border-right: 1px solid #bbf7d0;
+                            padding: 4px 18px 0 18px;
+                            margin-top: -4px;
+                        "></div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+                    col_total_outro, col_espaco1, col_ok_outro, col_espaco2 = st.columns(
+                        [1.45, 0.35, 0.75, 0.45]
                     )
 
                     col_total_outro.metric(
@@ -2348,8 +2397,8 @@ else:
                         chave_confirmacao_outro
                     ]:
                         clicou_ok_outro = col_ok_outro.button(
-                            "✅ OK — Adicionar",
-                            type="primary",
+                            "OK — Adicionar",
+                            type="secondary",
                             use_container_width=True,
                             disabled=(
                                 valor_outros_extratos <= 0
@@ -2385,11 +2434,38 @@ else:
                             + float(valor_outros_extratos)
                         )
 
-                        st.caption(
-                            "O valor acima já está incluído no "
-                            "faturamento total. Se você desmarcar "
-                            "uma entrada em “Ver detalhes”, o total "
-                            "será recalculado automaticamente."
+                        st.markdown(
+                            """
+                            <div style="
+                                background: #f0fdf4;
+                                border: 1px solid #bbf7d0;
+                                border-top: 0;
+                                border-radius: 0 0 12px 12px;
+                                padding: 10px 18px 14px 18px;
+                                color: #667085;
+                                font-size: 0.9rem;
+                                margin-bottom: 18px;
+                            ">
+                                O valor acima já está incluído no faturamento total.
+                                Se você desmarcar uma entrada em “Ver detalhes”,
+                                o total será recalculado automaticamente.
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
+                    else:
+                        st.markdown(
+                            """
+                            <div style="
+                                background: #f0fdf4;
+                                border: 1px solid #bbf7d0;
+                                border-top: 0;
+                                border-radius: 0 0 12px 12px;
+                                height: 14px;
+                                margin-bottom: 18px;
+                            "></div>
+                            """,
+                            unsafe_allow_html=True
                         )
 
                 st.markdown("#### Adicionar valor ao faturamento")
