@@ -2168,305 +2168,272 @@ else:
                 # OUTRO EXTRATO / MAQUININHA
                 # ====================================================
 
-                st.markdown(
-                    """
-                    <div style="
-                        background: #f0fdf4;
-                        border: 1px solid #bbf7d0;
-                        border-radius: 12px 12px 0 0;
-                        padding: 14px 18px 8px 18px;
-                        margin-top: 6px;
-                    ">
-                        <div style="font-size: 1.15rem; font-weight: 600; color: #262730;">
-                            Outro extrato / maquininha
-                        </div>
-                        <div style="font-size: 0.9rem; color: #667085; margin-top: 2px;">
-                            Área destinada às entradas de extratos adicionais.
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+                chave_area_outro = f"outro_extrato_area_{indice}"
 
                 st.markdown(
-                    """
+                    f"""
                     <style>
-                    div[data-testid="stFileUploader"]:has(
-                        input[aria-label="Carregar outro extrato"]
-                    ) {
-                        background: #f0fdf4;
-                        border-left: 1px solid #bbf7d0;
-                        border-right: 1px solid #bbf7d0;
-                        padding: 4px 16px 10px 16px;
-                    }
+                    .st-key-{{chave_area_outro}} {{
+                        background: #f0fdf4 !important;
+                        border: 1px solid #86efac !important;
+                        border-radius: 14px !important;
+                        padding: 18px 20px 16px 20px !important;
+                        margin-top: 8px !important;
+                        margin-bottom: 22px !important;
+                    }}
+
+                    .st-key-{{chave_area_outro}} [data-testid="stFileUploader"] {{
+                        background: transparent !important;
+                    }}
+
+                    .st-key-{{chave_area_outro}} [data-testid="stExpander"] {{
+                        background: rgba(255, 255, 255, 0.72) !important;
+                        border-radius: 10px !important;
+                    }}
                     </style>
                     """,
                     unsafe_allow_html=True
                 )
 
-                outros_arquivos = st.file_uploader(
-                    "Carregar outro extrato",
-                    type=["pdf", "xlsx", "xls", "csv", "ofx"],
-                    accept_multiple_files=True,
-                    help=(
-                        "Aceita PDF, Excel, CSV e OFX. "
-                        "O sistema reconhece automaticamente Stone, "
-                        "InfinitePay e Mercado Pago e também tenta "
-                        "interpretar outros formatos de extrato."
-                    ),
-                    key=f"outro_extrato_uploader_{indice}"
-                )
-
-                valor_outros_extratos = 0.0
-                quantidade_outros_extratos = 0
-                chave_confirmacao_outro = (
-                    f"outro_extrato_confirmado_{indice}"
-                )
-                chave_assinatura_outro = (
-                    f"outro_extrato_assinatura_{indice}"
-                )
-
-                if outros_arquivos:
-                    assinatura_atual_outro = (
-                        assinatura_arquivos_adicionais(
-                            outros_arquivos
-                        )
+                with st.container(
+                    border=False,
+                    key=chave_area_outro
+                ):
+                    st.markdown("#### Outro extrato / maquininha")
+                    st.caption(
+                        "Área destinada às entradas de extratos adicionais "
+                        "(Stone, InfinitePay, Mercado Pago e outros formatos). "
+                        "O valor confirmado aqui será somado ao faturamento total."
                     )
 
-                    if (
-                        st.session_state.get(
-                            chave_assinatura_outro
-                        )
-                        != assinatura_atual_outro
-                    ):
-                        st.session_state[
-                            chave_assinatura_outro
-                        ] = assinatura_atual_outro
-
-                        st.session_state[
-                            chave_confirmacao_outro
-                        ] = False
-
-                    totais_por_arquivo = []
-
-                    for indice_outro, arquivo_outro in enumerate(
-                        outros_arquivos
-                    ):
-                        try:
-                            (
-                                dados_outro,
-                                origem_outro,
-                            ) = processar_outro_extrato(
-                                arquivo_outro
-                            )
-
-                            # Segurança contra o erro de CheckboxColumn
-                            # receber FLOAT em vez de booleano.
-                            dados_outro["Considerar"] = (
-                                dados_outro["Considerar"]
-                                .fillna(False)
-                                .astype(bool)
-                            )
-
-                            chave_editor_outro = (
-                                f"editor_outro_{indice}_"
-                                f"{indice_outro}_"
-                                f"{assinatura_atual_outro[:12]}"
-                            )
-
-                            with st.expander(
-                                (
-                                    f"🔎 Ver detalhes — "
-                                    f"{arquivo_outro.name} "
-                                    f"({origem_outro})"
-                                ),
-                                expanded=False
-                            ):
-                                st.caption(
-                                    "Desmarque qualquer entrada que "
-                                    "não queira somar ao faturamento."
-                                )
-
-                                editado_outro = st.data_editor(
-                                    dados_outro,
-                                    use_container_width=True,
-                                    hide_index=True,
-                                    key=chave_editor_outro,
-                                    column_config={
-                                        "Considerar":
-                                            st.column_config.CheckboxColumn(
-                                                "Considerar"
-                                            ),
-                                        "Valor":
-                                            st.column_config.NumberColumn(
-                                                "Valor",
-                                                format="R$ %.2f"
-                                            ),
-                                    },
-                                    disabled=[
-                                        "Data",
-                                        "Descrição",
-                                        "Valor",
-                                        "Classificação",
-                                    ],
-                                )
-
-                            selecionado_outro = editado_outro[
-                                editado_outro["Considerar"] == True
-                            ].copy()
-
-                            total_arquivo_outro = (
-                                pd.to_numeric(
-                                    selecionado_outro["Valor"],
-                                    errors="coerce"
-                                )
-                                .fillna(0)
-                                .sum()
-                            )
-
-                            quantidade_arquivo_outro = len(
-                                selecionado_outro
-                            )
-
-                            valor_outros_extratos += float(
-                                total_arquivo_outro
-                            )
-
-                            quantidade_outros_extratos += (
-                                quantidade_arquivo_outro
-                            )
-
-                            totais_por_arquivo.append(
-                                (
-                                    arquivo_outro.name,
-                                    origem_outro,
-                                    float(total_arquivo_outro),
-                                )
-                            )
-
-                        except Exception as erro_outro:
-                            st.error(
-                                f"Erro ao processar "
-                                f"{arquivo_outro.name}: "
-                                f"{erro_outro}"
-                            )
-
-                    for (
-                        nome_outro,
-                        origem_outro,
-                        total_outro,
-                    ) in totais_por_arquivo:
-                        st.caption(
-                            f"{origem_outro} • {nome_outro} • "
-                            f"Entradas selecionadas: "
-                            f"{formatar_moeda(total_outro)}"
-                        )
-
-                    # Fundo verde suave para diferenciar visualmente
-                    # toda a área de cálculo do extrato adicional.
-                    st.markdown(
-                        """
-                        <div style="
-                            background: #f0fdf4;
-                            border-left: 1px solid #bbf7d0;
-                            border-right: 1px solid #bbf7d0;
-                            padding: 4px 18px 0 18px;
-                            margin-top: -4px;
-                        "></div>
-                        """,
-                        unsafe_allow_html=True
+                    outros_arquivos = st.file_uploader(
+                        "Carregar outro extrato",
+                        type=["pdf", "xlsx", "xls", "csv", "ofx"],
+                        accept_multiple_files=True,
+                        help=(
+                            "Aceita PDF, Excel, CSV e OFX. "
+                            "O sistema reconhece automaticamente Stone, "
+                            "InfinitePay e Mercado Pago e também tenta "
+                            "interpretar outros formatos de extrato."
+                        ),
+                        key=f"outro_extrato_uploader_{indice}"
                     )
 
-                    col_total_outro, col_espaco1, col_ok_outro, col_espaco2 = st.columns(
-                        [1.45, 0.35, 0.75, 0.45]
+                    valor_outros_extratos = 0.0
+                    quantidade_outros_extratos = 0
+                    chave_confirmacao_outro = (
+                        f"outro_extrato_confirmado_{indice}"
+                    )
+                    chave_assinatura_outro = (
+                        f"outro_extrato_assinatura_{indice}"
                     )
 
-                    col_total_outro.metric(
-                        "Total do outro extrato",
-                        formatar_moeda(
-                            valor_outros_extratos
-                        )
-                    )
-
-                    if chave_confirmacao_outro not in st.session_state:
-                        st.session_state[
-                            chave_confirmacao_outro
-                        ] = False
-
-                    if not st.session_state[
-                        chave_confirmacao_outro
-                    ]:
-                        clicou_ok_outro = col_ok_outro.button(
-                            "OK — Adicionar",
-                            type="secondary",
-                            use_container_width=True,
-                            disabled=(
-                                valor_outros_extratos <= 0
-                            ),
-                            key=f"confirmar_outro_{indice}"
+                    if outros_arquivos:
+                        assinatura_atual_outro = (
+                            assinatura_arquivos_adicionais(
+                                outros_arquivos
+                            )
                         )
 
-                        if clicou_ok_outro:
-                            st.session_state[
-                                chave_confirmacao_outro
-                            ] = True
-                    else:
-                        col_ok_outro.success(
-                            "✅ Adicionado ao faturamento"
-                        )
-
-                        if col_ok_outro.button(
-                            "Remover do faturamento",
-                            use_container_width=True,
-                            key=f"remover_outro_{indice}"
+                        if (
+                            st.session_state.get(
+                                chave_assinatura_outro
+                            )
+                            != assinatura_atual_outro
                         ):
+                            st.session_state[
+                                chave_assinatura_outro
+                            ] = assinatura_atual_outro
+
                             st.session_state[
                                 chave_confirmacao_outro
                             ] = False
-                            st.rerun()
 
-                    if st.session_state.get(
-                        chave_confirmacao_outro,
-                        False
-                    ):
-                        faturamento = (
-                            float(faturamento)
-                            + float(valor_outros_extratos)
+                        totais_por_arquivo = []
+
+                        for indice_outro, arquivo_outro in enumerate(
+                            outros_arquivos
+                        ):
+                            try:
+                                (
+                                    dados_outro,
+                                    origem_outro,
+                                ) = processar_outro_extrato(
+                                    arquivo_outro
+                                )
+
+                                # Segurança contra o erro de CheckboxColumn
+                                # receber FLOAT em vez de booleano.
+                                dados_outro["Considerar"] = (
+                                    dados_outro["Considerar"]
+                                    .fillna(False)
+                                    .astype(bool)
+                                )
+
+                                chave_editor_outro = (
+                                    f"editor_outro_{indice}_"
+                                    f"{indice_outro}_"
+                                    f"{assinatura_atual_outro[:12]}"
+                                )
+
+                                with st.expander(
+                                    (
+                                        f"🔎 Ver detalhes — "
+                                        f"{arquivo_outro.name} "
+                                        f"({origem_outro})"
+                                    ),
+                                    expanded=False
+                                ):
+                                    st.caption(
+                                        "Desmarque qualquer entrada que "
+                                        "não queira somar ao faturamento."
+                                    )
+
+                                    editado_outro = st.data_editor(
+                                        dados_outro,
+                                        use_container_width=True,
+                                        hide_index=True,
+                                        key=chave_editor_outro,
+                                        column_config={
+                                            "Considerar":
+                                                st.column_config.CheckboxColumn(
+                                                    "Considerar"
+                                                ),
+                                            "Valor":
+                                                st.column_config.NumberColumn(
+                                                    "Valor",
+                                                    format="R$ %.2f"
+                                                ),
+                                        },
+                                        disabled=[
+                                            "Data",
+                                            "Descrição",
+                                            "Valor",
+                                            "Classificação",
+                                        ],
+                                    )
+
+                                selecionado_outro = editado_outro[
+                                    editado_outro["Considerar"] == True
+                                ].copy()
+
+                                total_arquivo_outro = (
+                                    pd.to_numeric(
+                                        selecionado_outro["Valor"],
+                                        errors="coerce"
+                                    )
+                                    .fillna(0)
+                                    .sum()
+                                )
+
+                                quantidade_arquivo_outro = len(
+                                    selecionado_outro
+                                )
+
+                                valor_outros_extratos += float(
+                                    total_arquivo_outro
+                                )
+
+                                quantidade_outros_extratos += (
+                                    quantidade_arquivo_outro
+                                )
+
+                                totais_por_arquivo.append(
+                                    (
+                                        arquivo_outro.name,
+                                        origem_outro,
+                                        float(total_arquivo_outro),
+                                    )
+                                )
+
+                            except Exception as erro_outro:
+                                st.error(
+                                    f"Erro ao processar "
+                                    f"{arquivo_outro.name}: "
+                                    f"{erro_outro}"
+                                )
+
+                        for (
+                            nome_outro,
+                            origem_outro,
+                            total_outro,
+                        ) in totais_por_arquivo:
+                            st.caption(
+                                f"{origem_outro} • {nome_outro} • "
+                                f"Entradas selecionadas: "
+                                f"{formatar_moeda(total_outro)}"
+                            )
+
+                        col_total_outro, col_ok_outro, col_espaco_outro = st.columns(
+                            [1.05, 0.60, 2.35]
                         )
 
-                        st.markdown(
-                            """
-                            <div style="
-                                background: #f0fdf4;
-                                border: 1px solid #bbf7d0;
-                                border-top: 0;
-                                border-radius: 0 0 12px 12px;
-                                padding: 10px 18px 14px 18px;
-                                color: #667085;
-                                font-size: 0.9rem;
-                                margin-bottom: 18px;
-                            ">
-                                O valor acima já está incluído no faturamento total.
-                                Se você desmarcar uma entrada em “Ver detalhes”,
-                                o total será recalculado automaticamente.
-                            </div>
-                            """,
+                        col_total_outro.metric(
+                            "Total do outro extrato",
+                            formatar_moeda(
+                                valor_outros_extratos
+                            )
+                        )
+
+                        col_ok_outro.markdown(
+                            "<div style='height: 26px;'></div>",
                             unsafe_allow_html=True
                         )
-                    else:
-                        st.markdown(
-                            """
-                            <div style="
-                                background: #f0fdf4;
-                                border: 1px solid #bbf7d0;
-                                border-top: 0;
-                                border-radius: 0 0 12px 12px;
-                                height: 14px;
-                                margin-bottom: 18px;
-                            "></div>
-                            """,
-                            unsafe_allow_html=True
-                        )
+
+                        if chave_confirmacao_outro not in st.session_state:
+                            st.session_state[
+                                chave_confirmacao_outro
+                            ] = False
+
+                        if not st.session_state[
+                            chave_confirmacao_outro
+                        ]:
+                            clicou_ok_outro = col_ok_outro.button(
+                                "OK — Adicionar",
+                                type="secondary",
+                                use_container_width=True,
+                                disabled=(
+                                    valor_outros_extratos <= 0
+                                ),
+                                key=f"confirmar_outro_{indice}"
+                            )
+
+                            if clicou_ok_outro:
+                                st.session_state[
+                                    chave_confirmacao_outro
+                                ] = True
+                        else:
+                            col_ok_outro.success(
+                                "✅ Adicionado ao faturamento"
+                            )
+
+                            if col_ok_outro.button(
+                                "Remover do faturamento",
+                                use_container_width=True,
+                                key=f"remover_outro_{indice}"
+                            ):
+                                st.session_state[
+                                    chave_confirmacao_outro
+                                ] = False
+                                st.rerun()
+
+                        if st.session_state.get(
+                            chave_confirmacao_outro,
+                            False
+                        ):
+                            faturamento = (
+                                float(faturamento)
+                                + float(valor_outros_extratos)
+                            )
+
+                            st.caption(
+                                "O valor acima já está incluído no faturamento total. "
+                                "Se você desmarcar uma entrada em “Ver detalhes”, "
+                                "o total será recalculado automaticamente."
+                            )
+                        else:
+                            pass
+
 
                 st.markdown("#### Adicionar valor ao faturamento")
 
