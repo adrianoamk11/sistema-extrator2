@@ -145,6 +145,36 @@ with col_atalho_boleto:
             not st.session_state.mostrar_boleto_avulso
         )
 
+# ============================================================
+# IDENTIDADE VISUAL POR EMPRESA
+# ============================================================
+# A Líder Franquia mantém o fundo branco.
+# A Líder Serviços usa um amarelo suave em toda a área do sistema
+# para reduzir o risco de operar na empresa errada.
+if EMPRESA_SELECIONADA == "Lider Serviços":
+    st.markdown(
+        """
+        <style>
+        html, body, .stApp,
+        [data-testid="stAppViewContainer"],
+        [data-testid="stMain"],
+        [data-testid="stMainBlockContainer"] {
+            background-color: #FFF8D8 !important;
+        }
+
+        /* Mantém componentes de entrada claros e fáceis de ler. */
+        [data-testid="stFileUploaderDropzone"],
+        [data-testid="stDataFrame"],
+        div[data-baseweb="select"] > div,
+        div[data-baseweb="input"] > div,
+        div[data-baseweb="textarea"] > div {
+            background-color: #FFFFFF !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
 if EMPRESA_SELECIONADA == "Lider Franquia":
     ASAAS_API_KEY = st.secrets["ASAAS_LIDER_FRANQUIA_API_KEY"]
 else:
