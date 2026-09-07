@@ -122,7 +122,10 @@ PERCENTUAL_ROYALTIES = 0.04
 
 st.write("Selecione a empresa que deseja utilizar:")
 
-col_empresa, _ = st.columns([1, 5])
+if "mostrar_boleto_avulso" not in st.session_state:
+    st.session_state.mostrar_boleto_avulso = False
+
+col_empresa, _, col_atalho_boleto = st.columns([1, 4, 1])
 
 with col_empresa:
     EMPRESA_SELECIONADA = st.selectbox(
@@ -130,6 +133,17 @@ with col_empresa:
         ["Lider Franquia", "Lider Serviços"],
         label_visibility="collapsed"
     )
+
+with col_atalho_boleto:
+    if st.button(
+        "💳 Boleto avulso",
+        type="secondary",
+        use_container_width=True,
+        key="abrir_fechar_boleto_avulso"
+    ):
+        st.session_state.mostrar_boleto_avulso = (
+            not st.session_state.mostrar_boleto_avulso
+        )
 
 if EMPRESA_SELECIONADA == "Lider Franquia":
     ASAAS_API_KEY = st.secrets["ASAAS_LIDER_FRANQUIA_API_KEY"]
@@ -1150,22 +1164,6 @@ st.markdown(
 # BOLETO AVULSO
 # ============================================================
 
-if "mostrar_boleto_avulso" not in st.session_state:
-    st.session_state.mostrar_boleto_avulso = False
-
-col_boleto_avulso, _ = st.columns([1, 5])
-
-with col_boleto_avulso:
-    if st.button(
-        "💳 Boleto avulso",
-        type="secondary",
-        use_container_width=True,
-        key="abrir_fechar_boleto_avulso"
-    ):
-        st.session_state.mostrar_boleto_avulso = (
-            not st.session_state.mostrar_boleto_avulso
-        )
-
 if st.session_state.mostrar_boleto_avulso:
     with st.container(border=True):
         st.subheader("Boleto avulso")
@@ -1249,9 +1247,14 @@ if st.session_state.mostrar_boleto_avulso:
                 "Informe o BOX e clique em “Buscar cliente” antes de emitir."
             )
 
-        descricao_avulsa = st.text_input(
+        descricao_avulsa = st.text_area(
             "Descrição do boleto",
-            placeholder="Ex.: Taxa de publicidade",
+            placeholder=(
+                "Ex.: Taxa de publicidade\n"
+                "Multa contratual\n"
+                "Outra descrição"
+            ),
+            height=120,
             key="descricao_boleto_avulso"
         )
 
