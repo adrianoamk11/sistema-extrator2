@@ -2173,8 +2173,8 @@ else:
                 st.markdown(
                     f"""
                     <style>
-                    .st-key-{{chave_area_outro}} {{
-                        background: #f0fdf4 !important;
+                    .st-key-{chave_area_outro} {{
+                        background-color: #f0fdf4 !important;
                         border: 1px solid #86efac !important;
                         border-radius: 14px !important;
                         padding: 18px 20px 16px 20px !important;
@@ -2182,11 +2182,11 @@ else:
                         margin-bottom: 22px !important;
                     }}
 
-                    .st-key-{{chave_area_outro}} [data-testid="stFileUploader"] {{
+                    .st-key-{chave_area_outro} [data-testid="stFileUploader"] {{
                         background: transparent !important;
                     }}
 
-                    .st-key-{{chave_area_outro}} [data-testid="stExpander"] {{
+                    .st-key-{chave_area_outro} [data-testid="stExpander"] {{
                         background: rgba(255, 255, 255, 0.72) !important;
                         border-radius: 10px !important;
                     }}
