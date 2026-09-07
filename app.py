@@ -1145,6 +1145,227 @@ st.markdown(
 )
 
 
+
+# ============================================================
+# BOLETO AVULSO
+# ============================================================
+
+if "mostrar_boleto_avulso" not in st.session_state:
+    st.session_state.mostrar_boleto_avulso = False
+
+col_boleto_avulso, _ = st.columns([1, 5])
+
+with col_boleto_avulso:
+    if st.button(
+        "💳 Boleto avulso",
+        type="secondary",
+        use_container_width=True,
+        key="abrir_fechar_boleto_avulso"
+    ):
+        st.session_state.mostrar_boleto_avulso = (
+            not st.session_state.mostrar_boleto_avulso
+        )
+
+if st.session_state.mostrar_boleto_avulso:
+    with st.container(border=True):
+        st.subheader("Boleto avulso")
+        st.caption(
+            f"Emissão pela empresa: {EMPRESA_SELECIONADA}. "
+            "Esta cobrança não gera nota fiscal."
+        )
+
+        col_box, col_buscar = st.columns([2, 1])
+
+        numero_box_avulso = col_box.number_input(
+            "Número do BOX",
+            min_value=1,
+            step=1,
+            value=None,
+            placeholder="Ex.: 25",
+            key="box_boleto_avulso"
+        )
+
+        buscar_cliente_avulso = col_buscar.button(
+            "🔎 Buscar cliente",
+            use_container_width=True,
+            key="buscar_cliente_boleto_avulso"
+        )
+
+        # Se a empresa ou o BOX mudar, uma identificação antiga não pode
+        # ser usada para uma nova cobrança.
+        assinatura_busca_atual = (
+            EMPRESA_SELECIONADA,
+            int(numero_box_avulso) if numero_box_avulso is not None else None
+        )
+
+        if (
+            st.session_state.get("assinatura_cliente_avulso")
+            != assinatura_busca_atual
+        ):
+            st.session_state.pop("cliente_avulso_encontrado", None)
+
+        if buscar_cliente_avulso:
+            if numero_box_avulso is None:
+                st.warning("Informe o número do BOX.")
+            else:
+                try:
+                    cliente_avulso, box_confirmado = localizar_cliente_asaas_por_box(
+                        f"BOX {int(numero_box_avulso)}.txt"
+                    )
+
+                    st.session_state["cliente_avulso_encontrado"] = {
+                        "id": cliente_avulso.get("id"),
+                        "name": cliente_avulso.get("name", ""),
+                        "box": box_confirmado,
+                    }
+                    st.session_state["assinatura_cliente_avulso"] = (
+                        assinatura_busca_atual
+                    )
+
+                except Exception as erro_cliente:
+                    st.session_state.pop("cliente_avulso_encontrado", None)
+                    st.error(
+                        f"Não foi possível localizar o cliente: {erro_cliente}"
+                    )
+
+        cliente_avulso_salvo = st.session_state.get(
+            "cliente_avulso_encontrado"
+        )
+
+        cliente_confirmado = (
+            cliente_avulso_salvo is not None
+            and st.session_state.get("assinatura_cliente_avulso")
+            == assinatura_busca_atual
+        )
+
+        if cliente_confirmado:
+            st.success(
+                f"Cliente encontrado: "
+                f"{cliente_avulso_salvo.get('name', '')} "
+                f"(BOX {cliente_avulso_salvo.get('box', '')})"
+            )
+        else:
+            st.info(
+                "Informe o BOX e clique em “Buscar cliente” antes de emitir."
+            )
+
+        descricao_avulsa = st.text_input(
+            "Descrição do boleto",
+            placeholder="Ex.: Taxa de publicidade",
+            key="descricao_boleto_avulso"
+        )
+
+        col_valor_avulso, col_venc_avulso = st.columns(2)
+
+        valor_avulso = col_valor_avulso.number_input(
+            "Valor do boleto",
+            min_value=0.00,
+            step=0.01,
+            format="%.2f",
+            key="valor_boleto_avulso"
+        )
+
+        vencimento_avulso = col_venc_avulso.date_input(
+            "Vencimento do boleto",
+            value=proximo_dia_10(),
+            min_value=date.today(),
+            format="DD/MM/YYYY",
+            key="vencimento_boleto_avulso"
+        )
+
+        pode_emitir_avulso = (
+            cliente_confirmado
+            and bool(str(descricao_avulsa).strip())
+            and float(valor_avulso) > 0
+        )
+
+        clicou_emitir_avulso = st.button(
+            "💳 Emitir boleto avulso",
+            type="primary",
+            use_container_width=True,
+            disabled=not pode_emitir_avulso,
+            key="emitir_boleto_avulso"
+        )
+
+        if clicou_emitir_avulso:
+            try:
+                with st.spinner("Gerando boleto avulso no Asaas..."):
+                    # Usa a mesma rotina de localização, notificações e
+                    # proteção contra duplicidade do fluxo já existente.
+                    boleto_avulso = emitir_boleto_asaas(
+                        f"BOX {int(numero_box_avulso)}.txt",
+                        0.0,
+                        float(valor_avulso),
+                        vencimento_avulso,
+                        str(descricao_avulsa).strip(),
+                        False
+                    )
+
+                st.session_state["resultado_boleto_avulso"] = boleto_avulso
+                st.session_state["assinatura_resultado_boleto_avulso"] = (
+                    EMPRESA_SELECIONADA,
+                    int(numero_box_avulso),
+                    round(float(valor_avulso), 2),
+                    vencimento_avulso.isoformat(),
+                    str(descricao_avulsa).strip(),
+                )
+
+            except Exception as erro_boleto_avulso:
+                st.error(
+                    f"Não foi possível emitir o boleto avulso: "
+                    f"{erro_boleto_avulso}"
+                )
+
+        assinatura_resultado_atual = None
+        if numero_box_avulso is not None:
+            assinatura_resultado_atual = (
+                EMPRESA_SELECIONADA,
+                int(numero_box_avulso),
+                round(float(valor_avulso), 2),
+                vencimento_avulso.isoformat(),
+                str(descricao_avulsa).strip(),
+            )
+
+        boleto_avulso_salvo = st.session_state.get(
+            "resultado_boleto_avulso"
+        )
+
+        if (
+            boleto_avulso_salvo
+            and st.session_state.get(
+                "assinatura_resultado_boleto_avulso"
+            ) == assinatura_resultado_atual
+        ):
+            if boleto_avulso_salvo.get("novo"):
+                st.success(
+                    f"✅ Boleto avulso criado para "
+                    f"{boleto_avulso_salvo.get('clienteNome', '')} "
+                    f"(BOX {boleto_avulso_salvo.get('box', '')}) e "
+                    f"notificações padronizadas com sucesso. "
+                    f"ID: {boleto_avulso_salvo.get('id', '')}"
+                )
+            else:
+                st.info(
+                    "ℹ️ Esta cobrança já existia no Asaas. "
+                    "O sistema não gerou uma cobrança duplicada."
+                )
+
+            if boleto_avulso_salvo.get("invoiceUrl"):
+                st.link_button(
+                    "🔗 Abrir cobrança no Asaas",
+                    boleto_avulso_salvo["invoiceUrl"],
+                    use_container_width=True
+                )
+
+            if boleto_avulso_salvo.get("bankSlipUrl"):
+                st.link_button(
+                    "📄 Abrir boleto",
+                    boleto_avulso_salvo["bankSlipUrl"],
+                    use_container_width=True
+                )
+
+st.divider()
+
 if "uploader_key" not in st.session_state:
     st.session_state.uploader_key = 0
 
