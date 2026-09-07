@@ -6,3 +6,5 @@ xlrd>=2.0
 flask>=3.0
 requests>=2.31
 gunicorn>=22.0
+gspread
+google-auth
