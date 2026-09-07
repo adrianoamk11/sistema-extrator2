@@ -1066,6 +1066,623 @@ def processar_arquivo(arquivo):
 
 
 # ============================================================
+# OUTRO EXTRATO / MAQUININHA
+# ============================================================
+
+PALAVRAS_IGNORAR_OUTRO_EXTRATO = [
+    "saldo inicial",
+    "saldo final",
+    "saldo diario",
+    "daily balance",
+    "final balance",
+    "initial balance",
+    "total inflows",
+    "total outflows",
+    "rendimento",
+    "earnings",
+    "juros",
+    "interest",
+    "cashback",
+    "cash back",
+    "tarifa",
+    "taxa",
+]
+
+def converter_numero_flexivel(valor):
+    """
+    Converte valores tanto no padrão brasileiro (1.234,56)
+    quanto no padrão internacional (1,234.56).
+    """
+    if valor is None:
+        return None
+
+    try:
+        if pd.isna(valor):
+            return None
+    except Exception:
+        pass
+
+    if isinstance(valor, (int, float)):
+        return float(valor)
+
+    texto = str(valor).strip()
+    texto = (
+        texto
+        .replace("R$", "")
+        .replace("BRL", "")
+        .replace("\xa0", "")
+        .replace(" ", "")
+    )
+
+    if not texto:
+        return None
+
+    # Mantém somente sinal, números e separadores.
+    texto = re.sub(r"[^0-9,\.\-\+]", "", texto)
+
+    if not texto:
+        return None
+
+    try:
+        if "," in texto and "." in texto:
+            # O último separador é tratado como separador decimal.
+            if texto.rfind(",") > texto.rfind("."):
+                texto = texto.replace(".", "").replace(",", ".")
+            else:
+                texto = texto.replace(",", "")
+        elif "," in texto:
+            texto = texto.replace(".", "").replace(",", ".")
+        elif texto.count(".") > 1:
+            partes = texto.split(".")
+            texto = "".join(partes[:-1]) + "." + partes[-1]
+
+        return float(texto)
+    except Exception:
+        return None
+
+
+def texto_pdf_em_linhas(arquivo):
+    documento = fitz.open(
+        stream=arquivo.getvalue(),
+        filetype="pdf"
+    )
+
+    linhas = []
+
+    for pagina in documento:
+        linhas += [
+            re.sub(r"\s+", " ", linha).strip()
+            for linha in pagina.get_text().splitlines()
+            if linha.strip()
+        ]
+
+    return linhas
+
+
+def detectar_origem_outro_extrato(linhas):
+    texto = normalizar(" ".join(linhas))
+
+    if (
+        "stone instituicao de pagamento" in texto
+        or "pix | maquininha" in texto
+    ):
+        return "Stone"
+
+    if (
+        "cloudwalk" in texto
+        or "infinitepay" in texto
+        or "transaction report" in texto
+    ):
+        return "InfinitePay"
+
+    if (
+        "mercado pago instituicao de pagamento" in texto
+        or "mercadopago.com.br" in texto
+    ):
+        return "Mercado Pago"
+
+    return "Formato genérico"
+
+
+def valor_monetario_da_linha(linha):
+    # Valores com R$.
+    encontrados = re.findall(
+        r"(?:R\$\s*)?([+\-]?\s*[\d\.]+,\d{2}|[+\-]?\s*[\d,]+\.\d{2})",
+        str(linha)
+    )
+
+    if not encontrados:
+        return None
+
+    return converter_numero_flexivel(encontrados[0])
+
+
+def montar_tabela_outro_extrato(registros):
+    if not registros:
+        raise ValueError(
+            "Não encontrei entradas legíveis neste extrato."
+        )
+
+    tabela = pd.DataFrame(registros)
+
+    for coluna in ["Data", "Descrição"]:
+        if coluna not in tabela.columns:
+            tabela[coluna] = ""
+
+    tabela["Valor"] = pd.to_numeric(
+        tabela["Valor"],
+        errors="coerce"
+    )
+
+    tabela = tabela[
+        tabela["Valor"].notna()
+    ].copy()
+
+    # O campo precisa ser booleano para o CheckboxColumn do Streamlit.
+    if "Considerar" not in tabela.columns:
+        tabela["Considerar"] = True
+
+    tabela["Considerar"] = (
+        tabela["Considerar"]
+        .fillna(False)
+        .astype(bool)
+    )
+
+    tabela["Classificação"] = tabela["Considerar"].map(
+        {True: "ENTRADA", False: "REVISAR"}
+    )
+
+    return tabela[
+        [
+            "Data",
+            "Descrição",
+            "Valor",
+            "Classificação",
+            "Considerar",
+        ]
+    ].reset_index(drop=True)
+
+
+def ler_outro_pdf_stone(linhas):
+    registros = []
+    padrao_data = re.compile(r"^\d{2}/\d{2}/\d{2,4}$")
+
+    indices_datas = [
+        indice
+        for indice, linha in enumerate(linhas)
+        if padrao_data.match(linha.strip())
+    ]
+
+    for posicao, inicio in enumerate(indices_datas):
+        fim = (
+            indices_datas[posicao + 1]
+            if posicao + 1 < len(indices_datas)
+            else len(linhas)
+        )
+
+        bloco = linhas[inicio:fim]
+
+        if len(bloco) < 2:
+            continue
+
+        tipo = normalizar(bloco[1])
+
+        if "entrada" not in tipo:
+            continue
+
+        indice_valor = None
+        valor = None
+
+        for i in range(2, len(bloco)):
+            if "r$" in normalizar(bloco[i]):
+                candidato = valor_monetario_da_linha(bloco[i])
+
+                if candidato is not None:
+                    indice_valor = i
+                    valor = candidato
+                    break
+
+        if valor is None or valor <= 0:
+            continue
+
+        descricao = " | ".join(
+            bloco[2:indice_valor]
+        ).strip()
+
+        descricao_norm = normalizar(descricao)
+
+        considerar = not any(
+            palavra in descricao_norm
+            for palavra in PALAVRAS_IGNORAR_OUTRO_EXTRATO
+        )
+
+        registros.append({
+            "Data": bloco[0],
+            "Descrição": descricao or "Entrada",
+            "Valor": valor,
+            "Considerar": considerar,
+        })
+
+    return montar_tabela_outro_extrato(registros)
+
+
+def ler_outro_pdf_infinitepay(linhas):
+    registros = []
+
+    # No PDF da InfinitePay/CloudWalk, cada transação aparece como:
+    # horário -> tipo -> nome -> detalhe -> valor.
+    # Saldos e totais são descartados explicitamente.
+    for indice, linha in enumerate(linhas):
+        texto = str(linha).strip()
+
+        if not re.fullmatch(
+            r"[+\-]?\s*[\d,]+\.\d{2}",
+            texto
+        ):
+            continue
+
+        valor = converter_numero_flexivel(texto)
+
+        if valor is None or valor <= 0:
+            continue
+
+        contexto = linhas[
+            max(0, indice - 5):indice
+        ]
+
+        descricao = " | ".join(contexto).strip()
+        descricao_norm = normalizar(descricao)
+
+        if any(
+            termo in descricao_norm
+            for termo in [
+                "daily balance",
+                "final balance",
+                "initial balance",
+                "total inflows",
+                "total outflows",
+            ]
+        ):
+            continue
+
+        # Rendimentos são mostrados para revisão, mas não entram por padrão.
+        considerar = not any(
+            palavra in descricao_norm
+            for palavra in PALAVRAS_IGNORAR_OUTRO_EXTRATO
+        )
+
+        registros.append({
+            "Data": "",
+            "Descrição": descricao or "Entrada",
+            "Valor": valor,
+            "Considerar": considerar,
+        })
+
+    return montar_tabela_outro_extrato(registros)
+
+
+def ler_outro_pdf_mercado_pago(linhas):
+    registros = []
+    padrao_data = re.compile(r"^\d{2}-\d{2}-\d{4}$")
+
+    try:
+        inicio_detalhes = next(
+            i
+            for i, linha in enumerate(linhas)
+            if "detalhe dos movimentos" in normalizar(linha)
+        )
+    except StopIteration:
+        inicio_detalhes = 0
+
+    linhas_detalhes = linhas[inicio_detalhes:]
+
+    indices_datas = [
+        indice
+        for indice, linha in enumerate(linhas_detalhes)
+        if padrao_data.match(linha.strip())
+    ]
+
+    for posicao, inicio in enumerate(indices_datas):
+        fim = (
+            indices_datas[posicao + 1]
+            if posicao + 1 < len(indices_datas)
+            else len(linhas_detalhes)
+        )
+
+        bloco = linhas_detalhes[inicio:fim]
+
+        indice_valor = None
+        valor = None
+
+        # O primeiro R$ do bloco é o valor da movimentação;
+        # o segundo é o saldo da conta.
+        for i in range(1, len(bloco)):
+            if "r$" in normalizar(bloco[i]):
+                candidato = valor_monetario_da_linha(bloco[i])
+
+                if candidato is not None:
+                    indice_valor = i
+                    valor = candidato
+                    break
+
+        if valor is None or valor <= 0:
+            continue
+
+        descricao_partes = []
+
+        for item in bloco[1:indice_valor]:
+            # Evita colocar o ID numérico da operação como descrição.
+            if re.fullmatch(r"\d{6,}", item.strip()):
+                continue
+
+            descricao_partes.append(item)
+
+        descricao = " | ".join(descricao_partes).strip()
+        descricao_norm = normalizar(descricao)
+
+        considerar = not any(
+            palavra in descricao_norm
+            for palavra in PALAVRAS_IGNORAR_OUTRO_EXTRATO
+        )
+
+        registros.append({
+            "Data": bloco[0],
+            "Descrição": descricao or "Entrada",
+            "Valor": valor,
+            "Considerar": considerar,
+        })
+
+    return montar_tabela_outro_extrato(registros)
+
+
+def ler_outro_pdf_generico(linhas):
+    """
+    Leitor conservador para PDFs de outros bancos:
+    procura blocos iniciados por data e usa o primeiro valor monetário
+    do bloco como valor da movimentação, evitando somar o saldo.
+    """
+    registros = []
+
+    padrao_data = re.compile(
+        r"^(?:\d{2}[\/\-\.]\d{2}[\/\-\.]\d{2,4})$"
+    )
+
+    indices_datas = [
+        indice
+        for indice, linha in enumerate(linhas)
+        if padrao_data.match(str(linha).strip())
+    ]
+
+    for posicao, inicio in enumerate(indices_datas):
+        fim = (
+            indices_datas[posicao + 1]
+            if posicao + 1 < len(indices_datas)
+            else len(linhas)
+        )
+
+        bloco = linhas[inicio:fim]
+
+        indice_valor = None
+        valor = None
+
+        for i in range(1, len(bloco)):
+            candidato = valor_monetario_da_linha(bloco[i])
+
+            if candidato is not None:
+                indice_valor = i
+                valor = candidato
+                break
+
+        if valor is None or valor <= 0:
+            continue
+
+        descricao = " | ".join(
+            bloco[1:indice_valor]
+        ).strip()
+
+        descricao_norm = normalizar(descricao)
+
+        considerar = not any(
+            palavra in descricao_norm
+            for palavra in PALAVRAS_IGNORAR_OUTRO_EXTRATO
+        )
+
+        registros.append({
+            "Data": bloco[0],
+            "Descrição": descricao or "Entrada",
+            "Valor": valor,
+            "Considerar": considerar,
+        })
+
+    if registros:
+        return montar_tabela_outro_extrato(registros)
+
+    raise ValueError(
+        "O PDF não segue um formato reconhecível de movimentações. "
+        "Tente exportar o extrato em PDF, Excel ou CSV."
+    )
+
+
+def ler_outro_pdf(arquivo):
+    linhas = texto_pdf_em_linhas(arquivo)
+    origem = detectar_origem_outro_extrato(linhas)
+
+    if origem == "Stone":
+        tabela = ler_outro_pdf_stone(linhas)
+    elif origem == "InfinitePay":
+        tabela = ler_outro_pdf_infinitepay(linhas)
+    elif origem == "Mercado Pago":
+        tabela = ler_outro_pdf_mercado_pago(linhas)
+    else:
+        tabela = ler_outro_pdf_generico(linhas)
+
+    return tabela, origem
+
+
+def preparar_outro_extrato_tabela(dados):
+    dados = dados.copy()
+
+    if "Valor" not in dados.columns:
+        raise ValueError(
+            "Não encontrei a coluna de valor neste arquivo."
+        )
+
+    dados["Valor"] = dados["Valor"].apply(
+        converter_numero_flexivel
+    )
+
+    dados = dados[
+        dados["Valor"].notna()
+    ].copy()
+
+    if "Data" not in dados.columns:
+        dados["Data"] = ""
+
+    if "Descrição" not in dados.columns:
+        dados["Descrição"] = ""
+
+    # Se o arquivo informa explicitamente Crédito/Débito,
+    # somente créditos positivos entram como candidatos.
+    if "Tipo do lançamento" in dados.columns:
+        tipo = (
+            dados["Tipo do lançamento"]
+            .fillna("")
+            .astype(str)
+            .apply(normalizar)
+        )
+
+        candidatos = dados[
+            (dados["Valor"] > 0)
+            & tipo.str.contains("credito", regex=False)
+        ].copy()
+    else:
+        candidatos = dados[
+            dados["Valor"] > 0
+        ].copy()
+
+    if candidatos.empty:
+        raise ValueError(
+            "Não encontrei entradas positivas neste arquivo."
+        )
+
+    descricoes_norm = (
+        candidatos["Descrição"]
+        .fillna("")
+        .astype(str)
+        .apply(normalizar)
+    )
+
+    candidatos["Considerar"] = ~descricoes_norm.apply(
+        lambda texto: any(
+            palavra in texto
+            for palavra in PALAVRAS_IGNORAR_OUTRO_EXTRATO
+        )
+    )
+
+    return montar_tabela_outro_extrato(
+        candidatos[
+            ["Data", "Descrição", "Valor", "Considerar"]
+        ].to_dict("records")
+    )
+
+
+def ler_outro_ofx(arquivo):
+    texto = arquivo.getvalue().decode(
+        "latin1",
+        errors="ignore"
+    )
+
+    blocos = re.findall(
+        r"<STMTTRN>(.*?)(?=<STMTTRN>|</BANKTRANLIST>|$)",
+        texto,
+        flags=re.IGNORECASE | re.DOTALL
+    )
+
+    registros = []
+
+    for bloco in blocos:
+        def campo(nome):
+            encontrado = re.search(
+                rf"<{nome}>([^\r\n<]+)",
+                bloco,
+                flags=re.IGNORECASE
+            )
+            return encontrado.group(1).strip() if encontrado else ""
+
+        valor = converter_numero_flexivel(
+            campo("TRNAMT")
+        )
+
+        if valor is None or valor <= 0:
+            continue
+
+        descricao = (
+            campo("MEMO")
+            or campo("NAME")
+            or campo("TRNTYPE")
+            or "Entrada"
+        )
+
+        data_texto = campo("DTPOSTED")
+        data_texto = data_texto[:8] if data_texto else ""
+
+        if len(data_texto) == 8 and data_texto.isdigit():
+            data_formatada = (
+                f"{data_texto[6:8]}/"
+                f"{data_texto[4:6]}/"
+                f"{data_texto[0:4]}"
+            )
+        else:
+            data_formatada = data_texto
+
+        descricao_norm = normalizar(descricao)
+
+        considerar = not any(
+            palavra in descricao_norm
+            for palavra in PALAVRAS_IGNORAR_OUTRO_EXTRATO
+        )
+
+        registros.append({
+            "Data": data_formatada,
+            "Descrição": descricao,
+            "Valor": valor,
+            "Considerar": considerar,
+        })
+
+    return montar_tabela_outro_extrato(registros)
+
+
+def processar_outro_extrato(arquivo):
+    nome = arquivo.name.lower()
+
+    if nome.endswith(".pdf"):
+        return ler_outro_pdf(arquivo)
+
+    if nome.endswith(".ofx"):
+        return ler_outro_ofx(arquivo), "OFX"
+
+    if nome.endswith((".xlsx", ".xls", ".csv")):
+        dados = ler_excel_ou_csv(arquivo)
+        return preparar_outro_extrato_tabela(dados), "Excel/CSV"
+
+    raise ValueError(
+        "Formato não suportado. Use PDF, XLSX, XLS, CSV ou OFX."
+    )
+
+
+def assinatura_arquivos_adicionais(arquivos):
+    hash_total = hashlib.sha256()
+
+    for arquivo in arquivos:
+        hash_total.update(
+            arquivo.name.encode("utf-8", errors="ignore")
+        )
+        hash_total.update(arquivo.getvalue())
+
+    return hash_total.hexdigest()
+
+
+# ============================================================
 # EXPORTAÇÃO DO RELATÓRIO GERAL
 # ============================================================
 
@@ -1545,7 +2162,236 @@ else:
                     .sum()
                 )
 
-               
+
+
+                # ====================================================
+                # OUTRO EXTRATO / MAQUININHA
+                # ====================================================
+
+                st.markdown("#### Outro extrato / maquininha")
+
+                outros_arquivos = st.file_uploader(
+                    "Carregar outro extrato",
+                    type=["pdf", "xlsx", "xls", "csv", "ofx"],
+                    accept_multiple_files=True,
+                    help=(
+                        "Aceita PDF, Excel, CSV e OFX. "
+                        "O sistema reconhece automaticamente Stone, "
+                        "InfinitePay e Mercado Pago e também tenta "
+                        "interpretar outros formatos de extrato."
+                    ),
+                    key=f"outro_extrato_uploader_{indice}"
+                )
+
+                valor_outros_extratos = 0.0
+                quantidade_outros_extratos = 0
+                chave_confirmacao_outro = (
+                    f"outro_extrato_confirmado_{indice}"
+                )
+                chave_assinatura_outro = (
+                    f"outro_extrato_assinatura_{indice}"
+                )
+
+                if outros_arquivos:
+                    assinatura_atual_outro = (
+                        assinatura_arquivos_adicionais(
+                            outros_arquivos
+                        )
+                    )
+
+                    if (
+                        st.session_state.get(
+                            chave_assinatura_outro
+                        )
+                        != assinatura_atual_outro
+                    ):
+                        st.session_state[
+                            chave_assinatura_outro
+                        ] = assinatura_atual_outro
+
+                        st.session_state[
+                            chave_confirmacao_outro
+                        ] = False
+
+                    totais_por_arquivo = []
+
+                    for indice_outro, arquivo_outro in enumerate(
+                        outros_arquivos
+                    ):
+                        try:
+                            (
+                                dados_outro,
+                                origem_outro,
+                            ) = processar_outro_extrato(
+                                arquivo_outro
+                            )
+
+                            # Segurança contra o erro de CheckboxColumn
+                            # receber FLOAT em vez de booleano.
+                            dados_outro["Considerar"] = (
+                                dados_outro["Considerar"]
+                                .fillna(False)
+                                .astype(bool)
+                            )
+
+                            chave_editor_outro = (
+                                f"editor_outro_{indice}_"
+                                f"{indice_outro}_"
+                                f"{assinatura_atual_outro[:12]}"
+                            )
+
+                            with st.expander(
+                                (
+                                    f"🔎 Ver detalhes — "
+                                    f"{arquivo_outro.name} "
+                                    f"({origem_outro})"
+                                ),
+                                expanded=False
+                            ):
+                                st.caption(
+                                    "Desmarque qualquer entrada que "
+                                    "não queira somar ao faturamento."
+                                )
+
+                                editado_outro = st.data_editor(
+                                    dados_outro,
+                                    use_container_width=True,
+                                    hide_index=True,
+                                    key=chave_editor_outro,
+                                    column_config={
+                                        "Considerar":
+                                            st.column_config.CheckboxColumn(
+                                                "Considerar"
+                                            ),
+                                        "Valor":
+                                            st.column_config.NumberColumn(
+                                                "Valor",
+                                                format="R$ %.2f"
+                                            ),
+                                    },
+                                    disabled=[
+                                        "Data",
+                                        "Descrição",
+                                        "Valor",
+                                        "Classificação",
+                                    ],
+                                )
+
+                            selecionado_outro = editado_outro[
+                                editado_outro["Considerar"] == True
+                            ].copy()
+
+                            total_arquivo_outro = (
+                                pd.to_numeric(
+                                    selecionado_outro["Valor"],
+                                    errors="coerce"
+                                )
+                                .fillna(0)
+                                .sum()
+                            )
+
+                            quantidade_arquivo_outro = len(
+                                selecionado_outro
+                            )
+
+                            valor_outros_extratos += float(
+                                total_arquivo_outro
+                            )
+
+                            quantidade_outros_extratos += (
+                                quantidade_arquivo_outro
+                            )
+
+                            totais_por_arquivo.append(
+                                (
+                                    arquivo_outro.name,
+                                    origem_outro,
+                                    float(total_arquivo_outro),
+                                )
+                            )
+
+                        except Exception as erro_outro:
+                            st.error(
+                                f"Erro ao processar "
+                                f"{arquivo_outro.name}: "
+                                f"{erro_outro}"
+                            )
+
+                    for (
+                        nome_outro,
+                        origem_outro,
+                        total_outro,
+                    ) in totais_por_arquivo:
+                        st.caption(
+                            f"{origem_outro} • {nome_outro} • "
+                            f"Entradas selecionadas: "
+                            f"{formatar_moeda(total_outro)}"
+                        )
+
+                    col_total_outro, col_ok_outro = st.columns(
+                        [2, 1]
+                    )
+
+                    col_total_outro.metric(
+                        "Total do outro extrato",
+                        formatar_moeda(
+                            valor_outros_extratos
+                        )
+                    )
+
+                    if chave_confirmacao_outro not in st.session_state:
+                        st.session_state[
+                            chave_confirmacao_outro
+                        ] = False
+
+                    if not st.session_state[
+                        chave_confirmacao_outro
+                    ]:
+                        clicou_ok_outro = col_ok_outro.button(
+                            "✅ OK — Adicionar",
+                            type="primary",
+                            use_container_width=True,
+                            disabled=(
+                                valor_outros_extratos <= 0
+                            ),
+                            key=f"confirmar_outro_{indice}"
+                        )
+
+                        if clicou_ok_outro:
+                            st.session_state[
+                                chave_confirmacao_outro
+                            ] = True
+                    else:
+                        col_ok_outro.success(
+                            "✅ Adicionado ao faturamento"
+                        )
+
+                        if col_ok_outro.button(
+                            "Remover do faturamento",
+                            use_container_width=True,
+                            key=f"remover_outro_{indice}"
+                        ):
+                            st.session_state[
+                                chave_confirmacao_outro
+                            ] = False
+                            st.rerun()
+
+                    if st.session_state.get(
+                        chave_confirmacao_outro,
+                        False
+                    ):
+                        faturamento = (
+                            float(faturamento)
+                            + float(valor_outros_extratos)
+                        )
+
+                        st.caption(
+                            "O valor acima já está incluído no "
+                            "faturamento total. Se você desmarcar "
+                            "uma entrada em “Ver detalhes”, o total "
+                            "será recalculado automaticamente."
+                        )
+
                 st.markdown("#### Adicionar valor ao faturamento")
 
                 # Layout organizado
@@ -1640,7 +2486,17 @@ else:
     
                 col_dir.metric(
                     "Entradas consideradas",
-                    len(selecionadas)
+                    (
+                        len(selecionadas)
+                        + (
+                            quantidade_outros_extratos
+                            if st.session_state.get(
+                                chave_confirmacao_outro,
+                                False
+                            )
+                            else 0
+                        )
+                    )
                 )
     
                     
