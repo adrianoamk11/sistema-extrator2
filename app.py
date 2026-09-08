@@ -1,14 +1,12 @@
 
-import streamlit as st
+importar streamlit como st
 import pandas as pd
-import fitz
-import re
-import unicodedata
-import requests
+importar fitz
+importar re
+importar dados unicode
+solicitações de importação
 import hashlib
-import gspread
-from google.oauth2.service_account import Credentials
-from datetime import date, timedelta, datetime
+Importe data e hora a partir de datetime e timedelta.
 from dateutil.relativedelta import relativedelta
 from io import BytesIO
 from pathlib import Path
@@ -20,48 +18,48 @@ from pathlib import Path
 st.set_page_config(
     page_title="Extrator de Faturamento",
     page_icon="💰",
-    layout="wide"
+    layout="amplo"
 )
 st.markdown(
     """
     <style>
-    div[data-testid="stButton"] button[kind="primary"] {
-        background-color: #16a34a !important;
-        border-color: #16a34a !important;
-        color: white !important;
+    div[data-testid="stButton"] botão[kind="primary"] {
+        cor de fundo: #16a34a !importante;
+        cor da borda: #16a34a !importante;
+        cor: branco !importante;
     }
 
     div[data-testid="stButton"] button[kind="primary"]:hover {
-        background-color: #15803d !important;
-        border-color: #15803d !important;
-        color: white !important;
+        cor de fundo: #15803d !importante;
+        cor da borda: #15803d !importante;
+        cor: branco !importante;
     }
     </style>
-    """,
+    "",
     unsafe_allow_html=True
 )
 # =========================
 # LOGIN DO SISTEMA
 # =========================
 
-if "autenticado" not in st.session_state:
-    st.session_state.autenticado = False
+se "autenticado" não estiver em st.session_state:
+    st.session_state.autenticado = Falso
 
-if not st.session_state.autenticado:
+se não st.session_state.autenticado:
     st.title("Acesso ao sistema")
 
-    usuario = st.text_input("Usuário")
-    senha = st.text_input("Senha", type="password")
+    usuário = st.text_input("Usuário")
+    senha = st.text_input("Senha", type="senha")
 
-    if st.button("Entrar"):
-        if (
-            usuario == st.secrets["LOGIN_USUARIO"]
-            and senha == st.secrets["LOGIN_SENHA"]
+    se st.button("Entrar"):
+        se (
+            usuário == st.secrets["LOGIN_USUARIO"]
+            e senha == st.secrets["LOGIN_SENHA"]
         ):
             st.session_state.autenticado = True
             st.rerun()
-        else:
-            st.error("Usuário ou senha incorretos.")
+        outro:
+            st.error("Usuário ou senha incorreta.")
 
     st.stop()
 st.markdown("""
@@ -69,14 +67,14 @@ st.markdown("""
 /* Encosta o conteúdo no topo da página */
 [data-testid="stAppViewContainer"] .main .block-container {
     padding-top: 0rem !important;
-    margin-top: 0rem !important;
+    margem-superior: 0rem !importante;
 }
 [data-testid="stMainBlockContainer"] {
     padding-top: 0rem !important;
-    margin-top: 0rem !important;
+    margem-superior: 0rem !importante;
 }
 </style>
-""", unsafe_allow_html=True)
+"", unsafe_allow_html=True)
 
 BASE_DIR = Path(__file__).resolve().parent
 LOGO_PATH = BASE_DIR / "logo_lider.png"
@@ -85,25 +83,25 @@ LOGO_PATH = BASE_DIR / "logo_lider.png"
 # CABEÇALHO
 # ============================================================
 
-if LOGO_PATH.exists():
+Se LOGO_PATH.exists():
     st.image(str(LOGO_PATH), width=360)
 
-# Reduz aproximadamente pela metade o espaço entre a logo e o título.
+# Reduza aproximadamente pela metade o espaço entre o logotipo e o título.
 st.markdown(
     """
     <meta name="google" content="notranslate">
     <style>
-    html, body, [data-testid="stAppViewContainer"], [data-testid="stAppViewContainer"] * {
-        -webkit-translate: none !important;
+    html, corpo, [data-testid="stAppViewContainer"], [data-testid="stAppViewContainer"] * {
+        -webkit-translate: nenhum !importante;
     }
     .notranslate {
-        translate: no !important;
+        não !importante;
     }
     div[data-testid="stImage"] {
-        margin-bottom: -105px !important;
+        margem-inferior: -105px !importante;
     }
     </style>
-    """,
+    "",
     unsafe_allow_html=True,
 )
 
@@ -116,7 +114,7 @@ st.divider()
 # CONFIGURAÇÕES
 # ============================================================
 
-PERCENTUAL_ROYALTIES = 0.04
+ROYALTIES_PERCENTUAIS = 0,04
 
 # ============================================================
 # ASAAS - SELEÇÃO DA EMPRESA
@@ -124,27 +122,27 @@ PERCENTUAL_ROYALTIES = 0.04
 
 st.write("Selecione a empresa que deseja utilizar:")
 
-if "mostrar_boleto_avulso" not in st.session_state:
-    st.session_state.mostrar_boleto_avulso = False
+se "mostrar_boleto_avulso" não estiver em st.session_state:
+    st.session_state.mostrar_boleto_avulso = Falso
 
-col_empresa, _, col_atalho_boleto = st.columns([1, 4, 1])
+col_empresa, _, col_atalho_boleto = st.colunas([1, 4, 1])
 
-with col_empresa:
+com col_empresa:
     EMPRESA_SELECIONADA = st.selectbox(
         "Empresa",
-        ["Lider Franquia", "Lider Serviços"],
-        label_visibility="collapsed"
+        ["Líder Franquia", "Líder Serviços"],
+        visibilidade_do_rótulo="recolhido"
     )
 
-with col_atalho_boleto:
-    if st.button(
+com col_atalho_boleto:
+    se st.botão(
         "💳 Boleto avulso",
-        type="secondary",
+        tipo="secundário",
         use_container_width=True,
         key="abrir_fechar_boleto_avulso"
     ):
         st.session_state.mostrar_boleto_avulso = (
-            not st.session_state.mostrar_boleto_avulso
+            não st.session_state.mostrar_boleto_avulso
         )
 
 # ============================================================
@@ -153,51 +151,51 @@ with col_atalho_boleto:
 # A Líder Franquia mantém o fundo branco.
 # A Líder Serviços usa um amarelo suave em toda a área do sistema
 # para reduzir o risco de operar na empresa errada.
-if EMPRESA_SELECIONADA == "Lider Serviços":
+if EMPRESA_SELECIONADA == "Líder Serviços":
     st.markdown(
         """
         <style>
-        html, body, .stApp,
+        html, corpo, .stApp,
         [data-testid="stAppViewContainer"],
         [data-testid="stMain"],
         [data-testid="stMainBlockContainer"] {
             background-color: #FFF8D8 !important;
         }
 
-        /* Mantém componentes de entrada claros e fáceis de ler. */
+        /* Mantém componentes de entrada claros e simples de ler. */
         [data-testid="stFileUploaderDropzone"],
         [data-testid="stDataFrame"],
         div[data-baseweb="select"] > div,
         div[data-baseweb="input"] > div,
         div[data-baseweb="textarea"] > div {
-            background-color: #FFFFFF !important;
+            cor de fundo: #FFFFFF !importante;
         }
         </style>
-        """,
+        "",
         unsafe_allow_html=True,
     )
 
-if EMPRESA_SELECIONADA == "Lider Franquia":
+if EMPRESA_SELECIONADA == "Líder Franquia":
     ASAAS_API_KEY = st.secrets["ASAAS_LIDER_FRANQUIA_API_KEY"]
-else:
+outro:
     ASAAS_API_KEY = st.secrets["ASAAS_LIDER_SERVICOS_API_KEY"]
 
 ASAAS_BASE_URL = st.secrets["ASAAS_PRODUCAO_BASE_URL"].rstrip("/")
-emitir_nota_apos_pagamento = False
+emitir_nota_apos_pagamento = Falso
 
 
-def proximo_dia_10():
-    hoje = date.today()
+def próximo_dia_10():
+    hoje = data.hoje()
 
-    if hoje.day <= 10:
-        return date(hoje.year, hoje.month, 10)
+    se hoje.day <= 10:
+        data de retorno (hoje.ano, hoje.mês, 10)
 
-    proximo_mes = hoje + relativedelta(months=1)
-    return date(proximo_mes.year, proximo_mes.month, 10)
+    proximo_mes = hoje + relativodelta(meses=1)
+    data de retorno (proximo_mes.ano, proximo_mes.mês, 10)
 
 
 def cabecalhos_asaas():
-    return {
+    retornar {
         "access_token": ASAAS_API_KEY,
         "Content-Type": "application/json",
     }
@@ -208,21 +206,21 @@ def extrair_numero_box(texto):
     Exemplos:
     'BOX 25.xlsx' -> 25
     'Box 025 Julho.xlsx' -> 25
-    'mendel box 025 zona norte' -> 25
+    'caixa mendel 025 zona norte' -> 25
     """
     texto_norm = normalizar(texto)
     encontrado = re.search(r"\bbox\s*[-_:]?\s*0*(\d+)", texto_norm)
 
-    if not encontrado:
-        return None
+    se não encontrado:
+        retornar Nenhum
 
     return int(encontrado.group(1))
 
 
 def localizar_cliente_asaas_por_box(nome_arquivo):
     """
-    Localiza o cliente do Asaas usando somente o número do BOX
-    encontrado no nome do arquivo.
+    Localize o cliente do Asaas usando somente o número do BOX
+    encontrado sem nome do arquivo.
 
     Exemplo:
     Arquivo: 'Extrato BOX 25 Julho.xlsx'
@@ -232,31 +230,31 @@ def localizar_cliente_asaas_por_box(nome_arquivo):
     """
     numero_box = extrair_numero_box(Path(nome_arquivo).stem)
 
-    if numero_box is None:
+    Se numero_box for None:
         raise RuntimeError(
             "Não encontrei o número do BOX no nome do arquivo. "
             "Renomeie o arquivo incluindo, por exemplo, 'BOX 25'."
         )
 
-    encontrados = []
-    offset = 0
+    encontrado = []
+    deslocamento = 0
     limite = 100
 
-    while True:
+    enquanto Verdadeiro:
         resposta = requests.get(
-            f"{ASAAS_BASE_URL}/customers",
-            headers=cabecalhos_asaas(),
-            params={
-                "offset": offset,
-                "limit": limite,
+            f"{ASAAS_BASE_URL}/clientes",
+            cabeçalhos=cabecalhos_asaas(),
+            parâmetros={
+                "deslocamento": deslocamento,
+                "limite": limite,
             },
-            timeout=30,
+            tempo limite=30,
         )
 
-        if not resposta.ok:
-            try:
+        se não resposta.ok:
+            tentar:
                 detalhe = resposta.json()
-            except Exception:
+            exceto Exceção:
                 detalhe = resposta.text
 
             raise RuntimeError(
@@ -265,24 +263,24 @@ def localizar_cliente_asaas_por_box(nome_arquivo):
             )
 
         corpo = resposta.json()
-        clientes = corpo.get("data", [])
+        clientes = corpo.get("dados", [])
 
-        for cliente in clientes:
-            nome_asaas = str(cliente.get("name", ""))
+        para cliente em clientes:
+            nome_asaas = str(cliente.get("nome", ""))
             box_cliente = extrair_numero_box(nome_asaas)
 
-            if box_cliente == numero_box:
-                encontrados.append(cliente)
+            se box_cliente == numero_box:
+                encontrado.adicionar(cliente)
 
-        if not corpo.get("hasMore"):
-            break
+        se não corpo.get("hasMore"):
+            quebrar
 
-        offset += limite
+        deslocamento += limite
 
-    if len(encontrados) == 1:
-        return encontrados[0], numero_box
+    se len(encontrados) == 1:
+        retorno encontrado[0], numero_box
 
-    if len(encontrados) == 0:
+    se len(encontrados) == 0:
         raise RuntimeError(
             f"Não encontrei no Asaas nenhum cliente com BOX {numero_box}. "
             f"Confira se o cadastro do cliente contém 'BOX {numero_box}' "
@@ -291,12 +289,12 @@ def localizar_cliente_asaas_por_box(nome_arquivo):
 
     nomes = " | ".join(
         str(cliente.get("name", ""))
-        for cliente in encontrados[:5]
+        para cliente em encontrados[:5]
     )
 
     raise RuntimeError(
         f"Encontrei {len(encontrados)} clientes com BOX {numero_box}: {nomes}. "
-        f"Para evitar cobrança no cliente errado, a emissão foi bloqueada. "
+        f"Para evitar cobrança de cliente errado, a transferência foi bloqueada."
         f"Deixe apenas um cadastro correspondente a esse BOX."
     )
 
@@ -308,14 +306,14 @@ def recuperar_notificacoes_cliente(customer_id):
     """
     resposta = requests.get(
         f"{ASAAS_BASE_URL}/customers/{customer_id}/notifications",
-        headers=cabecalhos_asaas(),
-        timeout=30,
+        cabeçalhos=cabecalhos_asaas(),
+        tempo limite=30,
     )
 
-    if not resposta.ok:
-        try:
+    se não resposta.ok:
+        tentar:
             detalhe = resposta.json()
-        except Exception:
+        exceto Exceção:
             detalhe = resposta.text
 
         raise RuntimeError(
@@ -326,20 +324,20 @@ def recuperar_notificacoes_cliente(customer_id):
     corpo = resposta.json()
 
     # A resposta normalmente vem em "data", mas mantemos compatibilidade
-    # caso o endpoint retorne diretamente uma lista.
-    if isinstance(corpo, list):
-        return corpo
+    # caso o endpoint retorne diretamente a uma lista.
+    se isinstance(corpo, lista):
+        retorno corporativo
 
-    return corpo.get("data", [])
+    retornar corpo.get("dados", [])
 
 
 def configuracao_base_notificacao(notificacao):
     """
     Desliga canais que não fazem parte do padrão Líder.
     """
-    return {
-        "id": notificacao["id"],
-        "enabled": False,
+    retornar {
+        "id": notificação["id"],
+        "ativado": Falso,
         "emailEnabledForProvider": False,
         "smsEnabledForProvider": False,
         "emailEnabledForCustomer": False,
@@ -356,71 +354,71 @@ def padronizar_notificacoes_asaas(customer_id):
     1. Cobrança criada:
        - E-mail
 
-    2. Dia do vencimento:
+    2. Dia do aniversário:
        - E-mail
        - WhatsApp
 
-    3. Um dia após o vencimento:
+    3. Um dia após o surgimento:
        - E-mail
 
-    Demais notificações:
+    Mais notificações:
        - Desativadas
        - SMS desativado
        - Ligação desativada
     """
-    notificacoes = recuperar_notificacoes_cliente(customer_id)
+    notificações = recuperar_notificacoes_cliente(customer_id)
 
-    if not notificacoes:
+    se não houver notificações:
         raise RuntimeError(
-            "O Asaas não retornou notificações para este cliente."
+            "O Asaas não retorna notificações para este cliente."
         )
 
-    atualizacoes = []
+    atualizações = []
 
-    for notificacao in notificacoes:
+    para notificação em notificações:
         evento = str(notificacao.get("event", "")).upper()
-        offset_atual = notificacao.get("scheduleOffset", 0)
+        offset_atual = notificação.get("scheduleOffset", 0)
 
-        try:
-            offset_atual = int(offset_atual or 0)
-        except Exception:
-            offset_atual = 0
+        tentar:
+            deslocamento_atual = int(deslocamento_atual ou 0)
+        exceto Exceção:
+            deslocamento_real = 0
 
         config = configuracao_base_notificacao(notificacao)
 
         # 1) No momento da criação: apenas e-mail.
-        if evento == "PAYMENT_CREATED":
+        se evento == "PAGAMENTO_CRIADO":
             config.update({
-                "enabled": True,
-                "emailEnabledForCustomer": True,
-                "scheduleOffset": 0,
+                "ativado": Verdadeiro,
+                "emailEnabledForCustomer": Verdadeiro,
+                "deslocamento do cronograma": 0,
             })
 
         # 2) No dia do vencimento: e-mail + WhatsApp.
         elif evento == "PAYMENT_DUEDATE_WARNING" and offset_atual == 0:
             config.update({
-                "enabled": True,
-                "emailEnabledForCustomer": True,
-                "whatsappEnabledForCustomer": True,
-                "scheduleOffset": 0,
+                "ativado": Verdadeiro,
+                "emailEnabledForCustomer": Verdadeiro,
+                "whatsappEnabledForCustomer": Verdadeiro,
+                "deslocamento do cronograma": 0,
             })
 
         # Avisos antecipados (ex.: 10 dias antes): desligados.
         elif evento == "PAYMENT_DUEDATE_WARNING" and offset_atual != 0:
             config.update({
-                "enabled": False,
-                "scheduleOffset": offset_atual,
+                "ativado": Falso,
+                "deslocamento_cronometrado": deslocamento_real,
             })
 
-        # 3) Cobrança vencida / atraso:
+        #3) Cobrança vencida/atraso:
         # envia apenas um e-mail ao CLIENTE quando o Asaas
-        # identificar que a cobrança venceu e não foi paga.
+        # identificar que a cobrança foi vencida e não foi paga.
         elif evento == "PAYMENT_OVERDUE" and offset_atual == 0:
             config.update({
-                "enabled": True,
+                "ativado": Verdadeiro,
                 "emailEnabledForProvider": False,
                 "smsEnabledForProvider": False,
-                "emailEnabledForCustomer": True,
+                "emailEnabledForCustomer": Verdadeiro,
                 "smsEnabledForCustomer": False,
                 "phoneCallEnabledForCustomer": False,
                 "whatsappEnabledForCustomer": False,
@@ -429,35 +427,35 @@ def padronizar_notificacoes_asaas(customer_id):
         # Lembretes periódicos após o vencimento ficam desativados.
         elif evento == "PAYMENT_OVERDUE" and offset_atual > 0:
             config.update({
-                "enabled": False,
-                "scheduleOffset": offset_atual,
+                "ativado": Falso,
+                "deslocamento_cronometrado": deslocamento_real,
             })
 
         # Pagamento confirmado e demais eventos ficam desativados.
         # Linha digitável, alteração de cobrança e quaisquer outros
         # eventos ficam desativados para evitar mensagens duplicadas.
-        else:
-            if "scheduleOffset" in notificacao:
+        outro:
+            se "scheduleOffset" em notificação:
                 config["scheduleOffset"] = offset_atual
 
         atualizacoes.append(config)
 
-    payload = {
-        "customer": customer_id,
-        "notifications": atualizacoes,
+    carga útil = {
+        "cliente": id_do_cliente,
+        "notificações": atualizações,
     }
 
-    resposta = requests.put(
-        f"{ASAAS_BASE_URL}/notifications/batch",
-        headers=cabecalhos_asaas(),
-        json=payload,
-        timeout=30,
+    resposta = solicitações.put(
+        f"{ASAAS_BASE_URL}/notificações/lote",
+        cabeçalhos=cabecalhos_asaas(),
+        json=carga útil,
+        tempo limite=30,
     )
 
-    if not resposta.ok:
-        try:
+    se não resposta.ok:
+        tentar:
             detalhe = resposta.json()
-        except Exception:
+        exceto Exceção:
             detalhe = resposta.text
 
         raise RuntimeError(
@@ -465,10 +463,10 @@ def padronizar_notificacoes_asaas(customer_id):
             f"(HTTP {resposta.status_code}): {detalhe}"
         )
 
-    return True
+    retornar Verdadeiro
 
 
-def criar_referencia_externa(nome_arquivo, valor, vencimento, descricao=""):
+def criar_referencia_externa(nome_arquivo, valor, vencimento, descrição=""):
     base = (
         f"{nome_arquivo}|{valor:.2f}|{vencimento.isoformat()}|"
         f"{str(descricao).strip()}"
@@ -476,472 +474,120 @@ def criar_referencia_externa(nome_arquivo, valor, vencimento, descricao=""):
     digest = hashlib.sha256(base.encode("utf-8")).hexdigest()[:20]
     return f"lider-royalties-{digest}"
 
-def buscar_cobranca_existente(external_reference):
+def buscar_cobranca_existente(referência_externa):
     resposta = requests.get(
-        f"{ASAAS_BASE_URL}/payments",
-        headers=cabecalhos_asaas(),
+        f"{ASAAS_BASE_URL}/pagamentos",
+        cabeçalhos=cabecalhos_asaas(),
         params={"externalReference": external_reference},
-        timeout=30,
+        tempo limite=30,
     )
     resposta.raise_for_status()
-    dados = resposta.json().get("data", [])
-    return dados[0] if dados else None
+    dados = resposta.json().get("dados", [])
+    retornar dados[0] se dados else Nenhum
 
 def emitir_boleto_asaas(
     nome_arquivo,
-    faturamento,
+    Vastículo,
     valor_cobranca,
-    vencimento,
+    não,
     descricao_boleto,
     emitir_nota=False
 ):
     cliente, numero_box = localizar_cliente_asaas_por_box(nome_arquivo)
     customer_id = cliente.get("id")
-    nome_cliente = cliente.get("name", "")
+    nome_cliente = cliente.get("nome", "")
 
-    if not customer_id:
+    se não for customer_id:
         raise RuntimeError(
             f"O cliente do BOX {numero_box} foi encontrado, "
             f"mas o Asaas não retornou um ID válido."
         )
 
-    # Antes de emitir a cobrança, aplica automaticamente
-    # o padrão de notificações definido pela Líder.
+    # Antes de emitir a cobrança, aplica-se automaticamente
+    # o padrão de notificações definido pelo Líder.
     padronizar_notificacoes_asaas(customer_id)
 
-    descricao_final = str(descricao_boleto or "").strip()
+    descrição_final = str(descricao_boleto ou "").strip()
 
-    if not descricao_final:
-        descricao_final = (
+    se não descricao_final:
+        descrição_final = (
             "Royalties"
             f"Faturamento {formatar_moeda(faturamento)}"
         )
 
-    external_reference = criar_referencia_externa(
+    referência_externa = criar_referencia_externa(
         nome_arquivo,
         valor_cobranca,
-        vencimento,
-        descricao_final
+        não,
+        descrição_final
     )
 
-    if emitir_nota:
-        external_reference = f"{external_reference}|NFSE|"
+    se emitir_nota:
+        referência_externa = f"{referência_externa}|NFSE|"
 
     existente = buscar_cobranca_existente(external_reference)
-    if existente:
-        return {
-            "novo": False,
-            "clienteNome": cliente.get("name"),
-            "clienteId": customer_id,
-            "box": numero_box,
-            "id": existente.get("id"),
-            "invoiceUrl": existente.get("invoiceUrl"),
-            "bankSlipUrl": existente.get("bankSlipUrl"),
+    se existir:
+        retornar {
+            "novo": Falso,
+            "clienteNome": cliente.get("nome"),
+            "clienteId": id_do_cliente,
+            "caixa": numero_box,
+            "id": existe.get("id"),
+            "invoiceUrl": existe.get("invoiceUrl"),
+            "bankSlipUrl": existe.get("bankSlipUrl"),
             "status": existente.get("status"),
-            "externalReference": external_reference,
+            "referência_externa": referência_externa,
         }
 
 
-    payload = {
-        "customer": customer_id,
-        "billingType": "BOLETO",
-        "value": round(float(valor_cobranca), 2),
+    carga útil = {
+        "cliente": id_do_cliente,
+        "Tipo de cobrança": "BOLETO",
+        "valor": round(float(valor_cobranca), 2),
         "dueDate": vencimento.isoformat(),
-        "description": descricao_final[:500],
-        "externalReference": external_reference,
+        "descrição": descrição_final[:500],
+        "referência_externa": referência_externa,
     }
 
     resposta = requests.post(
-        f"{ASAAS_BASE_URL}/payments",
-        headers=cabecalhos_asaas(),
-        json=payload,
-        timeout=30,
+        f"{ASAAS_BASE_URL}/pagamentos",
+        cabeçalhos=cabecalhos_asaas(),
+        json=carga útil,
+        tempo limite=30,
     )
 
-    if not resposta.ok:
-        try:
+    se não resposta.ok:
+        tentar:
             detalhe = resposta.json()
-        except Exception:
+        exceto Exceção:
             detalhe = resposta.text
         raise RuntimeError(
-            f"Asaas retornou HTTP {resposta.status_code}: {detalhe}"
+            f"Asaas retornaram HTTP {resposta.status_code}: {detalhe}"
         )
 
     dados = resposta.json()
 
-    return {
-        "novo": True,
-        "clienteNome": cliente.get("name"),
-        "clienteId": customer_id,
-        "box": numero_box,
+    retornar {
+        "novo": Verdadeiro,
+        "clienteNome": cliente.get("nome"),
+        "clienteId": id_do_cliente,
+        "caixa": numero_box,
         "id": dados.get("id"),
         "invoiceUrl": dados.get("invoiceUrl"),
         "bankSlipUrl": dados.get("bankSlipUrl"),
         "status": dados.get("status"),
-        "externalReference": external_reference,
+        "referência_externa": referência_externa,
     }
-
-# ============================================================
-# HISTÓRICO PERMANENTE DE FATURAMENTO — GOOGLE PLANILHAS
-# ============================================================
-# O histórico é gravado somente depois que o boleto é processado no Asaas.
-# Assim, limpar os arquivos da tela não apaga os valores já arquivados.
-
-ABA_HISTORICO_FATURAMENTO = "HISTORICO_FATURAMENTO"
-CABECALHO_HISTORICO = [
-    "ID_REGISTRO",
-    "EMPRESA",
-    "MES_REFERENCIA",
-    "ANO",
-    "MES_NUMERO",
-    "BOX",
-    "FATURAMENTO",
-    "ROYALTIES",
-    "ASAAS_PAYMENT_ID",
-    "EXTERNAL_REFERENCE",
-    "ARQUIVO",
-    "DATA_EMISSAO",
-]
-
-MESES_PT = {
-    1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
-    5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
-    9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro",
-}
-
-
-def referencia_faturamento(data_base=None):
-    """Arquiva no mês anterior ao mês em que o boleto é emitido."""
-    data_base = data_base or date.today()
-    ref = data_base - relativedelta(months=1)
-    return ref.year, ref.month, f"{MESES_PT[ref.month]}/{ref.year}"
-
-
-def conectar_planilha_historico():
-    if "gcp_service_account" not in st.secrets:
-        raise RuntimeError(
-            "As credenciais do Google Planilhas ainda não foram configuradas "
-            "nos Secrets do Streamlit."
-        )
-
-    spreadsheet_id = str(
-        st.secrets.get("GOOGLE_SHEETS_SPREADSHEET_ID", "")
-    ).strip()
-
-    if not spreadsheet_id:
-        raise RuntimeError(
-            "GOOGLE_SHEETS_SPREADSHEET_ID não foi configurado nos Secrets."
-        )
-
-    info = dict(st.secrets["gcp_service_account"])
-    credenciais = Credentials.from_service_account_info(
-        info,
-        scopes=["https://www.googleapis.com/auth/spreadsheets"],
-    )
-    cliente = gspread.authorize(credenciais)
-    return cliente.open_by_key(spreadsheet_id)
-
-
-def obter_aba_historico(criar=True):
-    planilha = conectar_planilha_historico()
-
-    try:
-        aba = planilha.worksheet(ABA_HISTORICO_FATURAMENTO)
-    except gspread.WorksheetNotFound:
-        if not criar:
-            return None
-
-        aba = planilha.add_worksheet(
-            title=ABA_HISTORICO_FATURAMENTO,
-            rows=2000,
-            cols=len(CABECALHO_HISTORICO),
-        )
-        aba.append_row(CABECALHO_HISTORICO, value_input_option="RAW")
-
-        # A aba é técnica. Tentamos ocultá-la para não poluir a planilha.
-        try:
-            aba.hide()
-        except Exception:
-            pass
-
-    return aba
-
-
-def salvar_historico_faturamento(nome_arquivo, faturamento, boleto):
-    """Arquiva o faturamento uma única vez por cobrança do Asaas."""
-    if not boleto:
-        return {"salvo": False, "motivo": "boleto_invalido"}
-
-    external_reference = str(boleto.get("externalReference") or "").strip()
-    payment_id = str(boleto.get("id") or "").strip()
-    numero_box = boleto.get("box") or extrair_numero_box(nome_arquivo)
-
-    if not external_reference and not payment_id:
-        raise RuntimeError(
-            "A cobrança não retornou uma identificação válida do Asaas."
-        )
-
-    aba = obter_aba_historico(criar=True)
-    valores = aba.get_all_values()
-
-    # Impede histórico duplicado, inclusive quando o próprio Asaas informa
-    # que aquela cobrança já existia.
-    if valores:
-        cabecalho = valores[0]
-        idx_ext = (
-            cabecalho.index("EXTERNAL_REFERENCE")
-            if "EXTERNAL_REFERENCE" in cabecalho else None
-        )
-        idx_pag = (
-            cabecalho.index("ASAAS_PAYMENT_ID")
-            if "ASAAS_PAYMENT_ID" in cabecalho else None
-        )
-
-        for linha in valores[1:]:
-            ext_existente = (
-                linha[idx_ext].strip()
-                if idx_ext is not None and len(linha) > idx_ext else ""
-            )
-            pag_existente = (
-                linha[idx_pag].strip()
-                if idx_pag is not None and len(linha) > idx_pag else ""
-            )
-
-            if (
-                external_reference and ext_existente == external_reference
-            ) or (
-                payment_id and pag_existente == payment_id
-            ):
-                return {"salvo": False, "motivo": "ja_arquivado"}
-
-    ano, mes_numero, mes_referencia = referencia_faturamento()
-    faturamento = round(float(faturamento), 2)
-    royalties_calculados = round(
-        faturamento * PERCENTUAL_ROYALTIES, 2
-    )
-
-    id_registro = hashlib.sha256(
-        f"{EMPRESA_SELECIONADA}|{external_reference}|{payment_id}".encode("utf-8")
-    ).hexdigest()[:24]
-
-    aba.append_row(
-        [
-            id_registro,
-            EMPRESA_SELECIONADA,
-            mes_referencia,
-            ano,
-            mes_numero,
-            int(numero_box) if numero_box is not None else "",
-            faturamento,
-            royalties_calculados,
-            payment_id,
-            external_reference,
-            nome_arquivo,
-            datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-        ],
-        value_input_option="USER_ENTERED",
-    )
-
-    return {
-        "salvo": True,
-        "motivo": "novo",
-        "mes": mes_referencia,
-    }
-
-
-def carregar_historico_faturamento():
-    aba = obter_aba_historico(criar=False)
-
-    if aba is None:
-        return pd.DataFrame(columns=CABECALHO_HISTORICO)
-
-    registros = aba.get_all_records()
-    if not registros:
-        return pd.DataFrame(columns=CABECALHO_HISTORICO)
-
-    df = pd.DataFrame(registros)
-
-    for coluna in ["ANO", "MES_NUMERO", "BOX", "FATURAMENTO", "ROYALTIES"]:
-        if coluna in df.columns:
-            df[coluna] = pd.to_numeric(df[coluna], errors="coerce")
-
-    return df
-
-
-def gerar_excel_historico_mes(df_mes, mes_referencia):
-    resumo_box = (
-        df_mes.groupby("BOX", as_index=False)[["FATURAMENTO", "ROYALTIES"]]
-        .sum()
-        .sort_values("BOX")
-    )
-
-    resumo_box["BOX"] = resumo_box["BOX"].apply(
-        lambda x: f"BOX {int(x):02d}" if pd.notna(x) else "BOX"
-    )
-
-    total = pd.DataFrame([{
-        "BOX": "TOTAL DO MÊS",
-        "FATURAMENTO": resumo_box["FATURAMENTO"].sum(),
-        "ROYALTIES": resumo_box["ROYALTIES"].sum(),
-    }])
-
-    exportar = pd.concat([resumo_box, total], ignore_index=True)
-    buffer = BytesIO()
-
-    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-        exportar.to_excel(
-            writer,
-            sheet_name="Resumo do mês",
-            index=False,
-        )
-        df_mes.to_excel(
-            writer,
-            sheet_name="Lançamentos",
-            index=False,
-        )
-
-        for nome_aba in writer.sheets:
-            ws = writer.sheets[nome_aba]
-            for coluna in ws.columns:
-                largura = max(
-                    len(str(celula.value or ""))
-                    for celula in coluna
-                ) + 2
-                ws.column_dimensions[
-                    coluna[0].column_letter
-                ].width = min(largura, 45)
-
-    buffer.seek(0)
-    return buffer.getvalue()
-
-
-def exibir_historico_faturamento():
-    try:
-        historico = carregar_historico_faturamento()
-    except Exception as erro:
-        st.error(
-            f"Não foi possível abrir o histórico de faturamento: {erro}"
-        )
-        return
-
-    if historico.empty:
-        st.info(
-            "Ainda não há faturamentos arquivados. Os próximos valores "
-            "serão salvos automaticamente após a emissão do boleto."
-        )
-        return
-
-    historico = historico[
-        historico["EMPRESA"] == EMPRESA_SELECIONADA
-    ].copy()
-
-    if historico.empty:
-        st.info(
-            f"Ainda não há histórico para {EMPRESA_SELECIONADA}."
-        )
-        return
-
-    historico = historico.dropna(subset=["ANO", "MES_NUMERO"])
-    meses = (
-        historico[["ANO", "MES_NUMERO", "MES_REFERENCIA"]]
-        .drop_duplicates()
-        .sort_values(
-            ["ANO", "MES_NUMERO"],
-            ascending=[False, False],
-        )
-    )
-
-    st.caption(
-        f"Arquivo permanente de faturamento — {EMPRESA_SELECIONADA}. "
-        "Os valores permanecem salvos mesmo depois de limpar os extratos da tela."
-    )
-
-    for _, item in meses.iterrows():
-        ano = int(item["ANO"])
-        mes_numero = int(item["MES_NUMERO"])
-        mes_referencia = str(item["MES_REFERENCIA"])
-
-        df_mes = historico[
-            (historico["ANO"] == ano)
-            & (historico["MES_NUMERO"] == mes_numero)
-        ].copy()
-
-        resumo_box = (
-            df_mes.groupby("BOX", as_index=False)[["FATURAMENTO", "ROYALTIES"]]
-            .sum()
-            .sort_values("BOX")
-        )
-
-        resumo_box["BOX"] = resumo_box["BOX"].apply(
-            lambda x: f"BOX {int(x):02d}" if pd.notna(x) else "BOX"
-        )
-        resumo_box = resumo_box.rename(columns={
-            "FATURAMENTO": "Faturamento",
-            "ROYALTIES": "Royalties 4%",
-        })
-
-        total_fat = float(df_mes["FATURAMENTO"].sum())
-        total_roy = float(df_mes["ROYALTIES"].sum())
-
-        with st.expander(
-            f"📅 {mes_referencia} — {formatar_moeda(total_fat)}"
-        ):
-            c1, c2 = st.columns(2)
-            c1.metric(
-                "Faturamento total do mês",
-                formatar_moeda(total_fat),
-            )
-            c2.metric(
-                "Royalties 4% do mês",
-                formatar_moeda(total_roy),
-            )
-
-            st.dataframe(
-                resumo_box,
-                use_container_width=True,
-                hide_index=True,
-                column_config={
-                    "Faturamento": st.column_config.NumberColumn(
-                        "Faturamento",
-                        format="R$ %.2f",
-                    ),
-                    "Royalties 4%": st.column_config.NumberColumn(
-                        "Royalties 4%",
-                        format="R$ %.2f",
-                    ),
-                },
-            )
-
-            excel_mes = gerar_excel_historico_mes(
-                df_mes,
-                mes_referencia,
-            )
-            nome_seguro = normalizar(mes_referencia).replace(" ", "_")
-
-            st.download_button(
-                f"📥 Baixar {mes_referencia} em Excel",
-                data=excel_mes,
-                file_name=f"historico_faturamento_{nome_seguro}.xlsx",
-                mime=(
-                    "application/vnd.openxmlformats-officedocument."
-                    "spreadsheetml.sheet"
-                ),
-                key=(
-                    f"baixar_historico_{EMPRESA_SELECIONADA}_"
-                    f"{ano}_{mes_numero}"
-                ),
-            )
-
 
 PALAVRAS_FATURAMENTO = [
     "cobranca recebida",
-    "pagamento recebido",
+    "pagamento",
     "recebimento",
-    "pix recebido",
-    "credito de cliente",
+    "pix pesado",
+    "crédito de cliente",
     "venda",
     "fatura recebida",
-    "boleto recebido",
+    "boleto",
 ]
 
 PALAVRAS_IGNORAR = [
@@ -950,10 +596,10 @@ PALAVRAS_IGNORAR = [
     "saldo anterior",
     "saldo disponivel",
     "saldo bloqueado",
-    "taxa",
+    "taxas",
     "tarifa",
     "mensageria",
-    "notificacao",
+    "notificação",
 ]
 
 # ============================================================
@@ -961,123 +607,123 @@ PALAVRAS_IGNORAR = [
 # ============================================================
 
 def normalizar(texto):
-    texto = "" if texto is None else str(texto)
+    texto = "" se texto for None else str(texto)
     texto = unicodedata.normalize("NFKD", texto)
     texto = texto.encode("ascii", "ignore").decode("ascii")
-    return re.sub(r"\s+", " ", texto).strip().lower()
+    retorne re.sub(r"\s+", " ", texto).strip().lower()
 
 
 def converter_numero(valor):
-    if pd.isna(valor):
-        return None
+    se pd.isna(valor):
+        retornar Nenhum
 
-    if isinstance(valor, (int, float)):
-        return float(valor)
+    se isinstance(valor, (int, float)):
+        retornar float(valor)
 
     texto = str(valor).strip()
     texto = texto.replace("R$", "").replace(" ", "")
 
-    if not texto:
-        return None
+    se não for texto:
+        retornar Nenhum
 
-    try:
-        if "," in texto:
+    tentar:
+        se "," no texto:
             texto = texto.replace(".", "").replace(",", ".")
-        return float(texto)
-    except Exception:
-        return None
+        retornar float(texto)
+    exceto Exceção:
+        retornar Nenhum
 
 
 def formatar_moeda(valor):
-    return (
+    retornar (
         f"R$ {valor:,.2f}"
         .replace(",", "X")
-        .replace(".", ",")
+        .substituir(".", ",")
         .replace("X", ".")
     )
 
 
 def achar_coluna(colunas, nomes_possiveis):
-    mapa = {col: normalizar(col) for col in colunas}
+    mapa = {col: normalizar(col) para col em colunas}
 
-    # Primeiro tenta igualdade exata
-    for nome in nomes_possiveis:
+    # Primeira tentativa de igualdade exata
+    para nome em visionário_possivo:
         alvo = normalizar(nome)
-        for original, atual in mapa.items():
-            if atual == alvo:
-                return original
+        para original, atual em mapa.items():
+            se atual == alvo:
+                devolver original
 
     # Depois tenta ocorrência parcial
-    for nome in nomes_possiveis:
+    para nome em visionário_possivo:
         alvo = normalizar(nome)
-        for original, atual in mapa.items():
-            if alvo in atual:
-                return original
+        para original, atual em mapa.items():
+            se alvo em atual:
+                devolver original
 
-    return None
+    retornar Nenhum
 
 
 # ============================================================
 # LEITURA DE EXCEL / CSV
 # ============================================================
 
-def encontrar_linha_cabecalho_excel(arquivo, engine):
+def encontrar_linha_cabecalho_excel(arquivo, motor):
     """
-    Procura automaticamente a linha de cabeçalho.
+    Procure automaticamente a linha do cabeçalho.
     Útil para extratos Asaas que possuem informações antes da tabela.
     """
     arquivo.seek(0)
 
     bruto = pd.read_excel(
         arquivo,
-        engine=engine,
-        header=None,
+        motor=motor,
+        cabeçalho=Nenhum,
         nrows=30
     )
 
-    palavras = [
-        "data",
+    = [
+        "dados",
         "tipo de transacao",
         "descricao",
-        "valor",
+        "valentia",
         "saldo",
-        "tipo do lancamento",
+        "tipo do lançamento",
     ]
 
     melhor_linha = 0
     melhor_pontuacao = -1
 
-    for indice, linha in bruto.iterrows():
+    para índice, linha em bruto.iterrows():
         texto = " | ".join(
             normalizar(valor)
-            for valor in linha.tolist()
-            if not pd.isna(valor)
+            para valor em linha.tolist()
+            se não pd.isna(valor)
         )
 
-        pontuacao = sum(
-            1 for palavra in palavras
-            if normalizar(palavra) in texto
+        pontuação = soma(
+            1 para palavra em palavras
+            if normalizar(palavra) em texto
         )
 
         if pontuacao > melhor_pontuacao:
-            melhor_pontuacao = pontuacao
-            melhor_linha = indice
+            melhor_pontuacao = pontuação
+            melhor_linha = índice
 
-    return int(melhor_linha)
+    retornar int(melhor_linha)
 
 
 def preparar_layout_asaas(df):
     """
-    Tratamento específico do Excel exportado pelo Asaas.
+    Tratamento específico do Excel exportado pela Asaas.
 
     IMPORTANTE:
-    - Usa a coluna VALOR para o valor da movimentação.
-    - Usa Tipo do lançamento para Crédito/Débito.
+    - Use a coluna VALOR para o valor da entrega.
+    - Usa Tipo de lançamento para Crédito/Débito.
     - NÃO usa a coluna Saldo como faturamento.
     """
-    colunas = list(df.columns)
+    colunas = lista(df.colunas)
 
-    col_data = achar_coluna(colunas, ["Data"])
+    col_data = achar_coluna(colunas, ["Dados"])
     col_tipo = achar_coluna(colunas, ["Tipo de transação"])
     col_descricao = achar_coluna(colunas, ["Descrição"])
     col_valor = achar_coluna(colunas, ["Valor"])
@@ -1086,28 +732,28 @@ def preparar_layout_asaas(df):
         ["Tipo do lançamento"]
     )
 
-    if col_valor is None or col_tipo_lancamento is None:
-        return None
+    Se col_valor for None ou col_tipo_lancamento for None:
+        retornar Nenhum
 
     resultado = pd.DataFrame()
 
-    if col_data:
-        resultado["Data"] = df[col_data].astype(str)
-    else:
-        resultado["Data"] = ""
+    se col_data:
+        resultado["Dados"] = df[col_data].astype(str)
+    outro:
+        resultado["Dados"] = ""
 
     tipo = (
         df[col_tipo].fillna("").astype(str)
-        if col_tipo else ""
+        se col_tipo senão ""
     )
 
-    descricao = (
+    descrição = (
         df[col_descricao].fillna("").astype(str)
-        if col_descricao else ""
+        se col_descricao senão ""
     )
 
-    if col_tipo and col_descricao:
-        resultado["Descrição"] = (
+    if col_tipo e col_descricao:
+        resultado["Deda"] = (
             tipo.str.strip()
             + " - "
             + descricao.str.strip()
@@ -1115,15 +761,15 @@ def preparar_layout_asaas(df):
     elif col_tipo:
         resultado["Descrição"] = tipo.str.strip()
     elif col_descricao:
-        resultado["Descrição"] = descricao.str.strip()
-    else:
-        resultado["Descrição"] = ""
+        resultado["Descrição"] = descrição.str.strip()
+    outro:
+        resultado["Deda"] = ""
 
     resultado["Valor"] = df[col_valor].apply(
-        converter_numero
+        conversor_número
     )
 
-    resultado["Tipo do lançamento"] = (
+    resultado["Tipo de lançamento"] = (
         df[col_tipo_lancamento]
         .fillna("")
         .astype(str)
@@ -1132,26 +778,26 @@ def preparar_layout_asaas(df):
 
     resultado = resultado[
         resultado["Valor"].notna()
-    ].copy()
+    ].cópia()
 
     resultado = resultado[
-        resultado["Tipo do lançamento"].str.len() > 0
-    ].copy()
+        resultado["Tipo de lançamento"].str.len() > 0
+    ].cópia()
 
-    return resultado
+    retornar resultado
 
 
 def preparar_layout_generico(df):
     df = df.copy()
-    df.columns = [str(col).strip() for col in df.columns]
+    df.columns = [str(col).strip() para col em df.columns]
 
     col_data = achar_coluna(
         df.columns,
         [
+            "dados",
             "data",
-            "date",
-            "data movimentacao",
-            "data lancamento",
+            "dados de movimentação",
+            "data de lançamento",
         ],
     )
 
@@ -1159,8 +805,8 @@ def preparar_layout_generico(df):
         df.columns,
         [
             "descricao",
-            "historico",
-            "lancamento",
+            "histórico",
+            "lançamento",
             "movimentacao",
             "detalhes",
         ],
@@ -1169,8 +815,8 @@ def preparar_layout_generico(df):
     col_valor = achar_coluna(
         df.columns,
         [
-            "valor",
-            "amount",
+            "valentia",
+            "quantia",
             "valor movimentacao",
             "valor lancamento",
         ],
@@ -1178,56 +824,56 @@ def preparar_layout_generico(df):
 
     col_credito = achar_coluna(
         df.columns,
-        ["credito", "entrada", "creditos"],
+        ["crédito", "entrada", "créditos"],
     )
 
-    if col_descricao is None:
+    Se col_descricao for None:
         colunas_texto = [
-            col for col in df.columns
-            if df[col].dtype == "object"
+            coluna para coluna em df.columns
+            se df[col].dtype == "objeto"
         ]
 
-        if colunas_texto:
+        se colunas_texto:
             df["_descricao_auto"] = (
                 df[colunas_texto]
                 .fillna("")
                 .astype(str)
                 .agg(" | ".join, axis=1)
             )
-        else:
+        outro:
             df["_descricao_auto"] = ""
 
         col_descricao = "_descricao_auto"
 
-    if col_data is None:
+    Se col_data for None:
         df["_data_auto"] = ""
         col_data = "_data_auto"
 
-    if col_valor is not None:
+    se col_valor não for None:
         valores = df[col_valor].apply(converter_numero)
     elif col_credito is not None:
-        valores = df[col_credito].apply(converter_numero)
-    else:
+        valores = df[col_crédito].apply(converter_numero)
+    outro:
         raise ValueError(
             "Não encontrei uma coluna de valor da movimentação. "
-            "O sistema não usará a coluna Saldo para evitar cálculo incorreto."
+            "O sistema não usará a coluna Saldo para evitar cálculos incorretos."
         )
 
     resultado = pd.DataFrame({
-        "Data": df[col_data].astype(str),
+        "Dados": df[col_data].astype(str),
         "Descrição": df[col_descricao].astype(str),
         "Valor": valores,
     })
 
-    return resultado[
+    retornar resultado[
         resultado["Valor"].notna()
-    ].copy()
+    ].cópia()
 
 
 def ler_excel_ou_csv(arquivo):
     nome = arquivo.name.lower()
 
-    if nome.endswith(".xlsx"):
+    se nome.terminarcom(".xlsx"):
         cabecalho = encontrar_linha_cabecalho_excel(
             arquivo,
             "openpyxl"
@@ -1237,18 +883,18 @@ def ler_excel_ou_csv(arquivo):
 
         df = pd.read_excel(
             arquivo,
-            engine="openpyxl",
-            header=cabecalho
+            motor="openpyxl",
+            cabeçalho=cabecalho
         )
 
         asaas = preparar_layout_asaas(df)
 
-        if asaas is not None:
-            return asaas
+        se asaas não for None:
+            retornar asaas
 
-        return preparar_layout_generico(df)
+        retornar preparar_layout_generico(df)
 
-    if nome.endswith(".xls"):
+    se nome.terminarcom(".xls"):
         cabecalho = encontrar_linha_cabecalho_excel(
             arquivo,
             "xlrd"
@@ -1258,39 +904,39 @@ def ler_excel_ou_csv(arquivo):
 
         df = pd.read_excel(
             arquivo,
-            engine="xlrd",
-            header=cabecalho
+            motor="xlrd",
+            cabeçalho=cabecalho
         )
 
         asaas = preparar_layout_asaas(df)
 
-        if asaas is not None:
-            return asaas
+        se asaas não for None:
+            retornar asaas
 
-        return preparar_layout_generico(df)
+        retornar preparar_layout_generico(df)
 
     # CSV
     bruto = arquivo.getvalue()
 
-    for encoding in ["utf-8-sig", "utf-8", "latin1"]:
-        for separador in [";", ",", "\t"]:
-            try:
+    para codificação em ["utf-8-sig", "utf-8", "latin1"]:
+        para separador em [";", ","", "\t"]:
+            tentar:
                 df = pd.read_csv(
                     BytesIO(bruto),
                     sep=separador,
-                    encoding=encoding
+                    codificação=codificação
                 )
 
-                if df.shape[1] > 1:
+                se df.shape[1] > 1:
                     asaas = preparar_layout_asaas(df)
 
-                    if asaas is not None:
-                        return asaas
+                    se asaas não for None:
+                        retornar asaas
 
-                    return preparar_layout_generico(df)
+                    retornar preparar_layout_generico(df)
 
-            except Exception:
-                pass
+            exceto Exceção:
+                passar
 
     raise ValueError(
         "Não consegui interpretar o arquivo CSV."
@@ -1303,17 +949,17 @@ def ler_excel_ou_csv(arquivo):
 
 def ler_pdf(arquivo):
     documento = fitz.open(
-        stream=arquivo.getvalue(),
+        fluxo=arquivo.getvalue(),
         filetype="pdf"
     )
 
     linhas = []
 
-    for pagina in documento:
+    para página em documento:
         linhas += [
             re.sub(r"\s+", " ", linha).strip()
-            for linha in pagina.get_text().splitlines()
-            if linha.strip()
+            para linha na pagina.get_text().splitlines()
+            se linha.strip()
         ]
 
     padrao_data = re.compile(
@@ -1324,42 +970,42 @@ def ler_pdf(arquivo):
         r"R\$\s*(-?[\d\.]+,\d{2})"
     )
 
-    data_atual = ""
+    dados_reais = ""
     contexto = []
     registros = []
 
-    for linha in linhas:
-        datas = padrao_data.findall(linha)
+    para linha em linhas:
+        datas = padrão_data.findall(linha)
 
-        if datas:
-            data_atual = datas[0]
+        se houver dados:
+            dados_reais = dados[0]
 
-        valores = padrao_valor.findall(linha)
+        valores = padrão_valor.findall(linha)
 
-        for valor_texto in valores:
-            descricao = " ".join(
+        para valor_texto em valores:
+            descrição = " ".join(
                 contexto[-3:] + [linha]
             )
 
             descricao = padrao_valor.sub(
-                "",
-                descricao
-            ).strip()
+                ","
+                descrição
+            ).tira()
 
             registros.append({
-                "Data": data_atual,
-                "Descrição": descricao,
-                "Valor": converter_numero(valor_texto),
+                "Dados": dados_reais,
+                "Descrição": descrição,
+                "Valor": conversor_numero(valor_texto),
             })
 
         contexto.append(linha)
 
-    if not registros:
+    se não registros:
         raise ValueError(
             "Não encontrei movimentações legíveis neste PDF."
         )
 
-    return pd.DataFrame(registros)
+    retornar pd.DataFrame(registros)
 
 
 # ============================================================
@@ -1367,86 +1013,86 @@ def ler_pdf(arquivo):
 # ============================================================
 
 def classificar_movimentacao(
-    descricao,
-    valor,
-    tipo_lancamento=""
+    descrição,
+    valentia,
+    tipo_lançamento=""
 ):
-    descricao_normalizada = normalizar(descricao)
+    descrição_normalizada = normalizar(descrição)
     lancamento_normalizado = normalizar(
-        tipo_lancamento
+        tipo_lançamento
     )
 
-    if valor is None:
-        return "IGNORAR", False
+    Se o valor for None:
+        retornar "IGNORAR", Falso
 
     # Excel Asaas: Crédito/Débito explícito
-    if lancamento_normalizado:
-        if "debito" in lancamento_normalizado:
-            return "SAÍDA", False
+    se lancamento_normalizado:
+        if "debito" em lancamento_normalizado:
+            retornar "SAÍDA", Falso
 
-        if "credito" in lancamento_normalizado:
-            if any(
-                palavra in descricao_normalizada
-                for palavra in PALAVRAS_FATURAMENTO
+        if "crédito" em lancamento_normalizado:
+            se houver(
+                palavra em descrição_normalizada
+                para palavra em PALAVRAS_FATURAMENTO
             ):
-                return "FATURAMENTO", True
+                retornar "FATURAMENTO", Verdadeiro
 
             # Crédito não identificado automaticamente:
             # fica disponível para revisão manual.
-            return "REVISAR", False
+            retornar "REVISAR", Falso
 
     # PDFs e formatos sem Crédito/Débito explícito
-    if valor <= 0:
-        return "SAÍDA", False
+    se valor <= 0:
+        retornar "SAÍDA", Falso
 
-    if any(
-        palavra in descricao_normalizada
-        for palavra in PALAVRAS_IGNORAR
+    se houver(
+        palavra em descrição_normalizada
+        para palavra em PALAVRAS_IGNORAR
     ):
-        return "IGNORAR", False
+        retornar "IGNORAR", Falso
 
-    if any(
-        palavra in descricao_normalizada
-        for palavra in PALAVRAS_FATURAMENTO
+    se houver(
+        palavra em descrição_normalizada
+        para palavra em PALAVRAS_FATURAMENTO
     ):
-        return "FATURAMENTO", True
+        retornar "FATURAMENTO", Verdadeiro
 
-    return "REVISAR", False
+    retornar "REVISAR", Falso
 
 
 def processar_arquivo(arquivo):
     if arquivo.name.lower().endswith(".pdf"):
         dados = ler_pdf(arquivo)
-    else:
+    outro:
         dados = ler_excel_ou_csv(arquivo)
 
-    if "Tipo do lançamento" in dados.columns:
-        classificacao = dados.apply(
+    if "Tipo do lançamento" em dados.columns:
+        classificação = dados.apply(
             lambda linha: classificar_movimentacao(
-                linha["Descrição"],
+                linha["Det"],
                 linha["Valor"],
                 linha["Tipo do lançamento"],
             ),
-            axis=1,
+            eixo=1,
         )
-    else:
-        classificacao = dados.apply(
+    outro:
+        classificação = dados.apply(
             lambda linha: classificar_movimentacao(
-                linha["Descrição"],
+                linha["Det"],
                 linha["Valor"],
             ),
-            axis=1,
+            eixo=1,
         )
 
     dados["Classificação"] = [
-        item[0] for item in classificacao
+        item[0] para item na classificação
     ]
 
     dados["Considerar"] = [
-        item[1] for item in classificacao
+        item[1] para item na classificação
     ]
 
-    return dados
+    retornar dados
 
 
 # ============================================================
@@ -1456,38 +1102,38 @@ def processar_arquivo(arquivo):
 PALAVRAS_IGNORAR_OUTRO_EXTRATO = [
     "saldo inicial",
     "saldo final",
-    "saldo diario",
-    "daily balance",
-    "final balance",
-    "initial balance",
-    "total inflows",
-    "total outflows",
+    "saldo diário",
+    "equilíbrio diário",
+    "saldo final",
+    "saldo inicial",
+    "fluxos totais",
+    "saídas totais",
     "rendimento",
-    "earnings",
+    "ganhos",
     "juros",
-    "interest",
+    "interesse",
     "cashback",
-    "cash back",
+    "dinheiro de volta",
     "tarifa",
-    "taxa",
+    "taxas",
 ]
 
-def converter_numero_flexivel(valor):
+def conversor_numero_flexivel(valor):
     """
-    Converte valores tanto no padrão brasileiro (1.234,56)
-    quanto no padrão internacional (1,234.56).
+    Converter valores tanto no padrão brasileiro (1.234,56)
+    quanto no padrão internacional (1.234,56).
     """
-    if valor is None:
-        return None
+    Se o valor for None:
+        retornar Nenhum
 
-    try:
-        if pd.isna(valor):
-            return None
-    except Exception:
-        pass
+    tentar:
+        se pd.isna(valor):
+            retornar Nenhum
+    exceto Exceção:
+        passar
 
-    if isinstance(valor, (int, float)):
-        return float(valor)
+    se isinstance(valor, (int, float)):
+        retornar float(valor)
 
     texto = str(valor).strip()
     texto = (
@@ -1495,132 +1141,132 @@ def converter_numero_flexivel(valor):
         .replace("R$", "")
         .replace("BRL", "")
         .replace("\xa0", "")
-        .replace(" ", "")
+        .substituir(" ", "")
     )
 
-    if not texto:
-        return None
+    se não for texto:
+        retornar Nenhum
 
-    # Mantém somente sinal, números e separadores.
+    # Mantém somente sinais, números e separadores.
     texto = re.sub(r"[^0-9,\.\-\+]", "", texto)
 
-    if not texto:
-        return None
+    se não for texto:
+        retornar Nenhum
 
-    try:
-        if "," in texto and "." in texto:
+    tentar:
+        se "," no texto e "." no texto:
             # O último separador é tratado como separador decimal.
-            if texto.rfind(",") > texto.rfind("."):
+            se texto.rfind(",") > texto.rfind("."):
                 texto = texto.replace(".", "").replace(",", ".")
-            else:
+            outro:
                 texto = texto.replace(",", "")
-        elif "," in texto:
+        elif "," no texto:
             texto = texto.replace(".", "").replace(",", ".")
         elif texto.count(".") > 1:
             partes = texto.split(".")
             texto = "".join(partes[:-1]) + "." + partes[-1]
 
-        return float(texto)
-    except Exception:
-        return None
+        retornar float(texto)
+    exceto Exceção:
+        retornar Nenhum
 
 
 def texto_pdf_em_linhas(arquivo):
     documento = fitz.open(
-        stream=arquivo.getvalue(),
+        fluxo=arquivo.getvalue(),
         filetype="pdf"
     )
 
     linhas = []
 
-    for pagina in documento:
+    para página em documento:
         linhas += [
             re.sub(r"\s+", " ", linha).strip()
-            for linha in pagina.get_text().splitlines()
-            if linha.strip()
+            para linha na pagina.get_text().splitlines()
+            se linha.strip()
         ]
 
-    return linhas
+    retornar linhas
 
 
 def detectar_origem_outro_extrato(linhas):
     texto = normalizar(" ".join(linhas))
 
-    if (
-        "stone instituicao de pagamento" in texto
-        or "pix | maquininha" in texto
+    se (
+        "pedra instituição de pagamento" em texto
+        ou "pix | maquininha" no texto
     ):
-        return "Stone"
+        retornar "Pedra"
 
-    if (
-        "cloudwalk" in texto
-        or "infinitepay" in texto
-        or "transaction report" in texto
+    se (
+        "caminhada nas nuvens" em texto
+        ou "pagamento infinito" em texto
+        ou "relatório de transações" em texto
     ):
-        return "InfinitePay"
+        retornar "Pagamento Infinito"
 
-    if (
-        "mercado pago instituicao de pagamento" in texto
-        or "mercadopago.com.br" in texto
+    se (
+        "mercado pago instituição de pagamento" em texto
+        ou "mercadopago.com.br" em texto
     ):
-        return "Mercado Pago"
+        retornar "Mercado Pago"
 
-    return "Formato genérico"
+    retornar "Formato genérico"
 
 
 def valor_monetario_da_linha(linha):
     # Valores com R$.
-    encontrados = re.findall(
+    encontrado = re.findall(
         r"(?:R\$\s*)?([+\-]?\s*[\d\.]+,\d{2}|[+\-]?\s*[\d,]+\.\d{2})",
         str(linha)
     )
 
-    if not encontrados:
-        return None
+    se não for encontrado:
+        retornar Nenhum
 
     return converter_numero_flexivel(encontrados[0])
 
 
 def montar_tabela_outro_extrato(registros):
-    if not registros:
+    se não registros:
         raise ValueError(
             "Não encontrei entradas legíveis neste extrato."
         )
 
     tabela = pd.DataFrame(registros)
 
-    for coluna in ["Data", "Descrição"]:
-        if coluna not in tabela.columns:
-            tabela[coluna] = ""
+    para coluna em ["Dados", "Descrição"]:
+        se a coluna não estiver em tabela.columns:
+            Viúvo[coluna] = ""
 
     tabela["Valor"] = pd.to_numeric(
-        tabela["Valor"],
-        errors="coerce"
+        Vale["Valor"],
+        erros="coagir"
     )
 
-    tabela = tabela[
-        tabela["Valor"].notna()
-    ].copy()
+    tabela = ~[
+        Vi["Valor"].notna()
+    ].cópia()
 
     # O campo precisa ser booleano para o CheckboxColumn do Streamlit.
-    if "Considerar" not in tabela.columns:
-        tabela["Considerar"] = True
+    Se "Considerar" não estiver em tabela.columns:
+        Vi["Considerar"] = Verdadeiro
 
-    tabela["Considerar"] = (
-        tabela["Considerar"]
+    Vi["Considerar"] = (
+        Vi["Considerar"]
         .fillna(False)
         .astype(bool)
     )
 
     tabela["Classificação"] = tabela["Considerar"].map(
-        {True: "ENTRADA", False: "REVISAR"}
+        {Verdadeiro: "ENTRADA", Falso: "REVISAR"}
     )
 
-    return tabela[
+    retornar[
         [
-            "Data",
-            "Descrição",
-            "Valor",
+            "Dados",
+            "Ded",
+            "Valentia",
             "Classificação",
             "Considerar",
         ]
@@ -1631,58 +1277,58 @@ def ler_outro_pdf_stone(linhas):
     registros = []
     padrao_data = re.compile(r"^\d{2}/\d{2}/\d{2,4}$")
 
-    indices_datas = [
-        indice
-        for indice, linha in enumerate(linhas)
-        if padrao_data.match(linha.strip())
+    dados_índices = [
+        índice
+        para índice, linha in enumerate(linhas)
+        if padrão_data.match(linha.strip())
     ]
 
-    for posicao, inicio in enumerate(indices_datas):
+    para posição, inicio em enumerar(indices_datas):
         fim = (
-            indices_datas[posicao + 1]
-            if posicao + 1 < len(indices_datas)
-            else len(linhas)
+            índices_dados[posição + 1]
+            if posição + 1 < len(índices_dados)
+            senão len(linhas)
         )
 
         bloco = linhas[inicio:fim]
 
-        if len(bloco) < 2:
-            continue
+        se len(bloco) < 2:
+            continuar
 
         tipo = normalizar(bloco[1])
 
-        if "entrada" not in tipo:
-            continue
+        se "entrada" não estiver em tipo:
+            continuar
 
-        indice_valor = None
-        valor = None
+        valor_índice = Nenhum
+        valor = Nenhum
 
-        for i in range(2, len(bloco)):
-            if "r$" in normalizar(bloco[i]):
+        para i em range(2, len(bloco)):
+            if "r$" em normalizar(bloco[i]):
                 candidato = valor_monetario_da_linha(bloco[i])
 
-                if candidato is not None:
-                    indice_valor = i
-                    valor = candidato
-                    break
+                se não for None:
+                    valor_índice = i
+                    valor =
+                    quebrar
 
-        if valor is None or valor <= 0:
-            continue
+        Se valor for None ou valor <= 0:
+            continuar
 
-        descricao = " | ".join(
+        descrição = " | ".join(
             bloco[2:indice_valor]
-        ).strip()
+        ).tira()
 
-        descricao_norm = normalizar(descricao)
+        descrição_norm = normalizar(descrição)
 
-        considerar = not any(
-            palavra in descricao_norm
-            for palavra in PALAVRAS_IGNORAR_OUTRO_EXTRATO
+        considerar = nenhum(
+            palavra em descricao_norm
+            para palavra em PALAVRAS_IGNORAR_OUTRO_EXTRATO
         )
 
         registros.append({
-            "Data": bloco[0],
-            "Descrição": descricao or "Entrada",
+            "Dados": bloco[0],
+            "Descrição": descricao ou "Entrada",
             "Valor": valor,
             "Considerar": considerar,
         })
@@ -1694,50 +1340,50 @@ def ler_outro_pdf_infinitepay(linhas):
     registros = []
 
     # No PDF da InfinitePay/CloudWalk, cada transação aparece como:
-    # horário -> tipo -> nome -> detalhe -> valor.
+    # local -> tipo -> nome -> detalhe -> valor.
     # Saldos e totais são descartados explicitamente.
-    for indice, linha in enumerate(linhas):
+    para índice, linha in enumerate(linhas):
         texto = str(linha).strip()
 
-        if not re.fullmatch(
+        se não re.fullmatch(
             r"[+\-]?\s*[\d,]+\.\d{2}",
             texto
         ):
-            continue
+            continuar
 
-        valor = converter_numero_flexivel(texto)
+        valor = conversor_numero_flexivel(texto)
 
-        if valor is None or valor <= 0:
-            continue
+        Se valor for None ou valor <= 0:
+            continuar
 
         contexto = linhas[
-            max(0, indice - 5):indice
+            max(0, índice - 5):índice
         ]
 
-        descricao = " | ".join(contexto).strip()
-        descricao_norm = normalizar(descricao)
+        descrição = " | ".join(contexto).strip()
+        descrição_norm = normalizar(descrição)
 
-        if any(
-            termo in descricao_norm
-            for termo in [
-                "daily balance",
-                "final balance",
-                "initial balance",
-                "total inflows",
-                "total outflows",
+        se houver(
+            termo em descricao_norm
+            para termo em [
+                "equilíbrio diário",
+                "saldo final",
+                "saldo inicial",
+                "fluxos totais",
+                "saídas totais",
             ]
         ):
-            continue
+            continuar
 
-        # Rendimentos são mostrados para revisão, mas não entram por padrão.
-        considerar = not any(
-            palavra in descricao_norm
-            for palavra in PALAVRAS_IGNORAR_OUTRO_EXTRATO
+        # Rendimentos são marcados para revisão, mas não entram por padrão.
+        considerar = nenhum(
+            palavra em descricao_norm
+            para palavra em PALAVRAS_IGNORAR_OUTRO_EXTRATO
         )
 
         registros.append({
-            "Data": "",
-            "Descrição": descricao or "Entrada",
+            "Dados": "",
+            "Descrição": descricao ou "Entrada",
             "Valor": valor,
             "Considerar": considerar,
         })
@@ -1749,69 +1395,69 @@ def ler_outro_pdf_mercado_pago(linhas):
     registros = []
     padrao_data = re.compile(r"^\d{2}-\d{2}-\d{4}$")
 
-    try:
-        inicio_detalhes = next(
-            i
+    tentar:
+        inicio_detalhes = próximo(
+            eu
             for i, linha in enumerate(linhas)
-            if "detalhe dos movimentos" in normalizar(linha)
+            if "detalhe dos movimentos" em normalizar(linha)
         )
-    except StopIteration:
-        inicio_detalhes = 0
+    exceto StopIteration:
+        início_detalhes = 0
 
     linhas_detalhes = linhas[inicio_detalhes:]
 
-    indices_datas = [
-        indice
-        for indice, linha in enumerate(linhas_detalhes)
-        if padrao_data.match(linha.strip())
+    dados_índices = [
+        índice
+        para índice, linha in enumerate(linhas_detalhes)
+        if padrão_data.match(linha.strip())
     ]
 
-    for posicao, inicio in enumerate(indices_datas):
+    para posição, inicio em enumerar(indices_datas):
         fim = (
-            indices_datas[posicao + 1]
-            if posicao + 1 < len(indices_datas)
-            else len(linhas_detalhes)
+            índices_dados[posição + 1]
+            if posição + 1 < len(índices_dados)
+            senão len(linhas_detalhes)
         )
 
         bloco = linhas_detalhes[inicio:fim]
 
-        indice_valor = None
-        valor = None
+        valor_índice = Nenhum
+        valor = Nenhum
 
-        # O primeiro R$ do bloco é o valor da movimentação;
+        # O primeiro R$ do bloco é o valor da entrega;
         # o segundo é o saldo da conta.
-        for i in range(1, len(bloco)):
-            if "r$" in normalizar(bloco[i]):
+        para i em range(1, len(bloco)):
+            if "r$" em normalizar(bloco[i]):
                 candidato = valor_monetario_da_linha(bloco[i])
 
-                if candidato is not None:
-                    indice_valor = i
-                    valor = candidato
-                    break
+                se não for None:
+                    valor_índice = i
+                    valor =
+                    quebrar
 
-        if valor is None or valor <= 0:
-            continue
+        Se valor for None ou valor <= 0:
+            continuar
 
         descricao_partes = []
 
-        for item in bloco[1:indice_valor]:
-            # Evita colocar o ID numérico da operação como descrição.
-            if re.fullmatch(r"\d{6,}", item.strip()):
-                continue
+        para item do bloco[1:índice_valor]:
+            # Evite colocar o ID numérico da operação conforme descrição.
+            se re.fullmatch(r"\d{6,}", item.strip()):
+                continuar
 
             descricao_partes.append(item)
 
-        descricao = " | ".join(descricao_partes).strip()
-        descricao_norm = normalizar(descricao)
+        descrição = " | ".join(descricao_partes).strip()
+        descrição_norm = normalizar(descrição)
 
-        considerar = not any(
-            palavra in descricao_norm
-            for palavra in PALAVRAS_IGNORAR_OUTRO_EXTRATO
+        considerar = nenhum(
+            palavra em descricao_norm
+            para palavra em PALAVRAS_IGNORAR_OUTRO_EXTRATO
         )
 
         registros.append({
-            "Data": bloco[0],
-            "Descrição": descricao or "Entrada",
+            "Dados": bloco[0],
+            "Descrição": descricao ou "Entrada",
             "Valor": valor,
             "Considerar": considerar,
         })
@@ -1822,7 +1468,7 @@ def ler_outro_pdf_mercado_pago(linhas):
 def ler_outro_pdf_generico(linhas):
     """
     Leitor conservador para PDFs de outros bancos:
-    procura blocos iniciados por data e usa o primeiro valor monetário
+    procura blocos iniciados por dados e usa o primeiro valor monetário
     do bloco como valor da movimentação, evitando somar o saldo.
     """
     registros = []
@@ -1831,58 +1477,58 @@ def ler_outro_pdf_generico(linhas):
         r"^(?:\d{2}[\/\-\.]\d{2}[\/\-\.]\d{2,4})$"
     )
 
-    indices_datas = [
-        indice
-        for indice, linha in enumerate(linhas)
-        if padrao_data.match(str(linha).strip())
+    dados_índices = [
+        índice
+        para índice, linha in enumerate(linhas)
+        if padrão_data.match(str(linha).strip())
     ]
 
-    for posicao, inicio in enumerate(indices_datas):
+    para posição, inicio em enumerar(indices_datas):
         fim = (
-            indices_datas[posicao + 1]
-            if posicao + 1 < len(indices_datas)
-            else len(linhas)
+            índices_dados[posição + 1]
+            if posição + 1 < len(índices_dados)
+            senão len(linhas)
         )
 
         bloco = linhas[inicio:fim]
 
-        indice_valor = None
-        valor = None
+        valor_índice = Nenhum
+        valor = Nenhum
 
-        for i in range(1, len(bloco)):
+        para i em range(1, len(bloco)):
             candidato = valor_monetario_da_linha(bloco[i])
 
-            if candidato is not None:
-                indice_valor = i
-                valor = candidato
-                break
+            se não for None:
+                valor_índice = i
+                valor =
+                quebrar
 
-        if valor is None or valor <= 0:
-            continue
+        Se valor for None ou valor <= 0:
+            continuar
 
-        descricao = " | ".join(
+        descrição = " | ".join(
             bloco[1:indice_valor]
-        ).strip()
+        ).tira()
 
-        descricao_norm = normalizar(descricao)
+        descrição_norm = normalizar(descrição)
 
-        considerar = not any(
-            palavra in descricao_norm
-            for palavra in PALAVRAS_IGNORAR_OUTRO_EXTRATO
+        considerar = nenhum(
+            palavra em descricao_norm
+            para palavra em PALAVRAS_IGNORAR_OUTRO_EXTRATO
         )
 
         registros.append({
-            "Data": bloco[0],
-            "Descrição": descricao or "Entrada",
+            "Dados": bloco[0],
+            "Descrição": descricao ou "Entrada",
             "Valor": valor,
             "Considerar": considerar,
         })
 
-    if registros:
+    se registros:
         return montar_tabela_outro_extrato(registros)
 
     raise ValueError(
-        "O PDF não segue um formato reconhecível de movimentações. "
+        "O PDF não segue um formato reconhecível de movimentações."
         "Tente exportar o extrato em PDF, Excel ou CSV."
     )
 
@@ -1891,89 +1537,89 @@ def ler_outro_pdf(arquivo):
     linhas = texto_pdf_em_linhas(arquivo)
     origem = detectar_origem_outro_extrato(linhas)
 
-    if origem == "Stone":
+    ifl == "Pedra":
         tabela = ler_outro_pdf_stone(linhas)
-    elif origem == "InfinitePay":
+    elifs == "Pagamento Infinito":
         tabela = ler_outro_pdf_infinitepay(linhas)
     elif origem == "Mercado Pago":
         tabela = ler_outro_pdf_mercado_pago(linhas)
-    else:
+    outro:
         tabela = ler_outro_pdf_generico(linhas)
 
-    return tabela, origem
+    retornar tabela,
 
 
 def preparar_outro_extrato_tabela(dados):
-    dados = dados.copy()
+    dados = dados.copiar()
 
-    if "Valor" not in dados.columns:
+    Se "Valor" não estiver em dados.columns:
         raise ValueError(
             "Não encontrei a coluna de valor neste arquivo."
         )
 
     dados["Valor"] = dados["Valor"].apply(
-        converter_numero_flexivel
+        conversor_numero_flexível
     )
 
     dados = dados[
         dados["Valor"].notna()
-    ].copy()
+    ].cópia()
 
-    if "Data" not in dados.columns:
-        dados["Data"] = ""
+    Se "Data" não estiver em dados.columns:
+        dados["Dados"] = ""
 
-    if "Descrição" not in dados.columns:
-        dados["Descrição"] = ""
+    se "Descrição" não estiver em dados.columns:
+        dados["Deda"] = ""
 
     # Se o arquivo informa explicitamente Crédito/Débito,
-    # somente créditos positivos entram como candidatos.
-    if "Tipo do lançamento" in dados.columns:
+    #somente créditos positivos ganham como candidatos.
+    if "Tipo do lançamento" em dados.columns:
         tipo = (
             dados["Tipo do lançamento"]
             .fillna("")
             .astype(str)
-            .apply(normalizar)
+            .aplicar(normalizar)
         )
 
         candidatos = dados[
             (dados["Valor"] > 0)
-            & tipo.str.contains("credito", regex=False)
-        ].copy()
-    else:
+            & tipo.str.contains("crédito", regex=False)
+        ].cópia()
+    outro:
         candidatos = dados[
             dados["Valor"] > 0
-        ].copy()
+        ].cópia()
 
-    if candidatos.empty:
+    se candidatos.vazio:
         raise ValueError(
             "Não encontrei entradas positivas neste arquivo."
         )
 
     descricoes_norm = (
-        candidatos["Descrição"]
+        candidatos["Deda"]
         .fillna("")
         .astype(str)
-        .apply(normalizar)
+        .aplicar(normalizar)
     )
 
     candidatos["Considerar"] = ~descricoes_norm.apply(
-        lambda texto: any(
-            palavra in texto
-            for palavra in PALAVRAS_IGNORAR_OUTRO_EXTRATO
+        lambda texto: qualquer(
+            palavra em texto
+            para palavra em PALAVRAS_IGNORAR_OUTRO_EXTRATO
         )
     )
 
     return montar_tabela_outro_extrato(
         candidatos[
-            ["Data", "Descrição", "Valor", "Considerar"]
-        ].to_dict("records")
+            ["Dados", "Descrição", "Valor", "Considerar"]
+        ].to_dict("registros")
     )
 
 
 def ler_outro_ofx(arquivo):
     texto = arquivo.getvalue().decode(
         "latin1",
-        errors="ignore"
+        erros="ignore"
     )
 
     blocos = re.findall(
@@ -1984,51 +1630,51 @@ def ler_outro_ofx(arquivo):
 
     registros = []
 
-    for bloco in blocos:
+    para bloco em blocos:
         def campo(nome):
-            encontrado = re.search(
+            encontrado = re.pesquisa(
                 rf"<{nome}>([^\r\n<]+)",
                 bloco,
                 flags=re.IGNORECASE
             )
-            return encontrado.group(1).strip() if encontrado else ""
+            retorne encontrado.group(1).strip() se encontrado else ""
 
-        valor = converter_numero_flexivel(
+        valor = conversor_numero_flexivel(
             campo("TRNAMT")
         )
 
-        if valor is None or valor <= 0:
-            continue
+        Se valor for None ou valor <= 0:
+            continuar
 
-        descricao = (
+        descrição = (
             campo("MEMO")
-            or campo("NAME")
-            or campo("TRNTYPE")
-            or "Entrada"
+            ou campo("NOME")
+            ou campo ("TRNTYPE")
+            ou "Entrada"
         )
 
         data_texto = campo("DTPOSTED")
-        data_texto = data_texto[:8] if data_texto else ""
+        texto_dados = texto_dados[:8] if texto_dados else ""
 
-        if len(data_texto) == 8 and data_texto.isdigit():
+        se len(data_texto) == 8 e data_texto.isdigit():
             data_formatada = (
                 f"{data_texto[6:8]}/"
                 f"{data_texto[4:6]}/"
                 f"{data_texto[0:4]}"
             )
-        else:
+        outro:
             data_formatada = data_texto
 
-        descricao_norm = normalizar(descricao)
+        descrição_norm = normalizar(descrição)
 
-        considerar = not any(
-            palavra in descricao_norm
-            for palavra in PALAVRAS_IGNORAR_OUTRO_EXTRATO
+        considerar = nenhum(
+            palavra em descricao_norm
+            para palavra em PALAVRAS_IGNORAR_OUTRO_EXTRATO
         )
 
         registros.append({
-            "Data": data_formatada,
-            "Descrição": descricao,
+            "Dados": data_formatada,
+            "Descrição": descrição,
             "Valor": valor,
             "Considerar": considerar,
         })
@@ -2039,13 +1685,13 @@ def ler_outro_ofx(arquivo):
 def processar_outro_extrato(arquivo):
     nome = arquivo.name.lower()
 
-    if nome.endswith(".pdf"):
-        return ler_outro_pdf(arquivo)
+    se nome.terminarcom(".pdf"):
+        retornar ler_outro_pdf(arquivo)
 
-    if nome.endswith(".ofx"):
+    se nome.terminarcom(".ofx"):
         return ler_outro_ofx(arquivo), "OFX"
 
-    if nome.endswith((".xlsx", ".xls", ".csv")):
+    se nome.terminarcom((".xlsx", ".xls", ".csv")):
         dados = ler_excel_ou_csv(arquivo)
         return preparar_outro_extrato_tabela(dados), "Excel/CSV"
 
@@ -2057,13 +1703,13 @@ def processar_outro_extrato(arquivo):
 def assinatura_arquivos_adicionais(arquivos):
     hash_total = hashlib.sha256()
 
-    for arquivo in arquivos:
-        hash_total.update(
+    para arquivo em arquivos:
+        hash_total.atualizar(
             arquivo.name.encode("utf-8", errors="ignore")
         )
         hash_total.update(arquivo.getvalue())
 
-    return hash_total.hexdigest()
+    retornar hash_total.hexdigest()
 
 
 # ============================================================
@@ -2077,53 +1723,53 @@ def nome_aba_excel(nome, usados):
         nome
     )
 
-    nome = nome[:31] or "Extrato"
+    nome = nome[:31] ou "Extrato"
 
     original = nome
     contador = 2
 
-    while nome in usados:
+    enquanto nome em usados:
         sufixo = f"_{contador}"
         nome = original[:31-len(sufixo)] + sufixo
         contador += 1
 
-    usados.add(nome)
+    usados.adicionar(nome)
 
-    return nome
+    retornar nome
 
 
 def gerar_excel_geral(resumo, detalhes):
     arquivo_excel = BytesIO()
 
-    with pd.ExcelWriter(
+    com pd.ExcelWriter(
         arquivo_excel,
-        engine="openpyxl"
-    ) as writer:
+        motor="openpyxl"
+    ) como escritor:
 
         resumo_exportar = resumo.copy()
 
         resumo_exportar.to_excel(
-            writer,
-            index=False,
+            escritor,
+            índice=Falso,
             sheet_name="Resumo Geral"
         )
 
-        usados = {"Resumo Geral"}
+        usados ​​= {"Resumo Geral"}
 
-        for nome_arquivo, tabela in detalhes.items():
+        para nome_arquivo, tabela em detalhes.items():
             aba = nome_aba_excel(
-                Path(nome_arquivo).stem,
+                Caminho(nome_arquivo).tronco,
                 usados
             )
 
             tabela.to_excel(
-                writer,
-                index=False,
-                sheet_name=aba
+                escritor,
+                índice=Falso,
+                nome_da_folha=aba
             )
 
         # Ajustes simples de largura
-        for ws in writer.book.worksheets:
+        para ws em writer.book.worksheets:
             ws.column_dimensions["A"].width = 25
             ws.column_dimensions["B"].width = 60
             ws.column_dimensions["C"].width = 18
@@ -2132,7 +1778,7 @@ def gerar_excel_geral(resumo, detalhes):
 
     arquivo_excel.seek(0)
 
-    return arquivo_excel
+    retornar arquivo_excel
 
 
 # ============================================================
@@ -2145,17 +1791,17 @@ def gerar_excel_geral(resumo, detalhes):
 st.markdown(
     """
     <style>
-    div[data-testid="stExpander"] summary p,
-    div[data-testid="stExpander"] summary p * {
-        font-size: 20px !important;
-        line-height: 1.45 !important;
+    div[data-testid="stExpander"] resumo p,
+    div[data-testid="stExpander"] resumo p * {
+        tamanho da fonte: 20px !importante;
+        altura da linha: 1,45 !importante;
     }
 
-    div[data-testid="stExpander"] summary p {
-        color: #262730 !important;
+    div[data-testid="stExpander"] resumo p {
+        cor: #262730 !importante;
     }
     </style>
-    """,
+    "",
     unsafe_allow_html=True,
 )
 
@@ -2166,7 +1812,7 @@ st.markdown(
 # ============================================================
 
 if st.session_state.mostrar_boleto_avulso:
-    with st.container(border=True):
+    com st.container(border=True):
         st.subheader("Boleto avulso")
         st.caption(
             f"Emissão pela empresa: {EMPRESA_SELECIONADA}. "
@@ -2177,11 +1823,11 @@ if st.session_state.mostrar_boleto_avulso:
 
         numero_box_avulso = col_box.number_input(
             "Número do BOX",
-            min_value=1,
-            step=1,
-            value=None,
+            valor_mínimo=1,
+            passo=1,
+            valor=Nenhum,
             placeholder="Ex.: 25",
-            key="box_boleto_avulso"
+            chave="box_boleto_avulso"
         )
 
         buscar_cliente_avulso = col_buscar.button(
@@ -2191,39 +1837,39 @@ if st.session_state.mostrar_boleto_avulso:
         )
 
         # Se a empresa ou o BOX mudar, uma identificação antiga não pode
-        # ser usada para uma nova cobrança.
+        # ser usado para uma nova cobrança.
         assinatura_busca_atual = (
             EMPRESA_SELECIONADA,
-            int(numero_box_avulso) if numero_box_avulso is not None else None
+            int(numero_box_avulso) se numero_box_avulso não for None else None
         )
 
-        if (
+        se (
             st.session_state.get("assinatura_cliente_avulso")
             != assinatura_busca_atual
         ):
-            st.session_state.pop("cliente_avulso_encontrado", None)
+            st.session_state.pop("cliente_avulso_encontrado", Nenhum)
 
-        if buscar_cliente_avulso:
-            if numero_box_avulso is None:
+        se buscar_cliente_avulso:
+            se numero_box_avulso for None:
                 st.warning("Informe o número do BOX.")
-            else:
-                try:
+            outro:
+                tentar:
                     cliente_avulso, box_confirmado = localizar_cliente_asaas_por_box(
                         f"BOX {int(numero_box_avulso)}.txt"
                     )
 
                     st.session_state["cliente_avulso_encontrado"] = {
                         "id": cliente_avulso.get("id"),
-                        "name": cliente_avulso.get("name", ""),
-                        "box": box_confirmado,
+                        "nome": cliente_avulso.get("nome", ""),
+                        "caixa": caixa_confirmada,
                     }
                     st.session_state["assinatura_cliente_avulso"] = (
                         assinatura_busca_atual
                     )
 
-                except Exception as erro_cliente:
-                    st.session_state.pop("cliente_avulso_encontrado", None)
-                    st.error(
+                exceto Exceção como erro_cliente:
+                    st.session_state.pop("cliente_avulso_encontrado", Nenhum)
+                    st.erro(
                         f"Não foi possível localizar o cliente: {erro_cliente}"
                     )
 
@@ -2232,77 +1878,77 @@ if st.session_state.mostrar_boleto_avulso:
         )
 
         cliente_confirmado = (
-            cliente_avulso_salvo is not None
-            and st.session_state.get("assinatura_cliente_avulso")
+            cliente_avulso_salvo não é Nenhum
+            e st.session_state.get("assinatura_cliente_avulso")
             == assinatura_busca_atual
         )
 
-        if cliente_confirmado:
-            st.success(
+        se cliente_confirmado:
+            st.sucesso(
                 f"Cliente encontrado: "
-                f"{cliente_avulso_salvo.get('name', '')} "
-                f"(BOX {cliente_avulso_salvo.get('box', '')})"
+                f"{cliente_avulso_salvo.get('nome', '')} "
+                f"(BOX {cliente_avulso_salvo.get('caixa', '')})"
             )
-        else:
+        outro:
             st.info(
                 "Informe o BOX e clique em “Buscar cliente” antes de emitir."
             )
 
-        descricao_avulsa = st.text_area(
-            "Descrição do boleto",
-            placeholder=(
-                "Ex.: Taxa de publicidade\n"
+        descrição_avulsa = st.text_area(
+            "Desencadeado do boleto",
+            espaço reservado=(
+                "Ex.: Taxa de venda\n"
                 "Multa contratual\n"
                 "Outra descrição"
             ),
-            height=120,
-            key="descricao_boleto_avulso"
+            altura=120,
+            chave="descricao_boleto_avulso"
         )
 
         col_valor_avulso, col_venc_avulso = st.columns(2)
 
-        valor_avulso = col_valor_avulso.number_input(
+        valor_avulso = col_valor_avulso.número_input(
             "Valor do boleto",
-            min_value=0.00,
-            step=0.01,
-            format="%.2f",
-            key="valor_boleto_avulso"
+            valor_mínimo=0,00,
+            passo=0,01,
+            formato="%.2f",
+            chave="valor_boleto_avulso"
         )
 
         vencimento_avulso = col_venc_avulso.date_input(
             "Vencimento do boleto",
-            value=proximo_dia_10(),
-            min_value=date.today(),
-            format="DD/MM/YYYY",
+            valor=próximo_dia_10(),
+            valor_mínimo=data.hoje(),
+            formato="DD/MM/AAAA",
             key="vencimento_boleto_avulso"
         )
 
         pode_emitir_avulso = (
             cliente_confirmado
-            and bool(str(descricao_avulsa).strip())
-            and float(valor_avulso) > 0
+            e bool(str(descrição_avulsa).strip())
+            e float(valor_avulso) > 0
         )
 
         clicou_emitir_avulso = st.button(
             "💳 Emitir boleto avulso",
-            type="primary",
+            tipo="primário",
             use_container_width=True,
-            disabled=not pode_emitir_avulso,
-            key="emitir_boleto_avulso"
+            desativado=não pode_emitir_avulso,
+            chave="emitir_boleto_avulso"
         )
 
-        if clicou_emitir_avulso:
-            try:
+        se clicou_emitir_avulso:
+            tentar:
                 with st.spinner("Gerando boleto avulso no Asaas..."):
                     # Usa a mesma rotina de localização, notificações e
                     # proteção contra duplicidade do fluxo já existente.
                     boleto_avulso = emitir_boleto_asaas(
                         f"BOX {int(numero_box_avulso)}.txt",
-                        0.0,
+                        0,0,
                         float(valor_avulso),
-                        vencimento_avulso,
-                        str(descricao_avulsa).strip(),
-                        False
+                        virada_avulso,
+                        str(descrição_avulsa).strip(),
+                        Falso
                     )
 
                 st.session_state["resultado_boleto_avulso"] = boleto_avulso
@@ -2311,44 +1957,44 @@ if st.session_state.mostrar_boleto_avulso:
                     int(numero_box_avulso),
                     round(float(valor_avulso), 2),
                     vencimento_avulso.isoformat(),
-                    str(descricao_avulsa).strip(),
+                    str(descrição_avulsa).strip(),
                 )
 
-            except Exception as erro_boleto_avulso:
-                st.error(
+            exceto Exceção como erro_boleto_avulso:
+                st.erro(
                     f"Não foi possível emitir o boleto avulso: "
                     f"{erro_boleto_avulso}"
                 )
 
-        assinatura_resultado_atual = None
-        if numero_box_avulso is not None:
+        assinatura_resultado_atual = Nenhuma
+        se numero_box_avulso não for Nenhum:
             assinatura_resultado_atual = (
                 EMPRESA_SELECIONADA,
                 int(numero_box_avulso),
                 round(float(valor_avulso), 2),
                 vencimento_avulso.isoformat(),
-                str(descricao_avulsa).strip(),
+                str(descrição_avulsa).strip(),
             )
 
         boleto_avulso_salvo = st.session_state.get(
             "resultado_boleto_avulso"
         )
 
-        if (
+        se (
             boleto_avulso_salvo
-            and st.session_state.get(
+            e st.session_state.get(
                 "assinatura_resultado_boleto_avulso"
             ) == assinatura_resultado_atual
         ):
             if boleto_avulso_salvo.get("novo"):
-                st.success(
+                st.sucesso(
                     f"✅ Boleto avulso criado para "
                     f"{boleto_avulso_salvo.get('clienteNome', '')} "
                     f"(BOX {boleto_avulso_salvo.get('box', '')}) e "
-                    f"notificações padronizadas com sucesso. "
+                    f"notificações padronizadas com sucesso."
                     f"ID: {boleto_avulso_salvo.get('id', '')}"
                 )
-            else:
+            outro:
                 st.info(
                     "ℹ️ Esta cobrança já existia no Asaas. "
                     "O sistema não gerou uma cobrança duplicada."
@@ -2370,66 +2016,66 @@ if st.session_state.mostrar_boleto_avulso:
 
 st.divider()
 
-if "uploader_key" not in st.session_state:
+se "uploader_key" não estiver em st.session_state:
     st.session_state.uploader_key = 0
 
 arquivos = st.file_uploader(
     "Carregue os extratos",
-    type=["pdf", "xlsx", "xls", "csv"],
-    accept_multiple_files=True,
+    tipo=["pdf", "xlsx", "xls", "csv"],
+    aceitar_múltiplos_arquivos=Verdadeiro,
     help="Você pode selecionar vários arquivos de uma só vez.",
-    key=f"uploader_{st.session_state.uploader_key}"
+    chave=f"uploader_{st.session_state.uploader_key}"
 )
 
-if arquivos:
-    if st.button(
+se arquivos:
+    se st.botão(
         "🗑️ Limpar todos os arquivos",
-        type="secondary",
-        help="Remove todos os extratos carregados desta remessa."
+        tipo="secundário",
+        help="Remover todos os extratos carregados desta remessa."
     ):
         st.session_state.uploader_key += 1
 
-        # Limpa também os editores das remessas anteriores.
-        chaves_para_apagar = [
+        # Limpe também os editores das remessas anteriores.
+        fila_para_apagar = [
             chave
-            for chave in list(st.session_state.keys())
-            if str(chave).startswith("editor_")
+            para chave em list(st.session_state.keys())
+            se str(chave).startswith("editor_")
         ]
 
-        for chave in chaves_para_apagar:
+        para chave em chaves_para_apagar:
             del st.session_state[chave]
 
         st.rerun()
 
-if not arquivos:
+se não houver arquivos:
     st.info(
         "Selecione um ou vários arquivos PDF, Excel ou CSV para começar."
     )
 
-else:
-    st.success(
+outro:
+    st.sucesso(
         f"{len(arquivos)} arquivo(s) carregado(s)."
     )
 
     resultados = []
-    detalhes_exportacao = {}
+    exportação_de_verdade = {}
 
     st.subheader("Resumo dos arquivos")
     st.caption(
-        "Clique em qualquer linha para abrir e editar as movimentações daquele arquivo."
+        "Clique em qualquer linha para abrir e editar as movimentações desse arquivo."
     )
 
     total_faturamento = 0.0
-    total_royalties = 0.0
+    total_royalties = 0,0
 
-    for indice, arquivo in enumerate(arquivos):
-        try:
-            # Reinicia variáveis desta linha para não reaproveitar dados do arquivo anterior.
-            editada = None
-            selecionadas = None
-            faturamento = None
-            royalties = None
-            vencimento = proximo_dia_10()
+    para índice, arquivo in enumerate(arquivos):
+        tentar:
+            # Reiniciar variáveis ​​desta linha para não reaproveitar dados do arquivo anterior.
+            editada = Nenhuma
+            selecionados = Nenhum
+            faturamento = Nenhum
+            royalties = Nenhum
+            vencimento = próximo_dia_10()
 
             dados = processar_arquivo(arquivo)
 
@@ -2437,38 +2083,38 @@ else:
                 dados["Classificação"].isin(
                     ["FATURAMENTO", "REVISAR"]
                 )
-            ].copy()
+            ].cópia()
 
-            chave_editor = (
-                f"editor_{indice}_"
+            editor_chave = (
+                f"editor_{índice}_"
                 + re.sub(
                     r"[^a-zA-Z0-9_]",
                     "_",
-                    arquivo.name
+                    nome do arquivo
                 )
             )
 
-            # Primeiro calcula com a seleção padrão para exibir no título.
-            selecionadas_padrao = visiveis[
-                visiveis["Considerar"] == True
-            ].copy()
+            # Primeiro calcule com a seleção padrão para exibir no título.
+            selecionadoss_padrao = visiveis[
+                visiveis["Considerar"] == Verdadeiro
+            ].cópia()
 
             faturamento_padrao = (
-                pd.to_numeric(
-                    selecionadas_padrao["Valor"],
-                    errors="coerce"
+                pd.para_numérico(
+                    selecionado_padrao["Valor"],
+                    erros="coagir"
                 )
                 .fillna(0)
-                .sum()
+                .soma()
             )
 
             royalties_padrao = (
-                faturamento_padrao
-                * PERCENTUAL_ROYALTIES
+                faturamento_padrão
+                * ROYALTIES_PERCENTUAIS
             )
 
             valor_faturamento_titulo = formatar_moeda(
-                faturamento_padrao
+                faturamento_padrão
             ).replace("$", r"\$")
 
             valor_royalties_titulo = formatar_moeda(
@@ -2480,70 +2126,70 @@ else:
             # traduza "box" para "caixa".
             numero_box_resumo = extrair_numero_box(arquivo.name)
 
-            if numero_box_resumo is not None:
+            se numero_box_resumo não for None:
                 # Caracteres Unicode visualmente equivalentes impedem o
-                # tradutor automático do navegador de interpretar BOX como palavra inglesa.
-                nome_resumo = f"BΟX {numero_box_resumo:02d}"  # O é ômicron grego
-            else:
-                nome_resumo = Path(arquivo.name).stem
+                # tradutor automático do navegador de interpretação BOX como palavra inglesa.
+                nome_resumo = f"BΟX {numero_box_resumo:02d}" # O é ômicron grego
+            outro:
+                nome_resumo = Caminho(arquivo.nome).stem
 
-            titulo_linha = (
+            título_linha = (
                 f"📄 {nome_resumo}"
-                f"   |   Faturamento: :green[{valor_faturamento_titulo}]"
-                f"   |   Royalties 4%: :green[{valor_royalties_titulo}]"
+                f" | Faturamento: :green[{valor_faturamento_titulo}]"
+                f" | Royalties 4%: :green[{valor_royalties_titulo}]"
             )
 
-            with st.expander(
+            com st.expander(
                 titulo_linha,
-                expanded=False
+                expandido=Falso
             ):
                 st.caption(
                     "Desmarque qualquer valor que não queira considerar no faturamento."
                 )
 
                 editada = st.data_editor(
-                    visiveis[
+                    visivo
                         [
-                            "Data",
-                            "Descrição",
-                            "Valor",
+                            "Dados",
+                            "Ded",
+                            "Valentia",
                             "Classificação",
                             "Considerar",
                         ]
                     ],
                     use_container_width=True,
-                    hide_index=True,
-                    key=chave_editor,
-                    column_config={
+                    ocultar_índice=Verdadeiro,
+                    chave=editor_chave,
+                    configuração_coluna={
                         "Considerar":
                             st.column_config.CheckboxColumn(
                                 "Considerar"
                             ),
-                        "Valor":
+                        "Valentia":
                             st.column_config.NumberColumn(
-                                "Valor",
-                                format="R$ %.2f"
+                                "Valentia",
+                                formato="R$ %.2f"
                             ),
                     },
-                    disabled=[
-                        "Data",
-                        "Descrição",
-                        "Valor",
+                    desativado=[
+                        "Dados",
+                        "Ded",
+                        "Valentia",
                         "Classificação",
                     ],
                 )
 
-                selecionadas = editada[
+                selecionados = editada[
                     editada["Considerar"] == True
-                ].copy()
+                ].cópia()
 
                 faturamento = (
-                    pd.to_numeric(
-                        selecionadas["Valor"],
-                        errors="coerce"
+                    pd.para_numérico(
+                        selecionado["Valor"],
+                        erros="coagir"
                     )
                     .fillna(0)
-                    .sum()
+                    .soma()
                 )
 
 
@@ -2552,52 +2198,52 @@ else:
                 # OUTRO EXTRATO / MAQUININHA
                 # ====================================================
 
-                chave_area_outro = f"outro_extrato_area_{indice}"
+                chave_area_outro = f"outro_extrato_area_{índice}"
 
                 st.markdown(
                     f"""
                     <style>
                     .st-key-{chave_area_outro} {{
-                        background-color: #f0fdf4 !important;
-                        border: 1px solid #86efac !important;
+                        cor de fundo: #f0fdf4 !importante;
+                        borda: 1px sólida #86efac !importante;
                         border-radius: 14px !important;
-                        padding: 18px 20px 16px 20px !important;
-                        margin-top: 8px !important;
-                        margin-bottom: 22px !important;
+                        preenchimento: 18px 20px 16px 20px !importante;
+                        margem superior: 8px !importante;
+                        margem-inferior: 22px !importante;
                     }}
 
                     .st-key-{chave_area_outro} [data-testid="stFileUploader"] {{
-                        background: transparent !important;
+                        fundo: transparente !importante;
                     }}
 
                     .st-key-{chave_area_outro} [data-testid="stExpander"] {{
-                        background: rgba(255, 255, 255, 0.72) !important;
+                        fundo: rgba(255, 255, 255, 0.72) !importante;
                         border-radius: 10px !important;
                     }}
                     </style>
-                    """,
+                    "",
                     unsafe_allow_html=True
                 )
 
-                with st.container(
-                    border=False,
-                    key=chave_area_outro
+                com st.container(
+                    borda=False,
+                    chave=chave_área_outro
                 ):
                     st.markdown("#### Outro extrato / maquininha")
                     st.caption(
-                        "Área destinada às entradas de extratos adicionais "
+                        "Área destinada às entradas de extratos adicionais"
                         "(Stone, InfinitePay, Mercado Pago e outros formatos). "
                         "O valor confirmado aqui será somado ao faturamento total."
                     )
 
                     outros_arquivos = st.file_uploader(
                         "Carregar outro extrato",
-                        type=["pdf", "xlsx", "xls", "csv", "ofx"],
-                        accept_multiple_files=True,
-                        help=(
-                            "Aceita PDF, Excel, CSV e OFX. "
-                            "O sistema reconhece automaticamente Stone, "
-                            "InfinitePay e Mercado Pago e também tenta "
+                        tipo=["pdf", "xlsx", "xls", "csv", "ofx"],
+                        aceitar_múltiplos_arquivos=Verdadeiro,
+                        ajuda=(
+                            "Aceita PDF, Excel, CSV e OFX."
+                            "O sistema sincronizado automaticamente Stone,"
+                            "InfinitePay e Mercado Pago e também tenta"
                             "interpretar outros formatos de extrato."
                         ),
                         key=f"outro_extrato_uploader_{indice}"
@@ -2609,17 +2255,17 @@ else:
                         f"outro_extrato_confirmado_{indice}"
                     )
                     chave_assinatura_outro = (
-                        f"outro_extrato_assinatura_{indice}"
+                        f"outro_extrato_assinatura_{índice}"
                     )
 
-                    if outros_arquivos:
+                    se outros_arquivos:
                         assinatura_atual_outro = (
                             assinatura_arquivos_adicionais(
                                 outros_arquivos
                             )
                         )
 
-                        if (
+                        se (
                             st.session_state.get(
                                 chave_assinatura_outro
                             )
@@ -2631,23 +2277,23 @@ else:
 
                             st.session_state[
                                 chave_confirmacao_outro
-                            ] = False
+                            ] = Falso
 
                         totais_por_arquivo = []
 
-                        for indice_outro, arquivo_outro in enumerate(
+                        para índice_outro, arquivo_outro em enumerate(
                             outros_arquivos
                         ):
-                            try:
+                            tentar:
                                 (
                                     dados_outro,
                                     origem_outro,
-                                ) = processar_outro_extrato(
+                                ) = som_outro_extrato(
                                     arquivo_outro
                                 )
 
-                                # Segurança contra o erro de CheckboxColumn
-                                # receber FLOAT em vez de booleano.
+                                # Segurança contra erro de CheckboxColumn
+                                # receba FLOAT em vez de booleano.
                                 dados_outro["Considerar"] = (
                                     dados_outro["Considerar"]
                                     .fillna(False)
@@ -2660,54 +2306,54 @@ else:
                                     f"{assinatura_atual_outro[:12]}"
                                 )
 
-                                with st.expander(
+                                com st.expander(
                                     (
-                                        f"🔎 Ver detalhes — "
+                                        f"🔎 Ver sempre — "
                                         f"{arquivo_outro.name} "
                                         f"({origem_outro})"
                                     ),
-                                    expanded=False
+                                    expandido=Falso
                                 ):
                                     st.caption(
                                         "Desmarque qualquer entrada que "
-                                        "não queira somar ao faturamento."
+                                        "não quero somar ao faturamento."
                                     )
 
                                     editado_outro = st.data_editor(
                                         dados_outro,
                                         use_container_width=True,
-                                        hide_index=True,
-                                        key=chave_editor_outro,
-                                        column_config={
+                                        ocultar_índice=Verdadeiro,
+                                        chave=chave_editor_outro,
+                                        configuração_coluna={
                                             "Considerar":
                                                 st.column_config.CheckboxColumn(
                                                     "Considerar"
                                                 ),
-                                            "Valor":
+                                            "Valentia":
                                                 st.column_config.NumberColumn(
-                                                    "Valor",
-                                                    format="R$ %.2f"
+                                                    "Valentia",
+                                                    formato="R$ %.2f"
                                                 ),
                                         },
-                                        disabled=[
-                                            "Data",
-                                            "Descrição",
-                                            "Valor",
+                                        desativado=[
+                                            "Dados",
+                                            "Ded",
+                                            "Valentia",
                                             "Classificação",
                                         ],
                                     )
 
                                 selecionado_outro = editado_outro[
-                                    editado_outro["Considerar"] == True
-                                ].copy()
+                                    editado_outro["Considerar"] == Verdadeiro
+                                ].cópia()
 
                                 total_arquivo_outro = (
-                                    pd.to_numeric(
+                                    pd.para_numérico(
                                         selecionado_outro["Valor"],
-                                        errors="coerce"
+                                        erros="coagir"
                                     )
                                     .fillna(0)
-                                    .sum()
+                                    .soma()
                                 )
 
                                 quantidade_arquivo_outro = len(
@@ -2719,7 +2365,7 @@ else:
                                 )
 
                                 quantidade_outros_extratos += (
-                                    quantidade_arquivo_outro
+                                    outro_arquivo
                                 )
 
                                 totais_por_arquivo.append(
@@ -2730,26 +2376,26 @@ else:
                                     )
                                 )
 
-                            except Exception as erro_outro:
-                                st.error(
-                                    f"Erro ao processar "
+                            exceto Exceção como erro_outro:
+                                st.erro(
+                                    f"Erro ao"
                                     f"{arquivo_outro.name}: "
                                     f"{erro_outro}"
                                 )
 
-                        for (
+                        para (
                             nome_outro,
                             origem_outro,
                             total_outro,
-                        ) in totais_por_arquivo:
+                        ) em totais_por_arquivo:
                             st.caption(
                                 f"{origem_outro} • {nome_outro} • "
-                                f"Entradas selecionadas: "
+                                f"Entradas: "
                                 f"{formatar_moeda(total_outro)}"
                             )
 
                         col_total_outro, col_ok_outro, col_espaco_outro = st.columns(
-                            [1.05, 0.60, 2.35]
+                            [1,05, 0,60, 2,35]
                         )
 
                         col_total_outro.metric(
@@ -2764,65 +2410,65 @@ else:
                             unsafe_allow_html=True
                         )
 
-                        if chave_confirmacao_outro not in st.session_state:
+                        se chave_confirmacao_outro não estiver em st.session_state:
                             st.session_state[
                                 chave_confirmacao_outro
-                            ] = False
+                            ] = Falso
 
-                        if not st.session_state[
+                        se não st.session_state[
                             chave_confirmacao_outro
                         ]:
                             clicou_ok_outro = col_ok_outro.button(
-                                "OK — Adicionar",
-                                type="secondary",
+                                "OK —fera",
+                                tipo="secundário",
                                 use_container_width=True,
-                                disabled=(
+                                desativado=(
                                     valor_outros_extratos <= 0
                                 ),
                                 key=f"confirmar_outro_{indice}"
                             )
 
-                            if clicou_ok_outro:
+                            se clicou_ok_outro:
                                 st.session_state[
                                     chave_confirmacao_outro
-                                ] = True
-                        else:
+                                ] = Verdadeiro
+                        outro:
                             col_ok_outro.success(
                                 "✅ Adicionado ao faturamento"
                             )
 
-                            if col_ok_outro.button(
-                                "Remover do faturamento",
+                            se col_ok_outro.button(
+                                "Removedor do faturamento",
                                 use_container_width=True,
-                                key=f"remover_outro_{indice}"
+                                chave=f"remover_outro_{índice}"
                             ):
                                 st.session_state[
                                     chave_confirmacao_outro
-                                ] = False
+                                ] = Falso
                                 st.rerun()
 
-                        if st.session_state.get(
+                        se st.session_state.get(
                             chave_confirmacao_outro,
-                            False
+                            Falso
                         ):
                             faturamento = (
-                                float(faturamento)
+                                flutuar (faturamento)
                                 + float(valor_outros_extratos)
                             )
 
                             st.caption(
-                                "O valor acima já está incluído no faturamento total. "
+                                "O valor acima já está incluído no faturamento total."
                                 "Se você desmarcar uma entrada em “Ver detalhes”, "
                                 "o total será recalculado automaticamente."
                             )
-                        else:
-                            pass
+                        outro:
+                            passar
 
 
                 st.markdown("#### Adicionar valor ao faturamento")
 
                 # Layout organizado
-                col_esq, col_centro, col_dir = st.columns([0.85, 1.15, 0.75])
+                col_esq, col_centro, col_dir = st.columns([0,85, 1,15, 0,75])
     
                 # ==========================================
                 # COLUNA ESQUERDA
@@ -2830,40 +2476,40 @@ else:
     
                 adicional_texto = col_esq.text_input(
                     "Valor adicional ao faturamento",
-                    value="0,00",
-                    key=f"adicional_boleto_{indice}",
-                    help=(
+                    valor="0,00",
+                    key=f"adicional_boleto_{índice}",
+                    ajuda=(
                         "Digite um valor positivo para somar ou negativo para diminuir o faturamento. "
-                        "Ex.: 500,00 soma; -500,00 diminui. Os royalties de 4% serão recalculados sobre o novo total."
+                        "Ex.: 500,00 soma; -500,00 diminuída. Os royalties de 4% serão recalculados sobre o novo total."
                     )
                 )
     
-                adicional_boleto = converter_numero(adicional_texto)
+                boleto_adicional = conversor_numero(adicional_texto)
     
-                if adicional_boleto is None:
-                    adicional_boleto = 0.0
+                se adicional_boleto for None:
+                    boleto_adicional = 0,0
                     col_esq.warning("Digite um valor válido, por exemplo: 100,00")
     
     
-                # Recalcula faturamento e royalties
+                #Recalcula faturamento e royalties
                 faturamento = (
-                    float(faturamento)
-                    + float(adicional_boleto)
+                    flutuar (faturamento)
+                    + float(boleto_adicional)
                 )
     
                 royalties = (
-                    float(faturamento)
-                    * PERCENTUAL_ROYALTIES
+                    flutuar (faturamento)
+                    * ROYALTIES_PERCENTUAIS
                 )
     
                 # Valor final do boleto editável
-                # Atualiza automaticamente quando os royalties mudarem,
-                # mas preserva uma alteração manual feita pelo usuário.
-                chave_valor_boleto = f"valor_final_boleto_{indice}"
-                chave_valor_auto = f"valor_final_boleto_auto_{indice}"
-                novo_valor_auto = round(float(royalties), 2)
+                # Atualiza automaticamente quando os royalties mudam,
+                # mas preserve uma alteração manual feita pelo usuário.
+                chave_valor_boleto = f"valor_final_boleto_{índice}"
+                chave_valor_auto = f"valor_final_boleto_auto_{índice}"
+                novo_valor_auto = arredondar(float(royalties), 2)
 
-                if chave_valor_boleto not in st.session_state:
+                se chave_valor_boleto não estiver em st.session_state:
                     # Primeira exibição: usa automaticamente 4% do faturamento total.
                     st.session_state[chave_valor_boleto] = novo_valor_auto
 
@@ -2875,17 +2521,17 @@ else:
                     # Se o faturamento mudou (inclusive por valor adicional
                     # ou seleção/desseleção de entradas), recalcula os 4%
                     # e atualiza também o valor final do boleto.
-                    if abs(novo_valor_auto - valor_auto_anterior) >= 0.005:
+                    if abs(novo_valor_auto - valor_auto_anterior) >= 0,005:
                         st.session_state[chave_valor_boleto] = novo_valor_auto
 
-                st.session_state[chave_valor_auto] = novo_valor_auto
+                st.estado_sessão[chave_valor_auto] = novo_valor_auto
 
-                valor_final_boleto = col_esq.number_input(
+                valor_final_boleto = col_esq.número_input(
                     "Valor final do boleto",
-                    min_value=0.00,
-                    step=0.01,
-                    format="%.2f",
-                    key=chave_valor_boleto
+                    valor_mínimo=0,00,
+                    passo=0,01,
+                    formato="%.2f",
+                    chave=chave_valor_boleto
                 )
 
                 # O valor grande de Royalties acompanha o valor final do boleto.
@@ -2897,12 +2543,12 @@ else:
                 # COLUNA CENTRAL
                 # ==========================================
     
-                col_centro.metric(
+                col_centro.métrica(
                     "Total do faturamento",
                     formatar_moeda(faturamento)
                 )
     
-                col_centro.metric(
+                col_centro.métrica(
                     "Royalties 4%",
                     formatar_moeda(royalties)
                 )
@@ -2911,93 +2557,72 @@ else:
                 # COLUNA DIREITA
                 # ==========================================
     
-                col_dir.metric(
-                    "Entradas consideradas",
+                col_dir.métrica(
+                    "Entradas considerando",
                     (
                         len(selecionadas)
                         + (
-                            quantidade_outros_extratos
-                            if st.session_state.get(
+                            outros_extratos
+                            se st.session_state.get(
                                 chave_confirmacao_outro,
-                                False
+                                Falso
                             )
-                            else 0
+                            caso contrário 0
                         )
                     )
                 )
     
                     
                 st.markdown(f"#### Cobrança Asaas — {EMPRESA_SELECIONADA}")
-                col_venc, col_botao = st.columns([2, 1])
+                col_venc, col_botao = st.colunas([2, 1])
                 descricao_boleto = "Royalties"
                 vencimento = col_venc.date_input(
                     "Vencimento do boleto",
-                    value=proximo_dia_10(),
-                    min_value=date.today(),
-                    format="DD/MM/YYYY",
-                    key=f"vencimento_{indice}"
+                    valor=próximo_dia_10(),
+                    valor_mínimo=data.hoje(),
+                    formato="DD/MM/AAAA",
+                    chave=f"vencimento_{índice}"
                 )
     
                 chave_boleto = (
-                    f"boleto_{indice}_"
+                    f"boleto_{índice}_"
                     + re.sub(r"[^a-zA-Z0-9_]", "_", arquivo.name)
                 )
     
     
-                if EMPRESA_SELECIONADA == "Lider Franquia":
+                if EMPRESA_SELECIONADA == "Líder Franquia":
                         emitir_nota_apos_pagamento = col_botao.checkbox(
                             "Emitir nota fiscal de Royalties após o pagamento",
-                            value=False,
-                            key=f"emitir_nota_{indice}"
+                            valor=Falso,
+                            chave=f"emitir_nota_{índice}"
                     )
-                else:
-                        emitir_nota_apos_pagamento = False
+                outro:
+                        emitir_nota_apos_pagamento = Falso
     
                 clicou_emitir_boleto = col_botao.button(
                     "💳 Emitir boleto",
-                    key=chave_boleto,
-                    type="primary",
+                    chave=chave_boleto,
+                    tipo="primário",
                     use_container_width=True,
-                    disabled=valor_final_boleto <= 0
+                    desativado=valor_final_boleto <= 0
                 )
     
-                if clicou_emitir_boleto:
-                    try:
+                se clicou_emitir_boleto:
+                    tentar:
                         with st.spinner("Gerando boleto no Asaas..."):
                             boleto = emitir_boleto_asaas(
-                                arquivo.name,
-                                faturamento,
+                                nome.do.arquivo,
+                                Vaso sanitário,
                                 valor_final_boleto,
-                                vencimento,
+                                não,
                                 descricao_boleto,
                                 emitir_nota_apos_pagamento
                             )
 
                         st.session_state[f"resultado_boleto_{indice}"] = boleto
 
-                        # Arquiva o faturamento somente depois que a cobrança
-                        # foi processada pelo Asaas. O arquivo fica permanente
-                        # mesmo se os extratos forem removidos da tela.
-                        try:
-                            resultado_historico = salvar_historico_faturamento(
-                                arquivo.name,
-                                faturamento,
-                                boleto,
-                            )
-                            st.session_state[
-                                f"resultado_historico_{indice}"
-                            ] = resultado_historico
-                            st.session_state.pop(
-                                f"erro_historico_{indice}",
-                                None,
-                            )
-                        except Exception as erro_historico:
-                            st.session_state[
-                                f"erro_historico_{indice}"
-                            ] = str(erro_historico)
-
-                    except Exception as erro_boleto:
-                        st.error(
+                    exceto Exceção como erro_boleto:
+                        st.erro(
                             f"Não foi possível emitir o boleto: {erro_boleto}"
                         )
 
@@ -3005,43 +2630,22 @@ else:
                     f"resultado_boleto_{indice}"
                 )
 
-                if boleto_salvo:
-                    resultado_historico = st.session_state.get(
-                        f"resultado_historico_{indice}"
-                    )
-                    erro_historico = st.session_state.get(
-                        f"erro_historico_{indice}"
-                    )
-
-                    if (
-                        resultado_historico
-                        and resultado_historico.get("salvo")
-                    ):
-                        st.success(
-                            f"📚 Faturamento arquivado em "
-                            f"{resultado_historico.get('mes', '')}."
-                        )
-                    elif erro_historico:
-                        st.warning(
-                            "O boleto foi processado, mas o histórico não "
-                            f"pôde ser arquivado: {erro_historico}"
-                        )
-
-                    if boleto_salvo.get("novo"):
-                        st.success(
+                se boleto_salvo:
+                    se boleto_salvo.get("novo"):
+                        st.sucesso(
                             f"✅ Boleto criado para "
                             f"{boleto_salvo.get('clienteNome', '')} "
                             f"(BOX {boleto_salvo.get('box', '')}) "
-                            f"e notificações padronizadas com sucesso. "
+                            f"e notificações padronizadas com sucesso."
                             f"ID: {boleto_salvo.get('id', '')}"
                         )
-                    else:
+                    outro:
                         st.info(
                             "ℹ️ Esta cobrança já existia no Asaas. "
                             "O sistema não gerou uma cobrança duplicada."
                         )
 
-                    if boleto_salvo.get("invoiceUrl"):
+                    se boleto_salvo.get("invoiceUrl"):
                         st.link_button(
                             "🔗 Abrir cobrança no Asaas",
                             boleto_salvo["invoiceUrl"],
@@ -3056,40 +2660,40 @@ else:
                         )
 
             resultados.append({
-                "Arquivo": arquivo.name,
+                "Arquivo": nome.do.arquivo,
                 "Faturamento": faturamento,
                 "Royalties 4%": royalties,
             })
 
-            detalhes_exportacao[
-                arquivo.name
+            aviso_exportação[
+                nome do arquivo
             ] = editada.copy()
 
             total_faturamento += faturamento
             total_royalties += royalties
 
-        except Exception as erro:
-            st.error(
+        exceto Exception como erro:
+            st.erro(
                 f"Erro ao processar {arquivo.name}: {erro}"
             )
 
             resultados.append({
-                "Arquivo": arquivo.name,
-                "Faturamento": 0.0,
-                "Royalties 4%": 0.0,
+                "Arquivo": nome.do.arquivo,
+                "Faturamento": 0,0,
+                "Royalties 4%": 0,0,
             })
 
     st.divider()
 
     col_total1, col_total2 = st.columns(2)
 
-    col_total1.metric(
+    col_total1.métrica(
         "Faturamento total geral",
         formatar_moeda(total_faturamento)
     )
     
-    col_total2.metric(
-        "Royalties 4% total",
+    col_total2.métrica(
+        "Royalties 4% no total",
         formatar_moeda(total_royalties)
     )
     
@@ -3101,38 +2705,15 @@ else:
 
     excel_geral = gerar_excel_geral(
     resumo,
-    detalhes_exportacao
+    exportação_do_imigrante
 )
     
     st.download_button(
         "📥 Baixar relatório geral em Excel",
-        data=excel_geral,
+        dados=excel_geral,
         file_name="relatorio_geral_faturamento.xlsx",
         mime=(
             "application/vnd.openxmlformats-officedocument."
             "spreadsheetml.sheet"
         ),
     )
-
-# ============================================================
-# HISTÓRICO GERAL DE FATURAMENTO
-# ============================================================
-# Fica disponível mesmo quando nenhum extrato está carregado.
-
-st.divider()
-
-if "mostrar_historico_faturamento" not in st.session_state:
-    st.session_state.mostrar_historico_faturamento = False
-
-if st.button(
-    "📚 Histórico de faturamento",
-    key="abrir_historico_faturamento",
-    use_container_width=False,
-):
-    st.session_state.mostrar_historico_faturamento = (
-        not st.session_state.mostrar_historico_faturamento
-    )
-
-if st.session_state.mostrar_historico_faturamento:
-    st.markdown("### Histórico de faturamento")
-    exibir_historico_faturamento()
