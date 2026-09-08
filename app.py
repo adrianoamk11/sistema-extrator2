@@ -6,7 +6,9 @@ import re
 import unicodedata
 import requests
 import hashlib
-from datetime import date, timedelta
+import gspread
+from google.oauth2.service_account import Credentials
+from datetime import date, timedelta, datetime
 from dateutil.relativedelta import relativedelta
 from io import BytesIO
 from pathlib import Path
@@ -578,6 +580,358 @@ def emitir_boleto_asaas(
         "status": dados.get("status"),
         "externalReference": external_reference,
     }
+
+# ============================================================
+# HISTÓRICO PERMANENTE DE FATURAMENTO — GOOGLE PLANILHAS
+# ============================================================
+# O histórico é gravado somente depois que o boleto é processado no Asaas.
+# Assim, limpar os arquivos da tela não apaga os valores já arquivados.
+
+ABA_HISTORICO_FATURAMENTO = "HISTORICO_FATURAMENTO"
+CABECALHO_HISTORICO = [
+    "ID_REGISTRO",
+    "EMPRESA",
+    "MES_REFERENCIA",
+    "ANO",
+    "MES_NUMERO",
+    "BOX",
+    "FATURAMENTO",
+    "ROYALTIES",
+    "ASAAS_PAYMENT_ID",
+    "EXTERNAL_REFERENCE",
+    "ARQUIVO",
+    "DATA_EMISSAO",
+]
+
+MESES_PT = {
+    1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+    5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+    9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro",
+}
+
+
+def referencia_faturamento(data_base=None):
+    """Arquiva no mês anterior ao mês em que o boleto é emitido."""
+    data_base = data_base or date.today()
+    ref = data_base - relativedelta(months=1)
+    return ref.year, ref.month, f"{MESES_PT[ref.month]}/{ref.year}"
+
+
+def conectar_planilha_historico():
+    if "gcp_service_account" not in st.secrets:
+        raise RuntimeError(
+            "As credenciais do Google Planilhas ainda não foram configuradas "
+            "nos Secrets do Streamlit."
+        )
+
+    spreadsheet_id = str(
+        st.secrets.get("GOOGLE_SHEETS_SPREADSHEET_ID", "")
+    ).strip()
+
+    if not spreadsheet_id:
+        raise RuntimeError(
+            "GOOGLE_SHEETS_SPREADSHEET_ID não foi configurado nos Secrets."
+        )
+
+    info = dict(st.secrets["gcp_service_account"])
+    credenciais = Credentials.from_service_account_info(
+        info,
+        scopes=["https://www.googleapis.com/auth/spreadsheets"],
+    )
+    cliente = gspread.authorize(credenciais)
+    return cliente.open_by_key(spreadsheet_id)
+
+
+def obter_aba_historico(criar=True):
+    planilha = conectar_planilha_historico()
+
+    try:
+        aba = planilha.worksheet(ABA_HISTORICO_FATURAMENTO)
+    except gspread.WorksheetNotFound:
+        if not criar:
+            return None
+
+        aba = planilha.add_worksheet(
+            title=ABA_HISTORICO_FATURAMENTO,
+            rows=2000,
+            cols=len(CABECALHO_HISTORICO),
+        )
+        aba.append_row(CABECALHO_HISTORICO, value_input_option="RAW")
+
+        # A aba é técnica. Tentamos ocultá-la para não poluir a planilha.
+        try:
+            aba.hide()
+        except Exception:
+            pass
+
+    return aba
+
+
+def salvar_historico_faturamento(nome_arquivo, faturamento, boleto):
+    """Arquiva o faturamento uma única vez por cobrança do Asaas."""
+    if not boleto:
+        return {"salvo": False, "motivo": "boleto_invalido"}
+
+    external_reference = str(boleto.get("externalReference") or "").strip()
+    payment_id = str(boleto.get("id") or "").strip()
+    numero_box = boleto.get("box") or extrair_numero_box(nome_arquivo)
+
+    if not external_reference and not payment_id:
+        raise RuntimeError(
+            "A cobrança não retornou uma identificação válida do Asaas."
+        )
+
+    aba = obter_aba_historico(criar=True)
+    valores = aba.get_all_values()
+
+    # Impede histórico duplicado, inclusive quando o próprio Asaas informa
+    # que aquela cobrança já existia.
+    if valores:
+        cabecalho = valores[0]
+        idx_ext = (
+            cabecalho.index("EXTERNAL_REFERENCE")
+            if "EXTERNAL_REFERENCE" in cabecalho else None
+        )
+        idx_pag = (
+            cabecalho.index("ASAAS_PAYMENT_ID")
+            if "ASAAS_PAYMENT_ID" in cabecalho else None
+        )
+
+        for linha in valores[1:]:
+            ext_existente = (
+                linha[idx_ext].strip()
+                if idx_ext is not None and len(linha) > idx_ext else ""
+            )
+            pag_existente = (
+                linha[idx_pag].strip()
+                if idx_pag is not None and len(linha) > idx_pag else ""
+            )
+
+            if (
+                external_reference and ext_existente == external_reference
+            ) or (
+                payment_id and pag_existente == payment_id
+            ):
+                return {"salvo": False, "motivo": "ja_arquivado"}
+
+    ano, mes_numero, mes_referencia = referencia_faturamento()
+    faturamento = round(float(faturamento), 2)
+    royalties_calculados = round(
+        faturamento * PERCENTUAL_ROYALTIES, 2
+    )
+
+    id_registro = hashlib.sha256(
+        f"{EMPRESA_SELECIONADA}|{external_reference}|{payment_id}".encode("utf-8")
+    ).hexdigest()[:24]
+
+    aba.append_row(
+        [
+            id_registro,
+            EMPRESA_SELECIONADA,
+            mes_referencia,
+            ano,
+            mes_numero,
+            int(numero_box) if numero_box is not None else "",
+            faturamento,
+            royalties_calculados,
+            payment_id,
+            external_reference,
+            nome_arquivo,
+            datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+        ],
+        value_input_option="USER_ENTERED",
+    )
+
+    return {
+        "salvo": True,
+        "motivo": "novo",
+        "mes": mes_referencia,
+    }
+
+
+def carregar_historico_faturamento():
+    aba = obter_aba_historico(criar=False)
+
+    if aba is None:
+        return pd.DataFrame(columns=CABECALHO_HISTORICO)
+
+    registros = aba.get_all_records()
+    if not registros:
+        return pd.DataFrame(columns=CABECALHO_HISTORICO)
+
+    df = pd.DataFrame(registros)
+
+    for coluna in ["ANO", "MES_NUMERO", "BOX", "FATURAMENTO", "ROYALTIES"]:
+        if coluna in df.columns:
+            df[coluna] = pd.to_numeric(df[coluna], errors="coerce")
+
+    return df
+
+
+def gerar_excel_historico_mes(df_mes, mes_referencia):
+    resumo_box = (
+        df_mes.groupby("BOX", as_index=False)[["FATURAMENTO", "ROYALTIES"]]
+        .sum()
+        .sort_values("BOX")
+    )
+
+    resumo_box["BOX"] = resumo_box["BOX"].apply(
+        lambda x: f"BOX {int(x):02d}" if pd.notna(x) else "BOX"
+    )
+
+    total = pd.DataFrame([{
+        "BOX": "TOTAL DO MÊS",
+        "FATURAMENTO": resumo_box["FATURAMENTO"].sum(),
+        "ROYALTIES": resumo_box["ROYALTIES"].sum(),
+    }])
+
+    exportar = pd.concat([resumo_box, total], ignore_index=True)
+    buffer = BytesIO()
+
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        exportar.to_excel(
+            writer,
+            sheet_name="Resumo do mês",
+            index=False,
+        )
+        df_mes.to_excel(
+            writer,
+            sheet_name="Lançamentos",
+            index=False,
+        )
+
+        for nome_aba in writer.sheets:
+            ws = writer.sheets[nome_aba]
+            for coluna in ws.columns:
+                largura = max(
+                    len(str(celula.value or ""))
+                    for celula in coluna
+                ) + 2
+                ws.column_dimensions[
+                    coluna[0].column_letter
+                ].width = min(largura, 45)
+
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+def exibir_historico_faturamento():
+    try:
+        historico = carregar_historico_faturamento()
+    except Exception as erro:
+        st.error(
+            f"Não foi possível abrir o histórico de faturamento: {erro}"
+        )
+        return
+
+    if historico.empty:
+        st.info(
+            "Ainda não há faturamentos arquivados. Os próximos valores "
+            "serão salvos automaticamente após a emissão do boleto."
+        )
+        return
+
+    historico = historico[
+        historico["EMPRESA"] == EMPRESA_SELECIONADA
+    ].copy()
+
+    if historico.empty:
+        st.info(
+            f"Ainda não há histórico para {EMPRESA_SELECIONADA}."
+        )
+        return
+
+    historico = historico.dropna(subset=["ANO", "MES_NUMERO"])
+    meses = (
+        historico[["ANO", "MES_NUMERO", "MES_REFERENCIA"]]
+        .drop_duplicates()
+        .sort_values(
+            ["ANO", "MES_NUMERO"],
+            ascending=[False, False],
+        )
+    )
+
+    st.caption(
+        f"Arquivo permanente de faturamento — {EMPRESA_SELECIONADA}. "
+        "Os valores permanecem salvos mesmo depois de limpar os extratos da tela."
+    )
+
+    for _, item in meses.iterrows():
+        ano = int(item["ANO"])
+        mes_numero = int(item["MES_NUMERO"])
+        mes_referencia = str(item["MES_REFERENCIA"])
+
+        df_mes = historico[
+            (historico["ANO"] == ano)
+            & (historico["MES_NUMERO"] == mes_numero)
+        ].copy()
+
+        resumo_box = (
+            df_mes.groupby("BOX", as_index=False)[["FATURAMENTO", "ROYALTIES"]]
+            .sum()
+            .sort_values("BOX")
+        )
+
+        resumo_box["BOX"] = resumo_box["BOX"].apply(
+            lambda x: f"BOX {int(x):02d}" if pd.notna(x) else "BOX"
+        )
+        resumo_box = resumo_box.rename(columns={
+            "FATURAMENTO": "Faturamento",
+            "ROYALTIES": "Royalties 4%",
+        })
+
+        total_fat = float(df_mes["FATURAMENTO"].sum())
+        total_roy = float(df_mes["ROYALTIES"].sum())
+
+        with st.expander(
+            f"📅 {mes_referencia} — {formatar_moeda(total_fat)}"
+        ):
+            c1, c2 = st.columns(2)
+            c1.metric(
+                "Faturamento total do mês",
+                formatar_moeda(total_fat),
+            )
+            c2.metric(
+                "Royalties 4% do mês",
+                formatar_moeda(total_roy),
+            )
+
+            st.dataframe(
+                resumo_box,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Faturamento": st.column_config.NumberColumn(
+                        "Faturamento",
+                        format="R$ %.2f",
+                    ),
+                    "Royalties 4%": st.column_config.NumberColumn(
+                        "Royalties 4%",
+                        format="R$ %.2f",
+                    ),
+                },
+            )
+
+            excel_mes = gerar_excel_historico_mes(
+                df_mes,
+                mes_referencia,
+            )
+            nome_seguro = normalizar(mes_referencia).replace(" ", "_")
+
+            st.download_button(
+                f"📥 Baixar {mes_referencia} em Excel",
+                data=excel_mes,
+                file_name=f"historico_faturamento_{nome_seguro}.xlsx",
+                mime=(
+                    "application/vnd.openxmlformats-officedocument."
+                    "spreadsheetml.sheet"
+                ),
+                key=(
+                    f"baixar_historico_{EMPRESA_SELECIONADA}_"
+                    f"{ano}_{mes_numero}"
+                ),
+            )
+
 
 PALAVRAS_FATURAMENTO = [
     "cobranca recebida",
@@ -2621,6 +2975,27 @@ else:
 
                         st.session_state[f"resultado_boleto_{indice}"] = boleto
 
+                        # Arquiva o faturamento somente depois que a cobrança
+                        # foi processada pelo Asaas. O arquivo fica permanente
+                        # mesmo se os extratos forem removidos da tela.
+                        try:
+                            resultado_historico = salvar_historico_faturamento(
+                                arquivo.name,
+                                faturamento,
+                                boleto,
+                            )
+                            st.session_state[
+                                f"resultado_historico_{indice}"
+                            ] = resultado_historico
+                            st.session_state.pop(
+                                f"erro_historico_{indice}",
+                                None,
+                            )
+                        except Exception as erro_historico:
+                            st.session_state[
+                                f"erro_historico_{indice}"
+                            ] = str(erro_historico)
+
                     except Exception as erro_boleto:
                         st.error(
                             f"Não foi possível emitir o boleto: {erro_boleto}"
@@ -2631,6 +3006,27 @@ else:
                 )
 
                 if boleto_salvo:
+                    resultado_historico = st.session_state.get(
+                        f"resultado_historico_{indice}"
+                    )
+                    erro_historico = st.session_state.get(
+                        f"erro_historico_{indice}"
+                    )
+
+                    if (
+                        resultado_historico
+                        and resultado_historico.get("salvo")
+                    ):
+                        st.success(
+                            f"📚 Faturamento arquivado em "
+                            f"{resultado_historico.get('mes', '')}."
+                        )
+                    elif erro_historico:
+                        st.warning(
+                            "O boleto foi processado, mas o histórico não "
+                            f"pôde ser arquivado: {erro_historico}"
+                        )
+
                     if boleto_salvo.get("novo"):
                         st.success(
                             f"✅ Boleto criado para "
@@ -2717,3 +3113,26 @@ else:
             "spreadsheetml.sheet"
         ),
     )
+
+# ============================================================
+# HISTÓRICO GERAL DE FATURAMENTO
+# ============================================================
+# Fica disponível mesmo quando nenhum extrato está carregado.
+
+st.divider()
+
+if "mostrar_historico_faturamento" not in st.session_state:
+    st.session_state.mostrar_historico_faturamento = False
+
+if st.button(
+    "📚 Histórico de faturamento",
+    key="abrir_historico_faturamento",
+    use_container_width=False,
+):
+    st.session_state.mostrar_historico_faturamento = (
+        not st.session_state.mostrar_historico_faturamento
+    )
+
+if st.session_state.mostrar_historico_faturamento:
+    st.markdown("### Histórico de faturamento")
+    exibir_historico_faturamento()
