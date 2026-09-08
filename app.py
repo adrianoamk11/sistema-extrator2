@@ -1,108 +1,290 @@
+assim?
+Mandei aqui uma print da lider serviços, mas note que ambas são com fundo totalmente branco, ou seja, não tem diferenciação da lider franquia Então note que não tem diferenciação e às vezes pode ocorrer alguma confusão de achar que tá num e está no outro. Então é muito interessante na Curva SIC Serviços deixar o fundo do sistema todo amarelo em todas as páginas, um amarelo suave, só para ter essa diferença. Gera os códigos tudo certinho e me manda pra mim mandar no sistema.
+Texto colado(20260907-204843).txt
+Documento
+este o codigo que esta agora, faça as alterações.
+hoje 11:48
+print do sistema, note que ali embaixo tem baixar relatório geral. Eu acho que seria interessante a gente ter ali um botãozinho onde tivesse o relatório geral, mas de todos os meses. Por exemplo, eu vou ali, clico no botão e abre uma outra telinha embaixo, mês de agosto. Aí eu clico em agosto e eu vou ter o faturamento total.Eu vou ter o faturamento total e logo abaixo eu vou ter, por exemplo, setembro, todos os meses anteriores, tudo o que eu colocar de extrato já vai salvando lá e deixando arquivado. Então vamos imaginar que eu coloquei cinco extratos agora. Ele já fica salvo, o valor que eu já... ele fica salvo após eu emitir o boleto. Aí vamos imaginar que eu apaguei os extratos. Mesmo assim tem que ficar o valor do faturamento salvo. Então quando eu clicar, por exemplo, no mês de agosto, ele vai aparecer lá os boxes e o faturamento total e a opção de eu baixar em planilha, caso eu queira. É possível fazer?
 
-importar streamlit como st
+Pronto. Fiz em cima da versão atual do sistema, mantendo inclusive a diferenciação amarela da Líder Serviços. O código atual já registra o resultado da emissão do boleto e impede cobrança duplicada no Asaas; aproveitei exatamente esse ponto para disparar o arquivamento permanente.
+
+O que ficou implementado
+
+O novo sistema terá o botão “📚 Histórico de faturamento” logo abaixo de “Baixar relatório geral em Excel”. O relatório atual já calcula faturamento e royalties gerais nessa área.
+
+Quando o boleto for emitido/processado no Asaas, o sistema salva permanentemente:
+
+empresa: Líder Franquia ou Líder Serviços;
+mês de referência;
+BOX;
+faturamento final;
+royalties de 4%;
+ID da cobrança Asaas;
+identificação única da cobrança;
+nome do arquivo;
+data do arquivamento.
+
+O mês é considerado como combinamos: o mês anterior à emissão. Portanto, boleto emitido agora em setembro/2026 arquiva em Agosto/2026.
+
+Se você apagar os extratos da tela, o histórico não desaparece, porque ficará na Google Planilha, em uma aba própria chamada HISTORICO_FATURAMENTO.
+
+Também coloquei proteção contra duplicidade: se clicar novamente e o Asaas disser que aquela cobrança já existe, o histórico não duplica o faturamento. O sistema usa a identificação da própria cobrança para conferir.
+
+Ao abrir, ficará aproximadamente:
+
+📚 Histórico de faturamento
+
+📅 Agosto/2026 — R$ 222.074,58
+→ BOX 03 — R$ ...
+→ BOX 06 — R$ ...
+→ BOX 18 — R$ ...
+→ Faturamento total do mês
+→ Royalties 4% do mês
+→ Baixar Agosto/2026 em Excel
+
+Depois Setembro/2026, Outubro/2026 etc., automaticamente, com os meses mais recentes primeiro.
+
+Arquivos prontos
+
+1. Este é o app.py completo que você deverá colocar no GitHub:
+
+Baixar app.py com Histórico de Faturamento
+
+2. Este é o requirements.txt completo:
+
+Baixar requirements.txt
+
+O requirements.txt já contém gspread e google-auth, além das dependências que seu sistema já utiliza.
+
+Só falta uma coisa antes de funcionar
+
+O código está pronto e validei a sintaxe, mas não coloque o app.py novo em produção ainda, porque ontem paramos justamente antes de terminar a credencial [gcp_service_account] nos Secrets do Streamlit.
+
+Sem terminar aquela configuração, o boleto continuará podendo ser emitido, mas o sistema vai avisar que não conseguiu arquivar o histórico no Google Sheets.
+
+A parte boa é que agora vale a pena terminarmos: a mesma configuração do Google que estávamos fazendo vai servir tanto para o histórico permanente quanto para a integração com sua planilha mensal.
+
+E não precisamos mexer mais no código para começar. Primeiro terminamos os Secrets; depois você coloca este app.py e fazemos um teste com um BOX, verificando se Agosto/2026 ficou arquivado corretamente.
+
+app_historico_faturamento_google.py
+Código
+requirements_historico.txt
+Documento
+Texto colado(20260908-150251).txt
+Documento
+este é código atual que esta, a ultima atualização app.py 
+
+Perfeito. Esse arquivo que você acabou de enviar é o app.py atual e passa na validação de sintaxe. Vou considerar exatamente esta versão de 2.719 linhas como a nova base oficial, e não aquela versão anterior que eu estava usando.
+
+Também confirmei que essa versão já contém, entre outras coisas, o Boleto Avulso, seleção entre Líder Franquia/Líder Serviços, fundo amarelo da Líder Serviços e as integrações atuais do Asaas.
+
+Então, para evitar qualquer regressão: não substitua seu app.py pelo arquivo que eu mandei anteriormente.
+
+A partir de agora, qualquer implementação do Histórico de Faturamento + Google Planilhas será feita em cima desse código que você acabou de mandar, preservando todo o restante exatamente como está.
+
+Ok, então pode mandar a nova atualização que eu te pedi agora.
+
+Pronto. Fiz a atualização em cima do app.py atual que você acabou de me enviar, preservando as funções que já estavam funcionando.
+
+Implementei o Histórico de Faturamento no formato que combinamos: o faturamento é arquivado após a emissão do boleto, não some quando você limpa os extratos, fica separado por mês e por empresa, mostra BOX + faturamento + royalties + total mensal e permite baixar o mês em Excel. Também coloquei proteção para não salvar duas vezes o mesmo boleto.
+
+Arquivos prontos
+
+Pacote completo — recomendo baixar este:
+
+📦 Baixar atualização completa
+
+Ou separados:
+
+📄 Baixar novo app.py
+
+📄 Baixar novo requirements.txt
+
+Eu também validei o novo app.py antes de enviar e ele passou na verificação de sintaxe.
+
+Só existe uma etapa que ainda ficou pendente: como você parou ontem na configuração do Google, o sistema abre normalmente, mas o Histórico permanente só começará a salvar quando terminarmos aquela configuração das credenciais do Google Planilhas. Não precisa fazer isso agora se não quiser.
+
+Quando quiser continuar, podemos fazer uma tela por vez, exatamente de onde paramos.
+
+app.py
+Código
+requirements.txt
+Documento
+
+Entendi. Você quer o modelo completo já no formato certo para colar no Streamlit, usando os dados que passou como referência, mas deixando somente a nova chave para você substituir.
+
+Cole este bloco no final dos Secrets que já existem:
+
+GOOGLE_SHEETS_SPREADSHEET_ID = "1bBXEypaZ_0vfz47nU9ndC5DzjIa51_PDFW_g5zat1BE"
+
+[gcp_service_account]
+type = "service_account"
+project_id = "extrator-507920"
+
+private_key_id = "COLE_AQUI_O_PRIVATE_KEY_ID_DA_NOVA_CHAVE"
+
+private_key = "COLE_AQUI_A_PRIVATE_KEY_DA_NOVA_CHAVE"
+
+client_email = "lider-extrator@extrator-507920.iam.gserviceaccount.com"
+client_id = "106526780885188193553"
+auth_uri = "https://accounts.google.com/o/oauth2/auth"
+token_uri = "https://oauth2.googleapis.com/token"
+auth_provider_x509_cert_url = "https://www.googleapis.com/oauth2/v1/certs"
+client_x509_cert_url = "https://www.googleapis.com/robot/v1/metadata/x509/lider-extrator%40extrator-507920.iam.gserviceaccount.com"
+universe_domain = "googleapis.com"
+
+Quando gerar o novo JSON, você vai alterar somente estas duas linhas:
+
+private_key_id = "NOVO VALOR"
+private_key = "NOVA CHAVE COMPLETA"
+
+Na private_key, mantenha os \n exatamente como aparecem no JSON. Ela deve ficar em uma única linha no Secrets, mais ou menos assim:
+
+private_key = "-----BEGIN PRIVATE KEY-----\nCONTEUDO_DA_NOVA_CHAVE...\n-----END PRIVATE KEY-----\n"
+
+Todo o restante acima já está montado no formato esperado pelo sistema.
+
+Depois de gerar a nova chave, não precisa me mandar o conteúdo. Substitua esses dois campos diretamente no Streamlit e me mande apenas uma print com os valores secretos ocultados. Aí confiro a estrutura antes de você salvar.
+
+Existe alguma outra forma de fazer essa atualização que eu pedi sem ter que fazer através do Google?
+
+Sim. E, para o Histórico de Faturamento que você pediu, dá para fazer sem Google.
+
+A alternativa mais simples seria salvar o histórico em um banco de dados externo como Supabase. Porém, isso ainda exigiria criar conta, banco, credenciais e configurar Secrets — ou seja, trocaríamos a configuração do Google por outra configuração parecida.
+
+Salvar diretamente dentro do próprio Streamlit, por exemplo em SQLite, JSON, CSV ou Excel, eu não recomendo para esse caso. O Streamlit Community Cloud pode reiniciar/reimplantar o aplicativo, e arquivos gravados localmente não devem ser tratados como armazenamento permanente. Você poderia achar que Agosto está arquivado e depois perder esse histórico.
+
+Existe ainda uma solução bem prática que talvez seja melhor para você: usar o próprio Asaas como fonte do histórico. Como o sistema já cria a cobrança no Asaas e coloca uma identificação (externalReference) em cada boleto, podemos adaptar o programa para consultar as cobranças já emitidas no Asaas e montar o histórico a partir delas. Seu código já tem inclusive a função que pesquisa pagamentos no Asaas.
+
+Mas existe uma diferença importante: para mostrar o faturamento original (ex.: R$ 20.000) e não apenas o valor dos royalties (R$ 800), precisamos passar a registrar esse faturamento em algum campo da cobrança quando o boleto é criado. Hoje a cobrança envia valor, vencimento, descrição e externalReference. Isso é perfeitamente ajustável para as novas cobranças. Para boletos antigos, só conseguiremos reconstruir o faturamento se houver informação suficiente neles.
+
+Para o seu objetivo, eu escolheria o Asaas. Não precisaríamos de Google, nova conta ou chave adicional: você já está conectado ao Asaas. A partir da atualização, cada boleto de royalties guardaria os dados necessários e o botão Histórico de faturamento consultaria o Asaas para mostrar Agosto, Setembro etc., separado entre Líder Franquia e Líder Serviços, com BOX, faturamento, royalties, total e download em Excel.
+
+E mesmo apagando os extratos ou reiniciando o Streamlit, os dados continuariam disponíveis porque a cobrança permanece registrada no Asaas.
+
+Se seguirmos por esse caminho, eu também retiraria do app.py toda a dependência do Google que adicionamos para esse histórico e te entregaria um novo app.py completo baseado no seu código atual, já com o histórico via Asaas.
+
+Eu retirei algumas coisas pra voltar como tava antes, mas olha o que apareceu.
+
+Sim. O erro da print é bem específico e aconteceu porque, ao retirar algumas partes do código, um trecho de CSS ficou fora do bloco de texto do Python.
+
+Na linha 69 ele está tentando interpretar isto como Python:
+
+padding-top: 0rem !important;
+
+Por isso aparece:
+
+SyntaxError: invalid decimal literal
+
+Não é problema do Streamlit nem do Asaas. O app.py ficou com um trecho incompleto depois das remoções.
+
+Como você quer voltar para a versão anterior, não recomendo corrigirmos só a linha 69, porque pode ter ficado outro pedaço quebrado mais abaixo.
+
+Me envie aqui o app.py que está atualmente no GitHub — exatamente o que está dando esse erro. Eu corrijo o arquivo inteiro, retiro corretamente o que você tentou remover, preservo o restante e valido o código antes de te devolver um app.py pronto para substituir, sem você precisar mexer manualmente.
+
+
+
+
+import streamlit as st
 import pandas as pd
-importar fitz
-importar re
-importar dados unicode
-solicitações de importação
+import fitz
+import re
+import unicodedata
+import requests
 import hashlib
-Importe data e hora a partir de datetime e timedelta.
+from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
 from io import BytesIO
 from pathlib import Path
 
-# ============================================================
-# CONFIGURAÇÃO DA PÁGINA
-# ============================================================
+============================================================
+CONFIGURAÇÃO DA PÁGINA
+============================================================
 
 st.set_page_config(
-    page_title="Extrator de Faturamento",
-    page_icon="💰",
-    layout="amplo"
+page_title="Extrator de Faturamento",
+page_icon="💰",
+layout="wide"
 )
 st.markdown(
-    """
-    <style>
-    div[data-testid="stButton"] botão[kind="primary"] {
-        cor de fundo: #16a34a !importante;
-        cor da borda: #16a34a !importante;
-        cor: branco !importante;
-    }
-
-    div[data-testid="stButton"] button[kind="primary"]:hover {
-        cor de fundo: #15803d !importante;
-        cor da borda: #15803d !importante;
-        cor: branco !importante;
-    }
-    </style>
-    "",
-    unsafe_allow_html=True
-)
-# =========================
-# LOGIN DO SISTEMA
-# =========================
-
-se "autenticado" não estiver em st.session_state:
-    st.session_state.autenticado = Falso
-
-se não st.session_state.autenticado:
-    st.title("Acesso ao sistema")
-
-    usuário = st.text_input("Usuário")
-    senha = st.text_input("Senha", type="senha")
-
-    se st.button("Entrar"):
-        se (
-            usuário == st.secrets["LOGIN_USUARIO"]
-            e senha == st.secrets["LOGIN_SENHA"]
-        ):
-            st.session_state.autenticado = True
-            st.rerun()
-        outro:
-            st.error("Usuário ou senha incorreta.")
-
-    st.stop()
-st.markdown("""
+"""
 <style>
-/* Encosta o conteúdo no topo da página */
-[data-testid="stAppViewContainer"] .main .block-container {
-    padding-top: 0rem !important;
-    margem-superior: 0rem !importante;
+div[data-testid="stButton"] button[kind="primary"] {
+background-color: #16a34a !important;
+border-color: #16a34a !important;
+color: white !important;
 }
-[data-testid="stMainBlockContainer"] {
-    padding-top: 0rem !important;
-    margem-superior: 0rem !importante;
+
+div[data-testid="stButton"] button[kind="primary"]:hover {
+    background-color: #15803d !important;
+    border-color: #15803d !important;
+    color: white !important;
 }
 </style>
-"", unsafe_allow_html=True)
+""",
+unsafe_allow_html=True
 
-BASE_DIR = Path(__file__).resolve().parent
+)
+
+=========================
+LOGIN DO SISTEMA
+=========================
+
+if "autenticado" not in st.session_state:
+st.session_state.autenticado = False
+
+if not st.session_state.autenticado:
+st.title("Acesso ao sistema")
+
+usuario = st.text_input("Usuário")
+senha = st.text_input("Senha", type="password")
+
+if st.button("Entrar"):
+    if (
+        usuario == st.secrets["LOGIN_USUARIO"]
+        and senha == st.secrets["LOGIN_SENHA"]
+    ):
+        st.session_state.autenticado = True
+        st.rerun()
+    else:
+        st.error("Usuário ou senha incorretos.")
+
+st.stop()
+
+st.markdown("""
+
+<style> /* Encosta o conteúdo no topo da página */ [data-testid="stAppViewContainer"] .main .block-container { padding-top: 0rem !important; margin-top: 0rem !important; } [data-testid="stMainBlockContainer"] { padding-top: 0rem !important; margin-top: 0rem !important; } </style>
+
+""", unsafe_allow_html=True)
+
+BASE_DIR = Path(file).resolve().parent
 LOGO_PATH = BASE_DIR / "logo_lider.png"
 
-# ============================================================
-# CABEÇALHO
-# ============================================================
+============================================================
+CABEÇALHO
+============================================================
 
-Se LOGO_PATH.exists():
-    st.image(str(LOGO_PATH), width=360)
+if LOGO_PATH.exists():
+st.image(str(LOGO_PATH), width=360)
 
-# Reduza aproximadamente pela metade o espaço entre o logotipo e o título.
+Reduz aproximadamente pela metade o espaço entre a logo e o título.
+
 st.markdown(
-    """
-    <meta name="google" content="notranslate">
-    <style>
-    html, corpo, [data-testid="stAppViewContainer"], [data-testid="stAppViewContainer"] * {
-        -webkit-translate: nenhum !importante;
-    }
-    .notranslate {
-        não !importante;
-    }
-    div[data-testid="stImage"] {
-        margem-inferior: -105px !importante;
-    }
-    </style>
-    "",
-    unsafe_allow_html=True,
+"""
+<meta name="google" content="notranslate">
+<style>
+html, body, [data-testid="stAppViewContainer"], [data-testid="stAppViewContainer"] * {
+-webkit-translate: none !important;
+}
+.notranslate {
+translate: no !important;
+}
+div[data-testid="stImage"] {
+margin-bottom: -105px !important;
+}
+</style>
+""",
+unsafe_allow_html=True,
 )
 
 st.title("Extrator de Faturamento")
@@ -110,2610 +292,2577 @@ st.caption("LÍDER Aluguel de Motos • PDF, Excel (.xlsx/.xls) e CSV")
 
 st.divider()
 
-# ============================================================
-# CONFIGURAÇÕES
-# ============================================================
+============================================================
+CONFIGURAÇÕES
+============================================================
 
-ROYALTIES_PERCENTUAIS = 0,04
+PERCENTUAL_ROYALTIES = 0.04
 
-# ============================================================
-# ASAAS - SELEÇÃO DA EMPRESA
-# ============================================================
+============================================================
+ASAAS - SELEÇÃO DA EMPRESA
+============================================================
 
 st.write("Selecione a empresa que deseja utilizar:")
 
-se "mostrar_boleto_avulso" não estiver em st.session_state:
-    st.session_state.mostrar_boleto_avulso = Falso
+if "mostrar_boleto_avulso" not in st.session_state:
+st.session_state.mostrar_boleto_avulso = False
 
-col_empresa, _, col_atalho_boleto = st.colunas([1, 4, 1])
+col_empresa, _, col_atalho_boleto = st.columns([1, 4, 1])
 
-com col_empresa:
-    EMPRESA_SELECIONADA = st.selectbox(
-        "Empresa",
-        ["Líder Franquia", "Líder Serviços"],
-        visibilidade_do_rótulo="recolhido"
-    )
+with col_empresa:
+EMPRESA_SELECIONADA = st.selectbox(
+"Empresa",
+["Lider Franquia", "Lider Serviços"],
+label_visibility="collapsed"
+)
 
-com col_atalho_boleto:
-    se st.botão(
-        "💳 Boleto avulso",
-        tipo="secundário",
-        use_container_width=True,
-        key="abrir_fechar_boleto_avulso"
-    ):
-        st.session_state.mostrar_boleto_avulso = (
-            não st.session_state.mostrar_boleto_avulso
-        )
+with col_atalho_boleto:
+if st.button(
+"💳 Boleto avulso",
+type="secondary",
+use_container_width=True,
+key="abrir_fechar_boleto_avulso"
+):
+st.session_state.mostrar_boleto_avulso = (
+not st.session_state.mostrar_boleto_avulso
+)
 
-# ============================================================
-# IDENTIDADE VISUAL POR EMPRESA
-# ============================================================
-# A Líder Franquia mantém o fundo branco.
-# A Líder Serviços usa um amarelo suave em toda a área do sistema
-# para reduzir o risco de operar na empresa errada.
-if EMPRESA_SELECIONADA == "Líder Serviços":
-    st.markdown(
-        """
-        <style>
-        html, corpo, .stApp,
-        [data-testid="stAppViewContainer"],
-        [data-testid="stMain"],
-        [data-testid="stMainBlockContainer"] {
-            background-color: #FFF8D8 !important;
-        }
+============================================================
+IDENTIDADE VISUAL POR EMPRESA
+============================================================
+A Líder Franquia mantém o fundo branco.
+A Líder Serviços usa um amarelo suave em toda a área do sistema
+para reduzir o risco de operar na empresa errada.
 
-        /* Mantém componentes de entrada claros e simples de ler. */
-        [data-testid="stFileUploaderDropzone"],
-        [data-testid="stDataFrame"],
-        div[data-baseweb="select"] > div,
-        div[data-baseweb="input"] > div,
-        div[data-baseweb="textarea"] > div {
-            cor de fundo: #FFFFFF !importante;
-        }
-        </style>
-        "",
-        unsafe_allow_html=True,
-    )
+if EMPRESA_SELECIONADA == "Lider Serviços":
+st.markdown(
+"""
+<style>
+html, body, .stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"],
+[data-testid="stMainBlockContainer"] {
+background-color: #FFF8D8 !important;
+}
 
-if EMPRESA_SELECIONADA == "Líder Franquia":
-    ASAAS_API_KEY = st.secrets["ASAAS_LIDER_FRANQUIA_API_KEY"]
-outro:
-    ASAAS_API_KEY = st.secrets["ASAAS_LIDER_SERVICOS_API_KEY"]
+    /* Mantém componentes de entrada claros e fáceis de ler. */
+    [data-testid="stFileUploaderDropzone"],
+    [data-testid="stDataFrame"],
+    div[data-baseweb="select"] > div,
+    div[data-baseweb="input"] > div,
+    div[data-baseweb="textarea"] > div {
+        background-color: #FFFFFF !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+if EMPRESA_SELECIONADA == "Lider Franquia":
+ASAAS_API_KEY = st.secrets["ASAAS_LIDER_FRANQUIA_API_KEY"]
+else:
+ASAAS_API_KEY = st.secrets["ASAAS_LIDER_SERVICOS_API_KEY"]
 
 ASAAS_BASE_URL = st.secrets["ASAAS_PRODUCAO_BASE_URL"].rstrip("/")
-emitir_nota_apos_pagamento = Falso
+emitir_nota_apos_pagamento = False
 
+def proximo_dia_10():
+hoje = date.today()
 
-def próximo_dia_10():
-    hoje = data.hoje()
+if hoje.day <= 10:
+    return date(hoje.year, hoje.month, 10)
 
-    se hoje.day <= 10:
-        data de retorno (hoje.ano, hoje.mês, 10)
-
-    proximo_mes = hoje + relativodelta(meses=1)
-    data de retorno (proximo_mes.ano, proximo_mes.mês, 10)
-
+proximo_mes = hoje + relativedelta(months=1)
+return date(proximo_mes.year, proximo_mes.month, 10)
 
 def cabecalhos_asaas():
-    retornar {
-        "access_token": ASAAS_API_KEY,
-        "Content-Type": "application/json",
-    }
+return {
+"access_token": ASAAS_API_KEY,
+"Content-Type": "application/json",
+}
 
 def extrair_numero_box(texto):
-    """
-    Extrai o número após a palavra BOX.
-    Exemplos:
-    'BOX 25.xlsx' -> 25
-    'Box 025 Julho.xlsx' -> 25
-    'caixa mendel 025 zona norte' -> 25
-    """
-    texto_norm = normalizar(texto)
-    encontrado = re.search(r"\bbox\s*[-_:]?\s*0*(\d+)", texto_norm)
+"""
+Extrai o número após a palavra BOX.
+Exemplos:
+'BOX 25.xlsx' -> 25
+'Box 025 Julho.xlsx' -> 25
+'mendel box 025 zona norte' -> 25
+"""
+texto_norm = normalizar(texto)
+encontrado = re.search(r"\bbox\s*[-_:]?\s0(\d+)", texto_norm)
 
-    se não encontrado:
-        retornar Nenhum
+if not encontrado:
+    return None
 
-    return int(encontrado.group(1))
-
+return int(encontrado.group(1))
 
 def localizar_cliente_asaas_por_box(nome_arquivo):
-    """
-    Localize o cliente do Asaas usando somente o número do BOX
-    encontrado sem nome do arquivo.
+"""
+Localiza o cliente do Asaas usando somente o número do BOX
+encontrado no nome do arquivo.
 
-    Exemplo:
-    Arquivo: 'Extrato BOX 25 Julho.xlsx'
-    Cliente Asaas: 'mendel box 025 zona norte'
+Exemplo:
+Arquivo: 'Extrato BOX 25 Julho.xlsx'
+Cliente Asaas: 'mendel box 025 zona norte'
 
-    Ambos correspondem ao BOX 25.
-    """
-    numero_box = extrair_numero_box(Path(nome_arquivo).stem)
+Ambos correspondem ao BOX 25.
+"""
+numero_box = extrair_numero_box(Path(nome_arquivo).stem)
 
-    Se numero_box for None:
-        raise RuntimeError(
-            "Não encontrei o número do BOX no nome do arquivo. "
-            "Renomeie o arquivo incluindo, por exemplo, 'BOX 25'."
-        )
-
-    encontrado = []
-    deslocamento = 0
-    limite = 100
-
-    enquanto Verdadeiro:
-        resposta = requests.get(
-            f"{ASAAS_BASE_URL}/clientes",
-            cabeçalhos=cabecalhos_asaas(),
-            parâmetros={
-                "deslocamento": deslocamento,
-                "limite": limite,
-            },
-            tempo limite=30,
-        )
-
-        se não resposta.ok:
-            tentar:
-                detalhe = resposta.json()
-            exceto Exceção:
-                detalhe = resposta.text
-
-            raise RuntimeError(
-                f"Erro ao consultar clientes no Asaas "
-                f"(HTTP {resposta.status_code}): {detalhe}"
-            )
-
-        corpo = resposta.json()
-        clientes = corpo.get("dados", [])
-
-        para cliente em clientes:
-            nome_asaas = str(cliente.get("nome", ""))
-            box_cliente = extrair_numero_box(nome_asaas)
-
-            se box_cliente == numero_box:
-                encontrado.adicionar(cliente)
-
-        se não corpo.get("hasMore"):
-            quebrar
-
-        deslocamento += limite
-
-    se len(encontrados) == 1:
-        retorno encontrado[0], numero_box
-
-    se len(encontrados) == 0:
-        raise RuntimeError(
-            f"Não encontrei no Asaas nenhum cliente com BOX {numero_box}. "
-            f"Confira se o cadastro do cliente contém 'BOX {numero_box}' "
-            f"no campo Nome."
-        )
-
-    nomes = " | ".join(
-        str(cliente.get("name", ""))
-        para cliente em encontrados[:5]
-    )
-
+if numero_box is None:
     raise RuntimeError(
-        f"Encontrei {len(encontrados)} clientes com BOX {numero_box}: {nomes}. "
-        f"Para evitar cobrança de cliente errado, a transferência foi bloqueada."
-        f"Deixe apenas um cadastro correspondente a esse BOX."
+        "Não encontrei o número do BOX no nome do arquivo. "
+        "Renomeie o arquivo incluindo, por exemplo, 'BOX 25'."
     )
 
+encontrados = []
+offset = 0
+limite = 100
 
-
-def recuperar_notificacoes_cliente(customer_id):
-    """
-    Recupera todas as notificações já existentes do cliente no Asaas.
-    """
+while True:
     resposta = requests.get(
-        f"{ASAAS_BASE_URL}/customers/{customer_id}/notifications",
-        cabeçalhos=cabecalhos_asaas(),
-        tempo limite=30,
+        f"{ASAAS_BASE_URL}/customers",
+        headers=cabecalhos_asaas(),
+        params={
+            "offset": offset,
+            "limit": limite,
+        },
+        timeout=30,
     )
 
-    se não resposta.ok:
-        tentar:
+    if not resposta.ok:
+        try:
             detalhe = resposta.json()
-        exceto Exceção:
+        except Exception:
             detalhe = resposta.text
 
         raise RuntimeError(
-            f"Não foi possível consultar as notificações do cliente "
+            f"Erro ao consultar clientes no Asaas "
             f"(HTTP {resposta.status_code}): {detalhe}"
         )
 
     corpo = resposta.json()
+    clientes = corpo.get("data", [])
 
-    # A resposta normalmente vem em "data", mas mantemos compatibilidade
-    # caso o endpoint retorne diretamente a uma lista.
-    se isinstance(corpo, lista):
-        retorno corporativo
+    for cliente in clientes:
+        nome_asaas = str(cliente.get("name", ""))
+        box_cliente = extrair_numero_box(nome_asaas)
 
-    retornar corpo.get("dados", [])
+        if box_cliente == numero_box:
+            encontrados.append(cliente)
 
+    if not corpo.get("hasMore"):
+        break
 
-def configuracao_base_notificacao(notificacao):
-    """
-    Desliga canais que não fazem parte do padrão Líder.
-    """
-    retornar {
-        "id": notificação["id"],
-        "ativado": Falso,
-        "emailEnabledForProvider": False,
-        "smsEnabledForProvider": False,
-        "emailEnabledForCustomer": False,
-        "smsEnabledForCustomer": False,
-        "phoneCallEnabledForCustomer": False,
-        "whatsappEnabledForCustomer": False,
-    }
+    offset += limite
 
+if len(encontrados) == 1:
+    return encontrados[0], numero_box
 
-def padronizar_notificacoes_asaas(customer_id):
-    """
-    Padrão Líder para o pagador:
-
-    1. Cobrança criada:
-       - E-mail
-
-    2. Dia do aniversário:
-       - E-mail
-       - WhatsApp
-
-    3. Um dia após o surgimento:
-       - E-mail
-
-    Mais notificações:
-       - Desativadas
-       - SMS desativado
-       - Ligação desativada
-    """
-    notificações = recuperar_notificacoes_cliente(customer_id)
-
-    se não houver notificações:
-        raise RuntimeError(
-            "O Asaas não retorna notificações para este cliente."
-        )
-
-    atualizações = []
-
-    para notificação em notificações:
-        evento = str(notificacao.get("event", "")).upper()
-        offset_atual = notificação.get("scheduleOffset", 0)
-
-        tentar:
-            deslocamento_atual = int(deslocamento_atual ou 0)
-        exceto Exceção:
-            deslocamento_real = 0
-
-        config = configuracao_base_notificacao(notificacao)
-
-        # 1) No momento da criação: apenas e-mail.
-        se evento == "PAGAMENTO_CRIADO":
-            config.update({
-                "ativado": Verdadeiro,
-                "emailEnabledForCustomer": Verdadeiro,
-                "deslocamento do cronograma": 0,
-            })
-
-        # 2) No dia do vencimento: e-mail + WhatsApp.
-        elif evento == "PAYMENT_DUEDATE_WARNING" and offset_atual == 0:
-            config.update({
-                "ativado": Verdadeiro,
-                "emailEnabledForCustomer": Verdadeiro,
-                "whatsappEnabledForCustomer": Verdadeiro,
-                "deslocamento do cronograma": 0,
-            })
-
-        # Avisos antecipados (ex.: 10 dias antes): desligados.
-        elif evento == "PAYMENT_DUEDATE_WARNING" and offset_atual != 0:
-            config.update({
-                "ativado": Falso,
-                "deslocamento_cronometrado": deslocamento_real,
-            })
-
-        #3) Cobrança vencida/atraso:
-        # envia apenas um e-mail ao CLIENTE quando o Asaas
-        # identificar que a cobrança foi vencida e não foi paga.
-        elif evento == "PAYMENT_OVERDUE" and offset_atual == 0:
-            config.update({
-                "ativado": Verdadeiro,
-                "emailEnabledForProvider": False,
-                "smsEnabledForProvider": False,
-                "emailEnabledForCustomer": Verdadeiro,
-                "smsEnabledForCustomer": False,
-                "phoneCallEnabledForCustomer": False,
-                "whatsappEnabledForCustomer": False,
-            })
-
-        # Lembretes periódicos após o vencimento ficam desativados.
-        elif evento == "PAYMENT_OVERDUE" and offset_atual > 0:
-            config.update({
-                "ativado": Falso,
-                "deslocamento_cronometrado": deslocamento_real,
-            })
-
-        # Pagamento confirmado e demais eventos ficam desativados.
-        # Linha digitável, alteração de cobrança e quaisquer outros
-        # eventos ficam desativados para evitar mensagens duplicadas.
-        outro:
-            se "scheduleOffset" em notificação:
-                config["scheduleOffset"] = offset_atual
-
-        atualizacoes.append(config)
-
-    carga útil = {
-        "cliente": id_do_cliente,
-        "notificações": atualizações,
-    }
-
-    resposta = solicitações.put(
-        f"{ASAAS_BASE_URL}/notificações/lote",
-        cabeçalhos=cabecalhos_asaas(),
-        json=carga útil,
-        tempo limite=30,
+if len(encontrados) == 0:
+    raise RuntimeError(
+        f"Não encontrei no Asaas nenhum cliente com BOX {numero_box}. "
+        f"Confira se o cadastro do cliente contém 'BOX {numero_box}' "
+        f"no campo Nome."
     )
 
-    se não resposta.ok:
-        tentar:
-            detalhe = resposta.json()
-        exceto Exceção:
-            detalhe = resposta.text
-
-        raise RuntimeError(
-            f"Não foi possível configurar as notificações no Asaas "
-            f"(HTTP {resposta.status_code}): {detalhe}"
-        )
-
-    retornar Verdadeiro
-
-
-def criar_referencia_externa(nome_arquivo, valor, vencimento, descrição=""):
-    base = (
-        f"{nome_arquivo}|{valor:.2f}|{vencimento.isoformat()}|"
-        f"{str(descricao).strip()}"
-    )
-    digest = hashlib.sha256(base.encode("utf-8")).hexdigest()[:20]
-    return f"lider-royalties-{digest}"
-
-def buscar_cobranca_existente(referência_externa):
-    resposta = requests.get(
-        f"{ASAAS_BASE_URL}/pagamentos",
-        cabeçalhos=cabecalhos_asaas(),
-        params={"externalReference": external_reference},
-        tempo limite=30,
-    )
-    resposta.raise_for_status()
-    dados = resposta.json().get("dados", [])
-    retornar dados[0] se dados else Nenhum
-
-def emitir_boleto_asaas(
-    nome_arquivo,
-    Vastículo,
-    valor_cobranca,
-    não,
-    descricao_boleto,
-    emitir_nota=False
-):
-    cliente, numero_box = localizar_cliente_asaas_por_box(nome_arquivo)
-    customer_id = cliente.get("id")
-    nome_cliente = cliente.get("nome", "")
-
-    se não for customer_id:
-        raise RuntimeError(
-            f"O cliente do BOX {numero_box} foi encontrado, "
-            f"mas o Asaas não retornou um ID válido."
-        )
-
-    # Antes de emitir a cobrança, aplica-se automaticamente
-    # o padrão de notificações definido pelo Líder.
-    padronizar_notificacoes_asaas(customer_id)
-
-    descrição_final = str(descricao_boleto ou "").strip()
-
-    se não descricao_final:
-        descrição_final = (
-            "Royalties"
-            f"Faturamento {formatar_moeda(faturamento)}"
-        )
-
-    referência_externa = criar_referencia_externa(
-        nome_arquivo,
-        valor_cobranca,
-        não,
-        descrição_final
-    )
-
-    se emitir_nota:
-        referência_externa = f"{referência_externa}|NFSE|"
-
-    existente = buscar_cobranca_existente(external_reference)
-    se existir:
-        retornar {
-            "novo": Falso,
-            "clienteNome": cliente.get("nome"),
-            "clienteId": id_do_cliente,
-            "caixa": numero_box,
-            "id": existe.get("id"),
-            "invoiceUrl": existe.get("invoiceUrl"),
-            "bankSlipUrl": existe.get("bankSlipUrl"),
-            "status": existente.get("status"),
-            "referência_externa": referência_externa,
-        }
-
-
-    carga útil = {
-        "cliente": id_do_cliente,
-        "Tipo de cobrança": "BOLETO",
-        "valor": round(float(valor_cobranca), 2),
-        "dueDate": vencimento.isoformat(),
-        "descrição": descrição_final[:500],
-        "referência_externa": referência_externa,
-    }
-
-    resposta = requests.post(
-        f"{ASAAS_BASE_URL}/pagamentos",
-        cabeçalhos=cabecalhos_asaas(),
-        json=carga útil,
-        tempo limite=30,
-    )
-
-    se não resposta.ok:
-        tentar:
-            detalhe = resposta.json()
-        exceto Exceção:
-            detalhe = resposta.text
-        raise RuntimeError(
-            f"Asaas retornaram HTTP {resposta.status_code}: {detalhe}"
-        )
-
-    dados = resposta.json()
-
-    retornar {
-        "novo": Verdadeiro,
-        "clienteNome": cliente.get("nome"),
-        "clienteId": id_do_cliente,
-        "caixa": numero_box,
-        "id": dados.get("id"),
-        "invoiceUrl": dados.get("invoiceUrl"),
-        "bankSlipUrl": dados.get("bankSlipUrl"),
-        "status": dados.get("status"),
-        "referência_externa": referência_externa,
-    }
-
-PALAVRAS_FATURAMENTO = [
-    "cobranca recebida",
-    "pagamento",
-    "recebimento",
-    "pix pesado",
-    "crédito de cliente",
-    "venda",
-    "fatura recebida",
-    "boleto",
-]
-
-PALAVRAS_IGNORAR = [
-    "saldo inicial",
-    "saldo final",
-    "saldo anterior",
-    "saldo disponivel",
-    "saldo bloqueado",
-    "taxas",
-    "tarifa",
-    "mensageria",
-    "notificação",
-]
-
-# ============================================================
-# FUNÇÕES AUXILIARES
-# ============================================================
-
-def normalizar(texto):
-    texto = "" se texto for None else str(texto)
-    texto = unicodedata.normalize("NFKD", texto)
-    texto = texto.encode("ascii", "ignore").decode("ascii")
-    retorne re.sub(r"\s+", " ", texto).strip().lower()
-
-
-def converter_numero(valor):
-    se pd.isna(valor):
-        retornar Nenhum
-
-    se isinstance(valor, (int, float)):
-        retornar float(valor)
-
-    texto = str(valor).strip()
-    texto = texto.replace("R$", "").replace(" ", "")
-
-    se não for texto:
-        retornar Nenhum
-
-    tentar:
-        se "," no texto:
-            texto = texto.replace(".", "").replace(",", ".")
-        retornar float(texto)
-    exceto Exceção:
-        retornar Nenhum
-
-
-def formatar_moeda(valor):
-    retornar (
-        f"R$ {valor:,.2f}"
-        .replace(",", "X")
-        .substituir(".", ",")
-        .replace("X", ".")
-    )
-
-
-def achar_coluna(colunas, nomes_possiveis):
-    mapa = {col: normalizar(col) para col em colunas}
-
-    # Primeira tentativa de igualdade exata
-    para nome em visionário_possivo:
-        alvo = normalizar(nome)
-        para original, atual em mapa.items():
-            se atual == alvo:
-                devolver original
-
-    # Depois tenta ocorrência parcial
-    para nome em visionário_possivo:
-        alvo = normalizar(nome)
-        para original, atual em mapa.items():
-            se alvo em atual:
-                devolver original
-
-    retornar Nenhum
-
-
-# ============================================================
-# LEITURA DE EXCEL / CSV
-# ============================================================
-
-def encontrar_linha_cabecalho_excel(arquivo, motor):
-    """
-    Procure automaticamente a linha do cabeçalho.
-    Útil para extratos Asaas que possuem informações antes da tabela.
-    """
-    arquivo.seek(0)
-
-    bruto = pd.read_excel(
-        arquivo,
-        motor=motor,
-        cabeçalho=Nenhum,
-        nrows=30
-    )
-
-    = [
-        "dados",
-        "tipo de transacao",
-        "descricao",
-        "valentia",
-        "saldo",
-        "tipo do lançamento",
-    ]
-
-    melhor_linha = 0
-    melhor_pontuacao = -1
-
-    para índice, linha em bruto.iterrows():
-        texto = " | ".join(
-            normalizar(valor)
-            para valor em linha.tolist()
-            se não pd.isna(valor)
-        )
-
-        pontuação = soma(
-            1 para palavra em palavras
-            if normalizar(palavra) em texto
-        )
-
-        if pontuacao > melhor_pontuacao:
-            melhor_pontuacao = pontuação
-            melhor_linha = índice
-
-    retornar int(melhor_linha)
-
-
-def preparar_layout_asaas(df):
-    """
-    Tratamento específico do Excel exportado pela Asaas.
-
-    IMPORTANTE:
-    - Use a coluna VALOR para o valor da entrega.
-    - Usa Tipo de lançamento para Crédito/Débito.
-    - NÃO usa a coluna Saldo como faturamento.
-    """
-    colunas = lista(df.colunas)
-
-    col_data = achar_coluna(colunas, ["Dados"])
-    col_tipo = achar_coluna(colunas, ["Tipo de transação"])
-    col_descricao = achar_coluna(colunas, ["Descrição"])
-    col_valor = achar_coluna(colunas, ["Valor"])
-    col_tipo_lancamento = achar_coluna(
-        colunas,
-        ["Tipo do lançamento"]
-    )
-
-    Se col_valor for None ou col_tipo_lancamento for None:
-        retornar Nenhum
-
-    resultado = pd.DataFrame()
-
-    se col_data:
-        resultado["Dados"] = df[col_data].astype(str)
-    outro:
-        resultado["Dados"] = ""
-
-    tipo = (
-        df[col_tipo].fillna("").astype(str)
-        se col_tipo senão ""
-    )
-
-    descrição = (
-        df[col_descricao].fillna("").astype(str)
-        se col_descricao senão ""
-    )
-
-    if col_tipo e col_descricao:
-        resultado["Deda"] = (
-            tipo.str.strip()
-            + " - "
-            + descricao.str.strip()
-        )
-    elif col_tipo:
-        resultado["Descrição"] = tipo.str.strip()
-    elif col_descricao:
-        resultado["Descrição"] = descrição.str.strip()
-    outro:
-        resultado["Deda"] = ""
-
-    resultado["Valor"] = df[col_valor].apply(
-        conversor_número
-    )
-
-    resultado["Tipo de lançamento"] = (
-        df[col_tipo_lancamento]
-        .fillna("")
-        .astype(str)
-        .str.strip()
-    )
-
-    resultado = resultado[
-        resultado["Valor"].notna()
-    ].cópia()
-
-    resultado = resultado[
-        resultado["Tipo de lançamento"].str.len() > 0
-    ].cópia()
-
-    retornar resultado
-
-
-def preparar_layout_generico(df):
-    df = df.copy()
-    df.columns = [str(col).strip() para col em df.columns]
-
-    col_data = achar_coluna(
-        df.columns,
-        [
-            "dados",
-            "data",
-            "dados de movimentação",
-            "data de lançamento",
-        ],
-    )
-
-    col_descricao = achar_coluna(
-        df.columns,
-        [
-            "descricao",
-            "histórico",
-            "lançamento",
-            "movimentacao",
-            "detalhes",
-        ],
-    )
-
-    col_valor = achar_coluna(
-        df.columns,
-        [
-            "valentia",
-            "quantia",
-            "valor movimentacao",
-            "valor lancamento",
-        ],
-    )
-
-    col_credito = achar_coluna(
-        df.columns,
-        ["crédito", "entrada", "créditos"],
-    )
-
-    Se col_descricao for None:
-        colunas_texto = [
-            coluna para coluna em df.columns
-            se df[col].dtype == "objeto"
-        ]
-
-        se colunas_texto:
-            df["_descricao_auto"] = (
-                df[colunas_texto]
-                .fillna("")
-                .astype(str)
-                .agg(" | ".join, axis=1)
-            )
-        outro:
-            df["_descricao_auto"] = ""
-
-        col_descricao = "_descricao_auto"
-
-    Se col_data for None:
-        df["_data_auto"] = ""
-        col_data = "_data_auto"
-
-    se col_valor não for None:
-        valores = df[col_valor].apply(converter_numero)
-    elif col_credito is not None:
-        valores = df[col_crédito].apply(converter_numero)
-    outro:
-        raise ValueError(
-            "Não encontrei uma coluna de valor da movimentação. "
-            "O sistema não usará a coluna Saldo para evitar cálculos incorretos."
-        )
-
-    resultado = pd.DataFrame({
-        "Dados": df[col_data].astype(str),
-        "Descrição": df[col_descricao].astype(str),
-        "Valor": valores,
-    })
-
-    retornar resultado[
-        resultado["Valor"].notna()
-    ].cópia()
-
-
-def ler_excel_ou_csv(arquivo):
-    nome = arquivo.name.lower()
-
-    se nome.terminarcom(".xlsx"):
-        cabecalho = encontrar_linha_cabecalho_excel(
-            arquivo,
-            "openpyxl"
-        )
-
-        arquivo.seek(0)
-
-        df = pd.read_excel(
-            arquivo,
-            motor="openpyxl",
-            cabeçalho=cabecalho
-        )
-
-        asaas = preparar_layout_asaas(df)
-
-        se asaas não for None:
-            retornar asaas
-
-        retornar preparar_layout_generico(df)
-
-    se nome.terminarcom(".xls"):
-        cabecalho = encontrar_linha_cabecalho_excel(
-            arquivo,
-            "xlrd"
-        )
-
-        arquivo.seek(0)
-
-        df = pd.read_excel(
-            arquivo,
-            motor="xlrd",
-            cabeçalho=cabecalho
-        )
-
-        asaas = preparar_layout_asaas(df)
-
-        se asaas não for None:
-            retornar asaas
-
-        retornar preparar_layout_generico(df)
-
-    # CSV
-    bruto = arquivo.getvalue()
-
-    para codificação em ["utf-8-sig", "utf-8", "latin1"]:
-        para separador em [";", ","", "\t"]:
-            tentar:
-                df = pd.read_csv(
-                    BytesIO(bruto),
-                    sep=separador,
-                    codificação=codificação
-                )
-
-                se df.shape[1] > 1:
-                    asaas = preparar_layout_asaas(df)
-
-                    se asaas não for None:
-                        retornar asaas
-
-                    retornar preparar_layout_generico(df)
-
-            exceto Exceção:
-                passar
-
-    raise ValueError(
-        "Não consegui interpretar o arquivo CSV."
-    )
-
-
-# ============================================================
-# LEITURA DE PDF
-# ============================================================
-
-def ler_pdf(arquivo):
-    documento = fitz.open(
-        fluxo=arquivo.getvalue(),
-        filetype="pdf"
-    )
-
-    linhas = []
-
-    para página em documento:
-        linhas += [
-            re.sub(r"\s+", " ", linha).strip()
-            para linha na pagina.get_text().splitlines()
-            se linha.strip()
-        ]
-
-    padrao_data = re.compile(
-        r"\b(\d{2}/\d{2}/\d{4})\b"
-    )
-
-    padrao_valor = re.compile(
-        r"R\$\s*(-?[\d\.]+,\d{2})"
-    )
-
-    dados_reais = ""
-    contexto = []
-    registros = []
-
-    para linha em linhas:
-        datas = padrão_data.findall(linha)
-
-        se houver dados:
-            dados_reais = dados[0]
-
-        valores = padrão_valor.findall(linha)
-
-        para valor_texto em valores:
-            descrição = " ".join(
-                contexto[-3:] + [linha]
-            )
-
-            descricao = padrao_valor.sub(
-                ","
-                descrição
-            ).tira()
-
-            registros.append({
-                "Dados": dados_reais,
-                "Descrição": descrição,
-                "Valor": conversor_numero(valor_texto),
-            })
-
-        contexto.append(linha)
-
-    se não registros:
-        raise ValueError(
-            "Não encontrei movimentações legíveis neste PDF."
-        )
-
-    retornar pd.DataFrame(registros)
-
-
-# ============================================================
-# CLASSIFICAÇÃO DO FATURAMENTO
-# ============================================================
-
-def classificar_movimentacao(
-    descrição,
-    valentia,
-    tipo_lançamento=""
-):
-    descrição_normalizada = normalizar(descrição)
-    lancamento_normalizado = normalizar(
-        tipo_lançamento
-    )
-
-    Se o valor for None:
-        retornar "IGNORAR", Falso
-
-    # Excel Asaas: Crédito/Débito explícito
-    se lancamento_normalizado:
-        if "debito" em lancamento_normalizado:
-            retornar "SAÍDA", Falso
-
-        if "crédito" em lancamento_normalizado:
-            se houver(
-                palavra em descrição_normalizada
-                para palavra em PALAVRAS_FATURAMENTO
-            ):
-                retornar "FATURAMENTO", Verdadeiro
-
-            # Crédito não identificado automaticamente:
-            # fica disponível para revisão manual.
-            retornar "REVISAR", Falso
-
-    # PDFs e formatos sem Crédito/Débito explícito
-    se valor <= 0:
-        retornar "SAÍDA", Falso
-
-    se houver(
-        palavra em descrição_normalizada
-        para palavra em PALAVRAS_IGNORAR
-    ):
-        retornar "IGNORAR", Falso
-
-    se houver(
-        palavra em descrição_normalizada
-        para palavra em PALAVRAS_FATURAMENTO
-    ):
-        retornar "FATURAMENTO", Verdadeiro
-
-    retornar "REVISAR", Falso
-
-
-def processar_arquivo(arquivo):
-    if arquivo.name.lower().endswith(".pdf"):
-        dados = ler_pdf(arquivo)
-    outro:
-        dados = ler_excel_ou_csv(arquivo)
-
-    if "Tipo do lançamento" em dados.columns:
-        classificação = dados.apply(
-            lambda linha: classificar_movimentacao(
-                linha["Det"],
-                linha["Valor"],
-                linha["Tipo do lançamento"],
-            ),
-            eixo=1,
-        )
-    outro:
-        classificação = dados.apply(
-            lambda linha: classificar_movimentacao(
-                linha["Det"],
-                linha["Valor"],
-            ),
-            eixo=1,
-        )
-
-    dados["Classificação"] = [
-        item[0] para item na classificação
-    ]
-
-    dados["Considerar"] = [
-        item[1] para item na classificação
-    ]
-
-    retornar dados
-
-
-# ============================================================
-# OUTRO EXTRATO / MAQUININHA
-# ============================================================
-
-PALAVRAS_IGNORAR_OUTRO_EXTRATO = [
-    "saldo inicial",
-    "saldo final",
-    "saldo diário",
-    "equilíbrio diário",
-    "saldo final",
-    "saldo inicial",
-    "fluxos totais",
-    "saídas totais",
-    "rendimento",
-    "ganhos",
-    "juros",
-    "interesse",
-    "cashback",
-    "dinheiro de volta",
-    "tarifa",
-    "taxas",
-]
-
-def conversor_numero_flexivel(valor):
-    """
-    Converter valores tanto no padrão brasileiro (1.234,56)
-    quanto no padrão internacional (1.234,56).
-    """
-    Se o valor for None:
-        retornar Nenhum
-
-    tentar:
-        se pd.isna(valor):
-            retornar Nenhum
-    exceto Exceção:
-        passar
-
-    se isinstance(valor, (int, float)):
-        retornar float(valor)
-
-    texto = str(valor).strip()
-    texto = (
-        texto
-        .replace("R$", "")
-        .replace("BRL", "")
-        .replace("\xa0", "")
-        .substituir(" ", "")
-    )
-
-    se não for texto:
-        retornar Nenhum
-
-    # Mantém somente sinais, números e separadores.
-    texto = re.sub(r"[^0-9,\.\-\+]", "", texto)
-
-    se não for texto:
-        retornar Nenhum
-
-    tentar:
-        se "," no texto e "." no texto:
-            # O último separador é tratado como separador decimal.
-            se texto.rfind(",") > texto.rfind("."):
-                texto = texto.replace(".", "").replace(",", ".")
-            outro:
-                texto = texto.replace(",", "")
-        elif "," no texto:
-            texto = texto.replace(".", "").replace(",", ".")
-        elif texto.count(".") > 1:
-            partes = texto.split(".")
-            texto = "".join(partes[:-1]) + "." + partes[-1]
-
-        retornar float(texto)
-    exceto Exceção:
-        retornar Nenhum
-
-
-def texto_pdf_em_linhas(arquivo):
-    documento = fitz.open(
-        fluxo=arquivo.getvalue(),
-        filetype="pdf"
-    )
-
-    linhas = []
-
-    para página em documento:
-        linhas += [
-            re.sub(r"\s+", " ", linha).strip()
-            para linha na pagina.get_text().splitlines()
-            se linha.strip()
-        ]
-
-    retornar linhas
-
-
-def detectar_origem_outro_extrato(linhas):
-    texto = normalizar(" ".join(linhas))
-
-    se (
-        "pedra instituição de pagamento" em texto
-        ou "pix | maquininha" no texto
-    ):
-        retornar "Pedra"
-
-    se (
-        "caminhada nas nuvens" em texto
-        ou "pagamento infinito" em texto
-        ou "relatório de transações" em texto
-    ):
-        retornar "Pagamento Infinito"
-
-    se (
-        "mercado pago instituição de pagamento" em texto
-        ou "mercadopago.com.br" em texto
-    ):
-        retornar "Mercado Pago"
-
-    retornar "Formato genérico"
-
-
-def valor_monetario_da_linha(linha):
-    # Valores com R$.
-    encontrado = re.findall(
-        r"(?:R\$\s*)?([+\-]?\s*[\d\.]+,\d{2}|[+\-]?\s*[\d,]+\.\d{2})",
-        str(linha)
-    )
-
-    se não for encontrado:
-        retornar Nenhum
-
-    return converter_numero_flexivel(encontrados[0])
-
-
-def montar_tabela_outro_extrato(registros):
-    se não registros:
-        raise ValueError(
-            "Não encontrei entradas legíveis neste extrato."
-        )
-
-    tabela = pd.DataFrame(registros)
-
-    para coluna em ["Dados", "Descrição"]:
-        se a coluna não estiver em tabela.columns:
-            Viúvo[coluna] = ""
-
-    tabela["Valor"] = pd.to_numeric(
-        Vale["Valor"],
-        erros="coagir"
-    )
-
-    tabela = ~[
-        Vi["Valor"].notna()
-    ].cópia()
-
-    # O campo precisa ser booleano para o CheckboxColumn do Streamlit.
-    Se "Considerar" não estiver em tabela.columns:
-        Vi["Considerar"] = Verdadeiro
-
-    Vi["Considerar"] = (
-        Vi["Considerar"]
-        .fillna(False)
-        .astype(bool)
-    )
-
-    tabela["Classificação"] = tabela["Considerar"].map(
-        {Verdadeiro: "ENTRADA", Falso: "REVISAR"}
-    )
-
-    retornar[
-        [
-            "Dados",
-            "Ded",
-            "Valentia",
-            "Classificação",
-            "Considerar",
-        ]
-    ].reset_index(drop=True)
-
-
-def ler_outro_pdf_stone(linhas):
-    registros = []
-    padrao_data = re.compile(r"^\d{2}/\d{2}/\d{2,4}$")
-
-    dados_índices = [
-        índice
-        para índice, linha in enumerate(linhas)
-        if padrão_data.match(linha.strip())
-    ]
-
-    para posição, inicio em enumerar(indices_datas):
-        fim = (
-            índices_dados[posição + 1]
-            if posição + 1 < len(índices_dados)
-            senão len(linhas)
-        )
-
-        bloco = linhas[inicio:fim]
-
-        se len(bloco) < 2:
-            continuar
-
-        tipo = normalizar(bloco[1])
-
-        se "entrada" não estiver em tipo:
-            continuar
-
-        valor_índice = Nenhum
-        valor = Nenhum
-
-        para i em range(2, len(bloco)):
-            if "r$" em normalizar(bloco[i]):
-                candidato = valor_monetario_da_linha(bloco[i])
-
-                se não for None:
-                    valor_índice = i
-                    valor =
-                    quebrar
-
-        Se valor for None ou valor <= 0:
-            continuar
-
-        descrição = " | ".join(
-            bloco[2:indice_valor]
-        ).tira()
-
-        descrição_norm = normalizar(descrição)
-
-        considerar = nenhum(
-            palavra em descricao_norm
-            para palavra em PALAVRAS_IGNORAR_OUTRO_EXTRATO
-        )
-
-        registros.append({
-            "Dados": bloco[0],
-            "Descrição": descricao ou "Entrada",
-            "Valor": valor,
-            "Considerar": considerar,
-        })
-
-    return montar_tabela_outro_extrato(registros)
-
-
-def ler_outro_pdf_infinitepay(linhas):
-    registros = []
-
-    # No PDF da InfinitePay/CloudWalk, cada transação aparece como:
-    # local -> tipo -> nome -> detalhe -> valor.
-    # Saldos e totais são descartados explicitamente.
-    para índice, linha in enumerate(linhas):
-        texto = str(linha).strip()
-
-        se não re.fullmatch(
-            r"[+\-]?\s*[\d,]+\.\d{2}",
-            texto
-        ):
-            continuar
-
-        valor = conversor_numero_flexivel(texto)
-
-        Se valor for None ou valor <= 0:
-            continuar
-
-        contexto = linhas[
-            max(0, índice - 5):índice
-        ]
-
-        descrição = " | ".join(contexto).strip()
-        descrição_norm = normalizar(descrição)
-
-        se houver(
-            termo em descricao_norm
-            para termo em [
-                "equilíbrio diário",
-                "saldo final",
-                "saldo inicial",
-                "fluxos totais",
-                "saídas totais",
-            ]
-        ):
-            continuar
-
-        # Rendimentos são marcados para revisão, mas não entram por padrão.
-        considerar = nenhum(
-            palavra em descricao_norm
-            para palavra em PALAVRAS_IGNORAR_OUTRO_EXTRATO
-        )
-
-        registros.append({
-            "Dados": "",
-            "Descrição": descricao ou "Entrada",
-            "Valor": valor,
-            "Considerar": considerar,
-        })
-
-    return montar_tabela_outro_extrato(registros)
-
-
-def ler_outro_pdf_mercado_pago(linhas):
-    registros = []
-    padrao_data = re.compile(r"^\d{2}-\d{2}-\d{4}$")
-
-    tentar:
-        inicio_detalhes = próximo(
-            eu
-            for i, linha in enumerate(linhas)
-            if "detalhe dos movimentos" em normalizar(linha)
-        )
-    exceto StopIteration:
-        início_detalhes = 0
-
-    linhas_detalhes = linhas[inicio_detalhes:]
-
-    dados_índices = [
-        índice
-        para índice, linha in enumerate(linhas_detalhes)
-        if padrão_data.match(linha.strip())
-    ]
-
-    para posição, inicio em enumerar(indices_datas):
-        fim = (
-            índices_dados[posição + 1]
-            if posição + 1 < len(índices_dados)
-            senão len(linhas_detalhes)
-        )
-
-        bloco = linhas_detalhes[inicio:fim]
-
-        valor_índice = Nenhum
-        valor = Nenhum
-
-        # O primeiro R$ do bloco é o valor da entrega;
-        # o segundo é o saldo da conta.
-        para i em range(1, len(bloco)):
-            if "r$" em normalizar(bloco[i]):
-                candidato = valor_monetario_da_linha(bloco[i])
-
-                se não for None:
-                    valor_índice = i
-                    valor =
-                    quebrar
-
-        Se valor for None ou valor <= 0:
-            continuar
-
-        descricao_partes = []
-
-        para item do bloco[1:índice_valor]:
-            # Evite colocar o ID numérico da operação conforme descrição.
-            se re.fullmatch(r"\d{6,}", item.strip()):
-                continuar
-
-            descricao_partes.append(item)
-
-        descrição = " | ".join(descricao_partes).strip()
-        descrição_norm = normalizar(descrição)
-
-        considerar = nenhum(
-            palavra em descricao_norm
-            para palavra em PALAVRAS_IGNORAR_OUTRO_EXTRATO
-        )
-
-        registros.append({
-            "Dados": bloco[0],
-            "Descrição": descricao ou "Entrada",
-            "Valor": valor,
-            "Considerar": considerar,
-        })
-
-    return montar_tabela_outro_extrato(registros)
-
-
-def ler_outro_pdf_generico(linhas):
-    """
-    Leitor conservador para PDFs de outros bancos:
-    procura blocos iniciados por dados e usa o primeiro valor monetário
-    do bloco como valor da movimentação, evitando somar o saldo.
-    """
-    registros = []
-
-    padrao_data = re.compile(
-        r"^(?:\d{2}[\/\-\.]\d{2}[\/\-\.]\d{2,4})$"
-    )
-
-    dados_índices = [
-        índice
-        para índice, linha in enumerate(linhas)
-        if padrão_data.match(str(linha).strip())
-    ]
-
-    para posição, inicio em enumerar(indices_datas):
-        fim = (
-            índices_dados[posição + 1]
-            if posição + 1 < len(índices_dados)
-            senão len(linhas)
-        )
-
-        bloco = linhas[inicio:fim]
-
-        valor_índice = Nenhum
-        valor = Nenhum
-
-        para i em range(1, len(bloco)):
-            candidato = valor_monetario_da_linha(bloco[i])
-
-            se não for None:
-                valor_índice = i
-                valor =
-                quebrar
-
-        Se valor for None ou valor <= 0:
-            continuar
-
-        descrição = " | ".join(
-            bloco[1:indice_valor]
-        ).tira()
-
-        descrição_norm = normalizar(descrição)
-
-        considerar = nenhum(
-            palavra em descricao_norm
-            para palavra em PALAVRAS_IGNORAR_OUTRO_EXTRATO
-        )
-
-        registros.append({
-            "Dados": bloco[0],
-            "Descrição": descricao ou "Entrada",
-            "Valor": valor,
-            "Considerar": considerar,
-        })
-
-    se registros:
-        return montar_tabela_outro_extrato(registros)
-
-    raise ValueError(
-        "O PDF não segue um formato reconhecível de movimentações."
-        "Tente exportar o extrato em PDF, Excel ou CSV."
-    )
-
-
-def ler_outro_pdf(arquivo):
-    linhas = texto_pdf_em_linhas(arquivo)
-    origem = detectar_origem_outro_extrato(linhas)
-
-    ifl == "Pedra":
-        tabela = ler_outro_pdf_stone(linhas)
-    elifs == "Pagamento Infinito":
-        tabela = ler_outro_pdf_infinitepay(linhas)
-    elif origem == "Mercado Pago":
-        tabela = ler_outro_pdf_mercado_pago(linhas)
-    outro:
-        tabela = ler_outro_pdf_generico(linhas)
-
-    retornar tabela,
-
-
-def preparar_outro_extrato_tabela(dados):
-    dados = dados.copiar()
-
-    Se "Valor" não estiver em dados.columns:
-        raise ValueError(
-            "Não encontrei a coluna de valor neste arquivo."
-        )
-
-    dados["Valor"] = dados["Valor"].apply(
-        conversor_numero_flexível
-    )
-
-    dados = dados[
-        dados["Valor"].notna()
-    ].cópia()
-
-    Se "Data" não estiver em dados.columns:
-        dados["Dados"] = ""
-
-    se "Descrição" não estiver em dados.columns:
-        dados["Deda"] = ""
-
-    # Se o arquivo informa explicitamente Crédito/Débito,
-    #somente créditos positivos ganham como candidatos.
-    if "Tipo do lançamento" em dados.columns:
-        tipo = (
-            dados["Tipo do lançamento"]
-            .fillna("")
-            .astype(str)
-            .aplicar(normalizar)
-        )
-
-        candidatos = dados[
-            (dados["Valor"] > 0)
-            & tipo.str.contains("crédito", regex=False)
-        ].cópia()
-    outro:
-        candidatos = dados[
-            dados["Valor"] > 0
-        ].cópia()
-
-    se candidatos.vazio:
-        raise ValueError(
-            "Não encontrei entradas positivas neste arquivo."
-        )
-
-    descricoes_norm = (
-        candidatos["Deda"]
-        .fillna("")
-        .astype(str)
-        .aplicar(normalizar)
-    )
-
-    candidatos["Considerar"] = ~descricoes_norm.apply(
-        lambda texto: qualquer(
-            palavra em texto
-            para palavra em PALAVRAS_IGNORAR_OUTRO_EXTRATO
-        )
-    )
-
-    return montar_tabela_outro_extrato(
-        candidatos[
-            ["Dados", "Descrição", "Valor", "Considerar"]
-        ].to_dict("registros")
-    )
-
-
-def ler_outro_ofx(arquivo):
-    texto = arquivo.getvalue().decode(
-        "latin1",
-        erros="ignore"
-    )
-
-    blocos = re.findall(
-        r"<STMTTRN>(.*?)(?=<STMTTRN>|</BANKTRANLIST>|$)",
-        texto,
-        flags=re.IGNORECASE | re.DOTALL
-    )
-
-    registros = []
-
-    para bloco em blocos:
-        def campo(nome):
-            encontrado = re.pesquisa(
-                rf"<{nome}>([^\r\n<]+)",
-                bloco,
-                flags=re.IGNORECASE
-            )
-            retorne encontrado.group(1).strip() se encontrado else ""
-
-        valor = conversor_numero_flexivel(
-            campo("TRNAMT")
-        )
-
-        Se valor for None ou valor <= 0:
-            continuar
-
-        descrição = (
-            campo("MEMO")
-            ou campo("NOME")
-            ou campo ("TRNTYPE")
-            ou "Entrada"
-        )
-
-        data_texto = campo("DTPOSTED")
-        texto_dados = texto_dados[:8] if texto_dados else ""
-
-        se len(data_texto) == 8 e data_texto.isdigit():
-            data_formatada = (
-                f"{data_texto[6:8]}/"
-                f"{data_texto[4:6]}/"
-                f"{data_texto[0:4]}"
-            )
-        outro:
-            data_formatada = data_texto
-
-        descrição_norm = normalizar(descrição)
-
-        considerar = nenhum(
-            palavra em descricao_norm
-            para palavra em PALAVRAS_IGNORAR_OUTRO_EXTRATO
-        )
-
-        registros.append({
-            "Dados": data_formatada,
-            "Descrição": descrição,
-            "Valor": valor,
-            "Considerar": considerar,
-        })
-
-    return montar_tabela_outro_extrato(registros)
-
-
-def processar_outro_extrato(arquivo):
-    nome = arquivo.name.lower()
-
-    se nome.terminarcom(".pdf"):
-        retornar ler_outro_pdf(arquivo)
-
-    se nome.terminarcom(".ofx"):
-        return ler_outro_ofx(arquivo), "OFX"
-
-    se nome.terminarcom((".xlsx", ".xls", ".csv")):
-        dados = ler_excel_ou_csv(arquivo)
-        return preparar_outro_extrato_tabela(dados), "Excel/CSV"
-
-    raise ValueError(
-        "Formato não suportado. Use PDF, XLSX, XLS, CSV ou OFX."
-    )
-
-
-def assinatura_arquivos_adicionais(arquivos):
-    hash_total = hashlib.sha256()
-
-    para arquivo em arquivos:
-        hash_total.atualizar(
-            arquivo.name.encode("utf-8", errors="ignore")
-        )
-        hash_total.update(arquivo.getvalue())
-
-    retornar hash_total.hexdigest()
-
-
-# ============================================================
-# EXPORTAÇÃO DO RELATÓRIO GERAL
-# ============================================================
-
-def nome_aba_excel(nome, usados):
-    nome = re.sub(
-        r'[\[\]\:\*\?\/\\]',
-        "_",
-        nome
-    )
-
-    nome = nome[:31] ou "Extrato"
-
-    original = nome
-    contador = 2
-
-    enquanto nome em usados:
-        sufixo = f"_{contador}"
-        nome = original[:31-len(sufixo)] + sufixo
-        contador += 1
-
-    usados.adicionar(nome)
-
-    retornar nome
-
-
-def gerar_excel_geral(resumo, detalhes):
-    arquivo_excel = BytesIO()
-
-    com pd.ExcelWriter(
-        arquivo_excel,
-        motor="openpyxl"
-    ) como escritor:
-
-        resumo_exportar = resumo.copy()
-
-        resumo_exportar.to_excel(
-            escritor,
-            índice=Falso,
-            sheet_name="Resumo Geral"
-        )
-
-        usados ​​= {"Resumo Geral"}
-
-        para nome_arquivo, tabela em detalhes.items():
-            aba = nome_aba_excel(
-                Caminho(nome_arquivo).tronco,
-                usados
-            )
-
-            tabela.to_excel(
-                escritor,
-                índice=Falso,
-                nome_da_folha=aba
-            )
-
-        # Ajustes simples de largura
-        para ws em writer.book.worksheets:
-            ws.column_dimensions["A"].width = 25
-            ws.column_dimensions["B"].width = 60
-            ws.column_dimensions["C"].width = 18
-            ws.column_dimensions["D"].width = 20
-            ws.column_dimensions["E"].width = 14
-
-    arquivo_excel.seek(0)
-
-    retornar arquivo_excel
-
-
-# ============================================================
-# INTERFACE
-# ============================================================
-
-# ============================================================
-# TAMANHO DO RESUMO CLICÁVEL POR ARQUIVO
-# ============================================================
-st.markdown(
-    """
-    <style>
-    div[data-testid="stExpander"] resumo p,
-    div[data-testid="stExpander"] resumo p * {
-        tamanho da fonte: 20px !importante;
-        altura da linha: 1,45 !importante;
-    }
-
-    div[data-testid="stExpander"] resumo p {
-        cor: #262730 !importante;
-    }
-    </style>
-    "",
-    unsafe_allow_html=True,
+nomes = " | ".join(
+    str(cliente.get("name", ""))
+    for cliente in encontrados[:5]
+)
+
+raise RuntimeError(
+    f"Encontrei {len(encontrados)} clientes com BOX {numero_box}: {nomes}. "
+    f"Para evitar cobrança no cliente errado, a emissão foi bloqueada. "
+    f"Deixe apenas um cadastro correspondente a esse BOX."
 )
 
 
 
-# ============================================================
-# BOLETO AVULSO
-# ============================================================
+
+def recuperar_notificacoes_cliente(customer_id):
+"""
+Recupera todas as notificações já existentes do cliente no Asaas.
+"""
+resposta = requests.get(
+f"{ASAAS_BASE_URL}/customers/{customer_id}/notifications",
+headers=cabecalhos_asaas(),
+timeout=30,
+)
+
+if not resposta.ok:
+    try:
+        detalhe = resposta.json()
+    except Exception:
+        detalhe = resposta.text
+
+    raise RuntimeError(
+        f"Não foi possível consultar as notificações do cliente "
+        f"(HTTP {resposta.status_code}): {detalhe}"
+    )
+
+corpo = resposta.json()
+
+# A resposta normalmente vem em "data", mas mantemos compatibilidade
+# caso o endpoint retorne diretamente uma lista.
+if isinstance(corpo, list):
+    return corpo
+
+return corpo.get("data", [])
+
+def configuracao_base_notificacao(notificacao):
+"""
+Desliga canais que não fazem parte do padrão Líder.
+"""
+return {
+"id": notificacao["id"],
+"enabled": False,
+"emailEnabledForProvider": False,
+"smsEnabledForProvider": False,
+"emailEnabledForCustomer": False,
+"smsEnabledForCustomer": False,
+"phoneCallEnabledForCustomer": False,
+"whatsappEnabledForCustomer": False,
+}
+
+def padronizar_notificacoes_asaas(customer_id):
+"""
+Padrão Líder para o pagador:
+
+1. Cobrança criada:
+   - E-mail
+
+2. Dia do vencimento:
+   - E-mail
+   - WhatsApp
+
+3. Um dia após o vencimento:
+   - E-mail
+
+Demais notificações:
+   - Desativadas
+   - SMS desativado
+   - Ligação desativada
+"""
+notificacoes = recuperar_notificacoes_cliente(customer_id)
+
+if not notificacoes:
+    raise RuntimeError(
+        "O Asaas não retornou notificações para este cliente."
+    )
+
+atualizacoes = []
+
+for notificacao in notificacoes:
+    evento = str(notificacao.get("event", "")).upper()
+    offset_atual = notificacao.get("scheduleOffset", 0)
+
+    try:
+        offset_atual = int(offset_atual or 0)
+    except Exception:
+        offset_atual = 0
+
+    config = configuracao_base_notificacao(notificacao)
+
+    # 1) No momento da criação: apenas e-mail.
+    if evento == "PAYMENT_CREATED":
+        config.update({
+            "enabled": True,
+            "emailEnabledForCustomer": True,
+            "scheduleOffset": 0,
+        })
+
+    # 2) No dia do vencimento: e-mail + WhatsApp.
+    elif evento == "PAYMENT_DUEDATE_WARNING" and offset_atual == 0:
+        config.update({
+            "enabled": True,
+            "emailEnabledForCustomer": True,
+            "whatsappEnabledForCustomer": True,
+            "scheduleOffset": 0,
+        })
+
+    # Avisos antecipados (ex.: 10 dias antes): desligados.
+    elif evento == "PAYMENT_DUEDATE_WARNING" and offset_atual != 0:
+        config.update({
+            "enabled": False,
+            "scheduleOffset": offset_atual,
+        })
+
+    # 3) Cobrança vencida / atraso:
+    # envia apenas um e-mail ao CLIENTE quando o Asaas
+    # identificar que a cobrança venceu e não foi paga.
+    elif evento == "PAYMENT_OVERDUE" and offset_atual == 0:
+        config.update({
+            "enabled": True,
+            "emailEnabledForProvider": False,
+            "smsEnabledForProvider": False,
+            "emailEnabledForCustomer": True,
+            "smsEnabledForCustomer": False,
+            "phoneCallEnabledForCustomer": False,
+            "whatsappEnabledForCustomer": False,
+        })
+
+    # Lembretes periódicos após o vencimento ficam desativados.
+    elif evento == "PAYMENT_OVERDUE" and offset_atual > 0:
+        config.update({
+            "enabled": False,
+            "scheduleOffset": offset_atual,
+        })
+
+    # Pagamento confirmado e demais eventos ficam desativados.
+    # Linha digitável, alteração de cobrança e quaisquer outros
+    # eventos ficam desativados para evitar mensagens duplicadas.
+    else:
+        if "scheduleOffset" in notificacao:
+            config["scheduleOffset"] = offset_atual
+
+    atualizacoes.append(config)
+
+payload = {
+    "customer": customer_id,
+    "notifications": atualizacoes,
+}
+
+resposta = requests.put(
+    f"{ASAAS_BASE_URL}/notifications/batch",
+    headers=cabecalhos_asaas(),
+    json=payload,
+    timeout=30,
+)
+
+if not resposta.ok:
+    try:
+        detalhe = resposta.json()
+    except Exception:
+        detalhe = resposta.text
+
+    raise RuntimeError(
+        f"Não foi possível configurar as notificações no Asaas "
+        f"(HTTP {resposta.status_code}): {detalhe}"
+    )
+
+return True
+
+def criar_referencia_externa(nome_arquivo, valor, vencimento, descricao=""):
+base = (
+f"{nome_arquivo}|{valor:.2f}|{vencimento.isoformat()}|"
+f"{str(descricao).strip()}"
+)
+digest = hashlib.sha256(base.encode("utf-8")).hexdigest()[:20]
+return f"lider-royalties-{digest}"
+
+def buscar_cobranca_existente(external_reference):
+resposta = requests.get(
+f"{ASAAS_BASE_URL}/payments",
+headers=cabecalhos_asaas(),
+params={"externalReference": external_reference},
+timeout=30,
+)
+resposta.raise_for_status()
+dados = resposta.json().get("data", [])
+return dados[0] if dados else None
+
+def emitir_boleto_asaas(
+nome_arquivo,
+faturamento,
+valor_cobranca,
+vencimento,
+descricao_boleto,
+emitir_nota=False
+):
+cliente, numero_box = localizar_cliente_asaas_por_box(nome_arquivo)
+customer_id = cliente.get("id")
+nome_cliente = cliente.get("name", "")
+
+if not customer_id:
+    raise RuntimeError(
+        f"O cliente do BOX {numero_box} foi encontrado, "
+        f"mas o Asaas não retornou um ID válido."
+    )
+
+# Antes de emitir a cobrança, aplica automaticamente
+# o padrão de notificações definido pela Líder.
+padronizar_notificacoes_asaas(customer_id)
+
+descricao_final = str(descricao_boleto or "").strip()
+
+if not descricao_final:
+    descricao_final = (
+        "Royalties"
+        f"Faturamento {formatar_moeda(faturamento)}"
+    )
+
+external_reference = criar_referencia_externa(
+    nome_arquivo,
+    valor_cobranca,
+    vencimento,
+    descricao_final
+)
+
+if emitir_nota:
+    external_reference = f"{external_reference}|NFSE|"
+
+existente = buscar_cobranca_existente(external_reference)
+if existente:
+    return {
+        "novo": False,
+        "clienteNome": cliente.get("name"),
+        "clienteId": customer_id,
+        "box": numero_box,
+        "id": existente.get("id"),
+        "invoiceUrl": existente.get("invoiceUrl"),
+        "bankSlipUrl": existente.get("bankSlipUrl"),
+        "status": existente.get("status"),
+        "externalReference": external_reference,
+    }
+
+
+payload = {
+    "customer": customer_id,
+    "billingType": "BOLETO",
+    "value": round(float(valor_cobranca), 2),
+    "dueDate": vencimento.isoformat(),
+    "description": descricao_final[:500],
+    "externalReference": external_reference,
+}
+
+resposta = requests.post(
+    f"{ASAAS_BASE_URL}/payments",
+    headers=cabecalhos_asaas(),
+    json=payload,
+    timeout=30,
+)
+
+if not resposta.ok:
+    try:
+        detalhe = resposta.json()
+    except Exception:
+        detalhe = resposta.text
+    raise RuntimeError(
+        f"Asaas retornou HTTP {resposta.status_code}: {detalhe}"
+    )
+
+dados = resposta.json()
+
+return {
+    "novo": True,
+    "clienteNome": cliente.get("name"),
+    "clienteId": customer_id,
+    "box": numero_box,
+    "id": dados.get("id"),
+    "invoiceUrl": dados.get("invoiceUrl"),
+    "bankSlipUrl": dados.get("bankSlipUrl"),
+    "status": dados.get("status"),
+    "externalReference": external_reference,
+}
+
+PALAVRAS_FATURAMENTO = [
+"cobranca recebida",
+"pagamento recebido",
+"recebimento",
+"pix recebido",
+"credito de cliente",
+"venda",
+"fatura recebida",
+"boleto recebido",
+]
+
+PALAVRAS_IGNORAR = [
+"saldo inicial",
+"saldo final",
+"saldo anterior",
+"saldo disponivel",
+"saldo bloqueado",
+"taxa",
+"tarifa",
+"mensageria",
+"notificacao",
+]
+
+============================================================
+FUNÇÕES AUXILIARES
+============================================================
+
+def normalizar(texto):
+texto = "" if texto is None else str(texto)
+texto = unicodedata.normalize("NFKD", texto)
+texto = texto.encode("ascii", "ignore").decode("ascii")
+return re.sub(r"\s+", " ", texto).strip().lower()
+
+def converter_numero(valor):
+if pd.isna(valor):
+return None
+
+if isinstance(valor, (int, float)):
+    return float(valor)
+
+texto = str(valor).strip()
+texto = texto.replace("R$", "").replace(" ", "")
+
+if not texto:
+    return None
+
+try:
+    if "," in texto:
+        texto = texto.replace(".", "").replace(",", ".")
+    return float(texto)
+except Exception:
+    return None
+
+def formatar_moeda(valor):
+return (
+f"R$ {valor:,.2f}"
+.replace(",", "X")
+.replace(".", ",")
+.replace("X", ".")
+)
+
+def achar_coluna(colunas, nomes_possiveis):
+mapa = {col: normalizar(col) for col in colunas}
+
+# Primeiro tenta igualdade exata
+for nome in nomes_possiveis:
+    alvo = normalizar(nome)
+    for original, atual in mapa.items():
+        if atual == alvo:
+            return original
+
+# Depois tenta ocorrência parcial
+for nome in nomes_possiveis:
+    alvo = normalizar(nome)
+    for original, atual in mapa.items():
+        if alvo in atual:
+            return original
+
+return None
+============================================================
+LEITURA DE EXCEL / CSV
+============================================================
+
+def encontrar_linha_cabecalho_excel(arquivo, engine):
+"""
+Procura automaticamente a linha de cabeçalho.
+Útil para extratos Asaas que possuem informações antes da tabela.
+"""
+arquivo.seek(0)
+
+bruto = pd.read_excel(
+    arquivo,
+    engine=engine,
+    header=None,
+    nrows=30
+)
+
+palavras = [
+    "data",
+    "tipo de transacao",
+    "descricao",
+    "valor",
+    "saldo",
+    "tipo do lancamento",
+]
+
+melhor_linha = 0
+melhor_pontuacao = -1
+
+for indice, linha in bruto.iterrows():
+    texto = " | ".join(
+        normalizar(valor)
+        for valor in linha.tolist()
+        if not pd.isna(valor)
+    )
+
+    pontuacao = sum(
+        1 for palavra in palavras
+        if normalizar(palavra) in texto
+    )
+
+    if pontuacao > melhor_pontuacao:
+        melhor_pontuacao = pontuacao
+        melhor_linha = indice
+
+return int(melhor_linha)
+
+def preparar_layout_asaas(df):
+"""
+Tratamento específico do Excel exportado pelo Asaas.
+
+IMPORTANTE:
+- Usa a coluna VALOR para o valor da movimentação.
+- Usa Tipo do lançamento para Crédito/Débito.
+- NÃO usa a coluna Saldo como faturamento.
+"""
+colunas = list(df.columns)
+
+col_data = achar_coluna(colunas, ["Data"])
+col_tipo = achar_coluna(colunas, ["Tipo de transação"])
+col_descricao = achar_coluna(colunas, ["Descrição"])
+col_valor = achar_coluna(colunas, ["Valor"])
+col_tipo_lancamento = achar_coluna(
+    colunas,
+    ["Tipo do lançamento"]
+)
+
+if col_valor is None or col_tipo_lancamento is None:
+    return None
+
+resultado = pd.DataFrame()
+
+if col_data:
+    resultado["Data"] = df[col_data].astype(str)
+else:
+    resultado["Data"] = ""
+
+tipo = (
+    df[col_tipo].fillna("").astype(str)
+    if col_tipo else ""
+)
+
+descricao = (
+    df[col_descricao].fillna("").astype(str)
+    if col_descricao else ""
+)
+
+if col_tipo and col_descricao:
+    resultado["Descrição"] = (
+        tipo.str.strip()
+        + " - "
+        + descricao.str.strip()
+    )
+elif col_tipo:
+    resultado["Descrição"] = tipo.str.strip()
+elif col_descricao:
+    resultado["Descrição"] = descricao.str.strip()
+else:
+    resultado["Descrição"] = ""
+
+resultado["Valor"] = df[col_valor].apply(
+    converter_numero
+)
+
+resultado["Tipo do lançamento"] = (
+    df[col_tipo_lancamento]
+    .fillna("")
+    .astype(str)
+    .str.strip()
+)
+
+resultado = resultado[
+    resultado["Valor"].notna()
+].copy()
+
+resultado = resultado[
+    resultado["Tipo do lançamento"].str.len() > 0
+].copy()
+
+return resultado
+
+def preparar_layout_generico(df):
+df = df.copy()
+df.columns = [str(col).strip() for col in df.columns]
+
+col_data = achar_coluna(
+    df.columns,
+    [
+        "data",
+        "date",
+        "data movimentacao",
+        "data lancamento",
+    ],
+)
+
+col_descricao = achar_coluna(
+    df.columns,
+    [
+        "descricao",
+        "historico",
+        "lancamento",
+        "movimentacao",
+        "detalhes",
+    ],
+)
+
+col_valor = achar_coluna(
+    df.columns,
+    [
+        "valor",
+        "amount",
+        "valor movimentacao",
+        "valor lancamento",
+    ],
+)
+
+col_credito = achar_coluna(
+    df.columns,
+    ["credito", "entrada", "creditos"],
+)
+
+if col_descricao is None:
+    colunas_texto = [
+        col for col in df.columns
+        if df[col].dtype == "object"
+    ]
+
+    if colunas_texto:
+        df["_descricao_auto"] = (
+            df[colunas_texto]
+            .fillna("")
+            .astype(str)
+            .agg(" | ".join, axis=1)
+        )
+    else:
+        df["_descricao_auto"] = ""
+
+    col_descricao = "_descricao_auto"
+
+if col_data is None:
+    df["_data_auto"] = ""
+    col_data = "_data_auto"
+
+if col_valor is not None:
+    valores = df[col_valor].apply(converter_numero)
+elif col_credito is not None:
+    valores = df[col_credito].apply(converter_numero)
+else:
+    raise ValueError(
+        "Não encontrei uma coluna de valor da movimentação. "
+        "O sistema não usará a coluna Saldo para evitar cálculo incorreto."
+    )
+
+resultado = pd.DataFrame({
+    "Data": df[col_data].astype(str),
+    "Descrição": df[col_descricao].astype(str),
+    "Valor": valores,
+})
+
+return resultado[
+    resultado["Valor"].notna()
+].copy()
+
+def ler_excel_ou_csv(arquivo):
+nome = arquivo.name.lower()
+
+if nome.endswith(".xlsx"):
+    cabecalho = encontrar_linha_cabecalho_excel(
+        arquivo,
+        "openpyxl"
+    )
+
+    arquivo.seek(0)
+
+    df = pd.read_excel(
+        arquivo,
+        engine="openpyxl",
+        header=cabecalho
+    )
+
+    asaas = preparar_layout_asaas(df)
+
+    if asaas is not None:
+        return asaas
+
+    return preparar_layout_generico(df)
+
+if nome.endswith(".xls"):
+    cabecalho = encontrar_linha_cabecalho_excel(
+        arquivo,
+        "xlrd"
+    )
+
+    arquivo.seek(0)
+
+    df = pd.read_excel(
+        arquivo,
+        engine="xlrd",
+        header=cabecalho
+    )
+
+    asaas = preparar_layout_asaas(df)
+
+    if asaas is not None:
+        return asaas
+
+    return preparar_layout_generico(df)
+
+# CSV
+bruto = arquivo.getvalue()
+
+for encoding in ["utf-8-sig", "utf-8", "latin1"]:
+    for separador in [";", ",", "\t"]:
+        try:
+            df = pd.read_csv(
+                BytesIO(bruto),
+                sep=separador,
+                encoding=encoding
+            )
+
+            if df.shape[1] > 1:
+                asaas = preparar_layout_asaas(df)
+
+                if asaas is not None:
+                    return asaas
+
+                return preparar_layout_generico(df)
+
+        except Exception:
+            pass
+
+raise ValueError(
+    "Não consegui interpretar o arquivo CSV."
+)
+============================================================
+LEITURA DE PDF
+============================================================
+
+def ler_pdf(arquivo):
+documento = fitz.open(
+stream=arquivo.getvalue(),
+filetype="pdf"
+)
+
+linhas = []
+
+for pagina in documento:
+    linhas += [
+        re.sub(r"\s+", " ", linha).strip()
+        for linha in pagina.get_text().splitlines()
+        if linha.strip()
+    ]
+
+padrao_data = re.compile(
+    r"\b(\d{2}/\d{2}/\d{4})\b"
+)
+
+padrao_valor = re.compile(
+    r"R\$\s*(-?[\d\.]+,\d{2})"
+)
+
+data_atual = ""
+contexto = []
+registros = []
+
+for linha in linhas:
+    datas = padrao_data.findall(linha)
+
+    if datas:
+        data_atual = datas[0]
+
+    valores = padrao_valor.findall(linha)
+
+    for valor_texto in valores:
+        descricao = " ".join(
+            contexto[-3:] + [linha]
+        )
+
+        descricao = padrao_valor.sub(
+            "",
+            descricao
+        ).strip()
+
+        registros.append({
+            "Data": data_atual,
+            "Descrição": descricao,
+            "Valor": converter_numero(valor_texto),
+        })
+
+    contexto.append(linha)
+
+if not registros:
+    raise ValueError(
+        "Não encontrei movimentações legíveis neste PDF."
+    )
+
+return pd.DataFrame(registros)
+============================================================
+CLASSIFICAÇÃO DO FATURAMENTO
+============================================================
+
+def classificar_movimentacao(
+descricao,
+valor,
+tipo_lancamento=""
+):
+descricao_normalizada = normalizar(descricao)
+lancamento_normalizado = normalizar(
+tipo_lancamento
+)
+
+if valor is None:
+    return "IGNORAR", False
+
+# Excel Asaas: Crédito/Débito explícito
+if lancamento_normalizado:
+    if "debito" in lancamento_normalizado:
+        return "SAÍDA", False
+
+    if "credito" in lancamento_normalizado:
+        if any(
+            palavra in descricao_normalizada
+            for palavra in PALAVRAS_FATURAMENTO
+        ):
+            return "FATURAMENTO", True
+
+        # Crédito não identificado automaticamente:
+        # fica disponível para revisão manual.
+        return "REVISAR", False
+
+# PDFs e formatos sem Crédito/Débito explícito
+if valor <= 0:
+    return "SAÍDA", False
+
+if any(
+    palavra in descricao_normalizada
+    for palavra in PALAVRAS_IGNORAR
+):
+    return "IGNORAR", False
+
+if any(
+    palavra in descricao_normalizada
+    for palavra in PALAVRAS_FATURAMENTO
+):
+    return "FATURAMENTO", True
+
+return "REVISAR", False
+
+def processar_arquivo(arquivo):
+if arquivo.name.lower().endswith(".pdf"):
+dados = ler_pdf(arquivo)
+else:
+dados = ler_excel_ou_csv(arquivo)
+
+if "Tipo do lançamento" in dados.columns:
+    classificacao = dados.apply(
+        lambda linha: classificar_movimentacao(
+            linha["Descrição"],
+            linha["Valor"],
+            linha["Tipo do lançamento"],
+        ),
+        axis=1,
+    )
+else:
+    classificacao = dados.apply(
+        lambda linha: classificar_movimentacao(
+            linha["Descrição"],
+            linha["Valor"],
+        ),
+        axis=1,
+    )
+
+dados["Classificação"] = [
+    item[0] for item in classificacao
+]
+
+dados["Considerar"] = [
+    item[1] for item in classificacao
+]
+
+return dados
+============================================================
+OUTRO EXTRATO / MAQUININHA
+============================================================
+
+PALAVRAS_IGNORAR_OUTRO_EXTRATO = [
+"saldo inicial",
+"saldo final",
+"saldo diario",
+"daily balance",
+"final balance",
+"initial balance",
+"total inflows",
+"total outflows",
+"rendimento",
+"earnings",
+"juros",
+"interest",
+"cashback",
+"cash back",
+"tarifa",
+"taxa",
+]
+
+def converter_numero_flexivel(valor):
+"""
+Converte valores tanto no padrão brasileiro (1.234,56)
+quanto no padrão internacional (1,234.56).
+"""
+if valor is None:
+return None
+
+try:
+    if pd.isna(valor):
+        return None
+except Exception:
+    pass
+
+if isinstance(valor, (int, float)):
+    return float(valor)
+
+texto = str(valor).strip()
+texto = (
+    texto
+    .replace("R$", "")
+    .replace("BRL", "")
+    .replace("\xa0", "")
+    .replace(" ", "")
+)
+
+if not texto:
+    return None
+
+# Mantém somente sinal, números e separadores.
+texto = re.sub(r"[^0-9,\.\-\+]", "", texto)
+
+if not texto:
+    return None
+
+try:
+    if "," in texto and "." in texto:
+        # O último separador é tratado como separador decimal.
+        if texto.rfind(",") > texto.rfind("."):
+            texto = texto.replace(".", "").replace(",", ".")
+        else:
+            texto = texto.replace(",", "")
+    elif "," in texto:
+        texto = texto.replace(".", "").replace(",", ".")
+    elif texto.count(".") > 1:
+        partes = texto.split(".")
+        texto = "".join(partes[:-1]) + "." + partes[-1]
+
+    return float(texto)
+except Exception:
+    return None
+
+def texto_pdf_em_linhas(arquivo):
+documento = fitz.open(
+stream=arquivo.getvalue(),
+filetype="pdf"
+)
+
+linhas = []
+
+for pagina in documento:
+    linhas += [
+        re.sub(r"\s+", " ", linha).strip()
+        for linha in pagina.get_text().splitlines()
+        if linha.strip()
+    ]
+
+return linhas
+
+def detectar_origem_outro_extrato(linhas):
+texto = normalizar(" ".join(linhas))
+
+if (
+    "stone instituicao de pagamento" in texto
+    or "pix | maquininha" in texto
+):
+    return "Stone"
+
+if (
+    "cloudwalk" in texto
+    or "infinitepay" in texto
+    or "transaction report" in texto
+):
+    return "InfinitePay"
+
+if (
+    "mercado pago instituicao de pagamento" in texto
+    or "mercadopago.com.br" in texto
+):
+    return "Mercado Pago"
+
+return "Formato genérico"
+
+def valor_monetario_da_linha(linha):
+# Valores com R$.
+encontrados = re.findall(
+r"(?$\s*)?([+-]?\s*[\d.]+,\d{2}|[+-]?\s*[\d,]+.\d{2})",
+str(linha)
+)
+
+if not encontrados:
+    return None
+
+return converter_numero_flexivel(encontrados[0])
+
+def montar_tabela_outro_extrato(registros):
+if not registros:
+raise ValueError(
+"Não encontrei entradas legíveis neste extrato."
+)
+
+tabela = pd.DataFrame(registros)
+
+for coluna in ["Data", "Descrição"]:
+    if coluna not in tabela.columns:
+        tabela[coluna] = ""
+
+tabela["Valor"] = pd.to_numeric(
+    tabela["Valor"],
+    errors="coerce"
+)
+
+tabela = tabela[
+    tabela["Valor"].notna()
+].copy()
+
+# O campo precisa ser booleano para o CheckboxColumn do Streamlit.
+if "Considerar" not in tabela.columns:
+    tabela["Considerar"] = True
+
+tabela["Considerar"] = (
+    tabela["Considerar"]
+    .fillna(False)
+    .astype(bool)
+)
+
+tabela["Classificação"] = tabela["Considerar"].map(
+    {True: "ENTRADA", False: "REVISAR"}
+)
+
+return tabela[
+    [
+        "Data",
+        "Descrição",
+        "Valor",
+        "Classificação",
+        "Considerar",
+    ]
+].reset_index(drop=True)
+
+def ler_outro_pdf_stone(linhas):
+registros = []
+padrao_data = re.compile(r"^\d{2}/\d{2}/\d{2,4}$")
+
+indices_datas = [
+    indice
+    for indice, linha in enumerate(linhas)
+    if padrao_data.match(linha.strip())
+]
+
+for posicao, inicio in enumerate(indices_datas):
+    fim = (
+        indices_datas[posicao + 1]
+        if posicao + 1 < len(indices_datas)
+        else len(linhas)
+    )
+
+    bloco = linhas[inicio:fim]
+
+    if len(bloco) < 2:
+        continue
+
+    tipo = normalizar(bloco[1])
+
+    if "entrada" not in tipo:
+        continue
+
+    indice_valor = None
+    valor = None
+
+    for i in range(2, len(bloco)):
+        if "r$" in normalizar(bloco[i]):
+            candidato = valor_monetario_da_linha(bloco[i])
+
+            if candidato is not None:
+                indice_valor = i
+                valor = candidato
+                break
+
+    if valor is None or valor <= 0:
+        continue
+
+    descricao = " | ".join(
+        bloco[2:indice_valor]
+    ).strip()
+
+    descricao_norm = normalizar(descricao)
+
+    considerar = not any(
+        palavra in descricao_norm
+        for palavra in PALAVRAS_IGNORAR_OUTRO_EXTRATO
+    )
+
+    registros.append({
+        "Data": bloco[0],
+        "Descrição": descricao or "Entrada",
+        "Valor": valor,
+        "Considerar": considerar,
+    })
+
+return montar_tabela_outro_extrato(registros)
+
+def ler_outro_pdf_infinitepay(linhas):
+registros = []
+
+# No PDF da InfinitePay/CloudWalk, cada transação aparece como:
+# horário -> tipo -> nome -> detalhe -> valor.
+# Saldos e totais são descartados explicitamente.
+for indice, linha in enumerate(linhas):
+    texto = str(linha).strip()
+
+    if not re.fullmatch(
+        r"[+\-]?\s*[\d,]+\.\d{2}",
+        texto
+    ):
+        continue
+
+    valor = converter_numero_flexivel(texto)
+
+    if valor is None or valor <= 0:
+        continue
+
+    contexto = linhas[
+        max(0, indice - 5):indice
+    ]
+
+    descricao = " | ".join(contexto).strip()
+    descricao_norm = normalizar(descricao)
+
+    if any(
+        termo in descricao_norm
+        for termo in [
+            "daily balance",
+            "final balance",
+            "initial balance",
+            "total inflows",
+            "total outflows",
+        ]
+    ):
+        continue
+
+    # Rendimentos são mostrados para revisão, mas não entram por padrão.
+    considerar = not any(
+        palavra in descricao_norm
+        for palavra in PALAVRAS_IGNORAR_OUTRO_EXTRATO
+    )
+
+    registros.append({
+        "Data": "",
+        "Descrição": descricao or "Entrada",
+        "Valor": valor,
+        "Considerar": considerar,
+    })
+
+return montar_tabela_outro_extrato(registros)
+
+def ler_outro_pdf_mercado_pago(linhas):
+registros = []
+padrao_data = re.compile(r"^\d{2}-\d{2}-\d{4}$")
+
+try:
+    inicio_detalhes = next(
+        i
+        for i, linha in enumerate(linhas)
+        if "detalhe dos movimentos" in normalizar(linha)
+    )
+except StopIteration:
+    inicio_detalhes = 0
+
+linhas_detalhes = linhas[inicio_detalhes:]
+
+indices_datas = [
+    indice
+    for indice, linha in enumerate(linhas_detalhes)
+    if padrao_data.match(linha.strip())
+]
+
+for posicao, inicio in enumerate(indices_datas):
+    fim = (
+        indices_datas[posicao + 1]
+        if posicao + 1 < len(indices_datas)
+        else len(linhas_detalhes)
+    )
+
+    bloco = linhas_detalhes[inicio:fim]
+
+    indice_valor = None
+    valor = None
+
+    # O primeiro R$ do bloco é o valor da movimentação;
+    # o segundo é o saldo da conta.
+    for i in range(1, len(bloco)):
+        if "r$" in normalizar(bloco[i]):
+            candidato = valor_monetario_da_linha(bloco[i])
+
+            if candidato is not None:
+                indice_valor = i
+                valor = candidato
+                break
+
+    if valor is None or valor <= 0:
+        continue
+
+    descricao_partes = []
+
+    for item in bloco[1:indice_valor]:
+        # Evita colocar o ID numérico da operação como descrição.
+        if re.fullmatch(r"\d{6,}", item.strip()):
+            continue
+
+        descricao_partes.append(item)
+
+    descricao = " | ".join(descricao_partes).strip()
+    descricao_norm = normalizar(descricao)
+
+    considerar = not any(
+        palavra in descricao_norm
+        for palavra in PALAVRAS_IGNORAR_OUTRO_EXTRATO
+    )
+
+    registros.append({
+        "Data": bloco[0],
+        "Descrição": descricao or "Entrada",
+        "Valor": valor,
+        "Considerar": considerar,
+    })
+
+return montar_tabela_outro_extrato(registros)
+
+def ler_outro_pdf_generico(linhas):
+"""
+Leitor conservador para PDFs de outros bancos:
+procura blocos iniciados por data e usa o primeiro valor monetário
+do bloco como valor da movimentação, evitando somar o saldo.
+"""
+registros = []
+
+padrao_data = re.compile(
+    r"^(?:\d{2}[\/\-\.]\d{2}[\/\-\.]\d{2,4})$"
+)
+
+indices_datas = [
+    indice
+    for indice, linha in enumerate(linhas)
+    if padrao_data.match(str(linha).strip())
+]
+
+for posicao, inicio in enumerate(indices_datas):
+    fim = (
+        indices_datas[posicao + 1]
+        if posicao + 1 < len(indices_datas)
+        else len(linhas)
+    )
+
+    bloco = linhas[inicio:fim]
+
+    indice_valor = None
+    valor = None
+
+    for i in range(1, len(bloco)):
+        candidato = valor_monetario_da_linha(bloco[i])
+
+        if candidato is not None:
+            indice_valor = i
+            valor = candidato
+            break
+
+    if valor is None or valor <= 0:
+        continue
+
+    descricao = " | ".join(
+        bloco[1:indice_valor]
+    ).strip()
+
+    descricao_norm = normalizar(descricao)
+
+    considerar = not any(
+        palavra in descricao_norm
+        for palavra in PALAVRAS_IGNORAR_OUTRO_EXTRATO
+    )
+
+    registros.append({
+        "Data": bloco[0],
+        "Descrição": descricao or "Entrada",
+        "Valor": valor,
+        "Considerar": considerar,
+    })
+
+if registros:
+    return montar_tabela_outro_extrato(registros)
+
+raise ValueError(
+    "O PDF não segue um formato reconhecível de movimentações. "
+    "Tente exportar o extrato em PDF, Excel ou CSV."
+)
+
+def ler_outro_pdf(arquivo):
+linhas = texto_pdf_em_linhas(arquivo)
+origem = detectar_origem_outro_extrato(linhas)
+
+if origem == "Stone":
+    tabela = ler_outro_pdf_stone(linhas)
+elif origem == "InfinitePay":
+    tabela = ler_outro_pdf_infinitepay(linhas)
+elif origem == "Mercado Pago":
+    tabela = ler_outro_pdf_mercado_pago(linhas)
+else:
+    tabela = ler_outro_pdf_generico(linhas)
+
+return tabela, origem
+
+def preparar_outro_extrato_tabela(dados):
+dados = dados.copy()
+
+if "Valor" not in dados.columns:
+    raise ValueError(
+        "Não encontrei a coluna de valor neste arquivo."
+    )
+
+dados["Valor"] = dados["Valor"].apply(
+    converter_numero_flexivel
+)
+
+dados = dados[
+    dados["Valor"].notna()
+].copy()
+
+if "Data" not in dados.columns:
+    dados["Data"] = ""
+
+if "Descrição" not in dados.columns:
+    dados["Descrição"] = ""
+
+# Se o arquivo informa explicitamente Crédito/Débito,
+# somente créditos positivos entram como candidatos.
+if "Tipo do lançamento" in dados.columns:
+    tipo = (
+        dados["Tipo do lançamento"]
+        .fillna("")
+        .astype(str)
+        .apply(normalizar)
+    )
+
+    candidatos = dados[
+        (dados["Valor"] > 0)
+        & tipo.str.contains("credito", regex=False)
+    ].copy()
+else:
+    candidatos = dados[
+        dados["Valor"] > 0
+    ].copy()
+
+if candidatos.empty:
+    raise ValueError(
+        "Não encontrei entradas positivas neste arquivo."
+    )
+
+descricoes_norm = (
+    candidatos["Descrição"]
+    .fillna("")
+    .astype(str)
+    .apply(normalizar)
+)
+
+candidatos["Considerar"] = ~descricoes_norm.apply(
+    lambda texto: any(
+        palavra in texto
+        for palavra in PALAVRAS_IGNORAR_OUTRO_EXTRATO
+    )
+)
+
+return montar_tabela_outro_extrato(
+    candidatos[
+        ["Data", "Descrição", "Valor", "Considerar"]
+    ].to_dict("records")
+)
+
+def ler_outro_ofx(arquivo):
+texto = arquivo.getvalue().decode(
+"latin1",
+errors="ignore"
+)
+
+blocos = re.findall(
+    r"<STMTTRN>(.*?)(?=<STMTTRN>|</BANKTRANLIST>|$)",
+    texto,
+    flags=re.IGNORECASE | re.DOTALL
+)
+
+registros = []
+
+for bloco in blocos:
+    def campo(nome):
+        encontrado = re.search(
+            rf"<{nome}>([^\r\n<]+)",
+            bloco,
+            flags=re.IGNORECASE
+        )
+        return encontrado.group(1).strip() if encontrado else ""
+
+    valor = converter_numero_flexivel(
+        campo("TRNAMT")
+    )
+
+    if valor is None or valor <= 0:
+        continue
+
+    descricao = (
+        campo("MEMO")
+        or campo("NAME")
+        or campo("TRNTYPE")
+        or "Entrada"
+    )
+
+    data_texto = campo("DTPOSTED")
+    data_texto = data_texto[:8] if data_texto else ""
+
+    if len(data_texto) == 8 and data_texto.isdigit():
+        data_formatada = (
+            f"{data_texto[6:8]}/"
+            f"{data_texto[4:6]}/"
+            f"{data_texto[0:4]}"
+        )
+    else:
+        data_formatada = data_texto
+
+    descricao_norm = normalizar(descricao)
+
+    considerar = not any(
+        palavra in descricao_norm
+        for palavra in PALAVRAS_IGNORAR_OUTRO_EXTRATO
+    )
+
+    registros.append({
+        "Data": data_formatada,
+        "Descrição": descricao,
+        "Valor": valor,
+        "Considerar": considerar,
+    })
+
+return montar_tabela_outro_extrato(registros)
+
+def processar_outro_extrato(arquivo):
+nome = arquivo.name.lower()
+
+if nome.endswith(".pdf"):
+    return ler_outro_pdf(arquivo)
+
+if nome.endswith(".ofx"):
+    return ler_outro_ofx(arquivo), "OFX"
+
+if nome.endswith((".xlsx", ".xls", ".csv")):
+    dados = ler_excel_ou_csv(arquivo)
+    return preparar_outro_extrato_tabela(dados), "Excel/CSV"
+
+raise ValueError(
+    "Formato não suportado. Use PDF, XLSX, XLS, CSV ou OFX."
+)
+
+def assinatura_arquivos_adicionais(arquivos):
+hash_total = hashlib.sha256()
+
+for arquivo in arquivos:
+    hash_total.update(
+        arquivo.name.encode("utf-8", errors="ignore")
+    )
+    hash_total.update(arquivo.getvalue())
+
+return hash_total.hexdigest()
+============================================================
+EXPORTAÇÃO DO RELATÓRIO GERAL
+============================================================
+
+def nome_aba_excel(nome, usados):
+nome = re.sub(
+r'[[]:*?/\]',
+"_",
+nome
+)
+
+nome = nome[:31] or "Extrato"
+
+original = nome
+contador = 2
+
+while nome in usados:
+    sufixo = f"_{contador}"
+    nome = original[:31-len(sufixo)] + sufixo
+    contador += 1
+
+usados.add(nome)
+
+return nome
+
+def gerar_excel_geral(resumo, detalhes):
+arquivo_excel = BytesIO()
+
+with pd.ExcelWriter(
+    arquivo_excel,
+    engine="openpyxl"
+) as writer:
+
+    resumo_exportar = resumo.copy()
+
+    resumo_exportar.to_excel(
+        writer,
+        index=False,
+        sheet_name="Resumo Geral"
+    )
+
+    usados = {"Resumo Geral"}
+
+    for nome_arquivo, tabela in detalhes.items():
+        aba = nome_aba_excel(
+            Path(nome_arquivo).stem,
+            usados
+        )
+
+        tabela.to_excel(
+            writer,
+            index=False,
+            sheet_name=aba
+        )
+
+    # Ajustes simples de largura
+    for ws in writer.book.worksheets:
+        ws.column_dimensions["A"].width = 25
+        ws.column_dimensions["B"].width = 60
+        ws.column_dimensions["C"].width = 18
+        ws.column_dimensions["D"].width = 20
+        ws.column_dimensions["E"].width = 14
+
+arquivo_excel.seek(0)
+
+return arquivo_excel
+============================================================
+INTERFACE
+============================================================
+============================================================
+TAMANHO DO RESUMO CLICÁVEL POR ARQUIVO
+============================================================
+
+st.markdown(
+"""
+<style>
+div[data-testid="stExpander"] summary p,
+div[data-testid="stExpander"] summary p * {
+font-size: 20px !important;
+line-height: 1.45 !important;
+}
+
+div[data-testid="stExpander"] summary p {
+    color: #262730 !important;
+}
+</style>
+""",
+unsafe_allow_html=True,
+
+)
+
+
+
+
+============================================================
+BOLETO AVULSO
+============================================================
 
 if st.session_state.mostrar_boleto_avulso:
-    com st.container(border=True):
-        st.subheader("Boleto avulso")
-        st.caption(
-            f"Emissão pela empresa: {EMPRESA_SELECIONADA}. "
-            "Esta cobrança não gera nota fiscal."
-        )
+with st.container(border=True):
+st.subheader("Boleto avulso")
+st.caption(
+f"Emissão pela empresa: {EMPRESA_SELECIONADA}. "
+"Esta cobrança não gera nota fiscal."
+)
 
-        col_box, col_buscar = st.columns([2, 1])
+    col_box, col_buscar = st.columns([2, 1])
 
-        numero_box_avulso = col_box.number_input(
-            "Número do BOX",
-            valor_mínimo=1,
-            passo=1,
-            valor=Nenhum,
-            placeholder="Ex.: 25",
-            chave="box_boleto_avulso"
-        )
+    numero_box_avulso = col_box.number_input(
+        "Número do BOX",
+        min_value=1,
+        step=1,
+        value=None,
+        placeholder="Ex.: 25",
+        key="box_boleto_avulso"
+    )
 
-        buscar_cliente_avulso = col_buscar.button(
-            "🔎 Buscar cliente",
-            use_container_width=True,
-            key="buscar_cliente_boleto_avulso"
-        )
+    buscar_cliente_avulso = col_buscar.button(
+        "🔎 Buscar cliente",
+        use_container_width=True,
+        key="buscar_cliente_boleto_avulso"
+    )
 
-        # Se a empresa ou o BOX mudar, uma identificação antiga não pode
-        # ser usado para uma nova cobrança.
-        assinatura_busca_atual = (
-            EMPRESA_SELECIONADA,
-            int(numero_box_avulso) se numero_box_avulso não for None else None
-        )
+    # Se a empresa ou o BOX mudar, uma identificação antiga não pode
+    # ser usada para uma nova cobrança.
+    assinatura_busca_atual = (
+        EMPRESA_SELECIONADA,
+        int(numero_box_avulso) if numero_box_avulso is not None else None
+    )
 
-        se (
-            st.session_state.get("assinatura_cliente_avulso")
-            != assinatura_busca_atual
-        ):
-            st.session_state.pop("cliente_avulso_encontrado", Nenhum)
+    if (
+        st.session_state.get("assinatura_cliente_avulso")
+        != assinatura_busca_atual
+    ):
+        st.session_state.pop("cliente_avulso_encontrado", None)
 
-        se buscar_cliente_avulso:
-            se numero_box_avulso for None:
-                st.warning("Informe o número do BOX.")
-            outro:
-                tentar:
-                    cliente_avulso, box_confirmado = localizar_cliente_asaas_por_box(
-                        f"BOX {int(numero_box_avulso)}.txt"
-                    )
-
-                    st.session_state["cliente_avulso_encontrado"] = {
-                        "id": cliente_avulso.get("id"),
-                        "nome": cliente_avulso.get("nome", ""),
-                        "caixa": caixa_confirmada,
-                    }
-                    st.session_state["assinatura_cliente_avulso"] = (
-                        assinatura_busca_atual
-                    )
-
-                exceto Exceção como erro_cliente:
-                    st.session_state.pop("cliente_avulso_encontrado", Nenhum)
-                    st.erro(
-                        f"Não foi possível localizar o cliente: {erro_cliente}"
-                    )
-
-        cliente_avulso_salvo = st.session_state.get(
-            "cliente_avulso_encontrado"
-        )
-
-        cliente_confirmado = (
-            cliente_avulso_salvo não é Nenhum
-            e st.session_state.get("assinatura_cliente_avulso")
-            == assinatura_busca_atual
-        )
-
-        se cliente_confirmado:
-            st.sucesso(
-                f"Cliente encontrado: "
-                f"{cliente_avulso_salvo.get('nome', '')} "
-                f"(BOX {cliente_avulso_salvo.get('caixa', '')})"
-            )
-        outro:
-            st.info(
-                "Informe o BOX e clique em “Buscar cliente” antes de emitir."
-            )
-
-        descrição_avulsa = st.text_area(
-            "Desencadeado do boleto",
-            espaço reservado=(
-                "Ex.: Taxa de venda\n"
-                "Multa contratual\n"
-                "Outra descrição"
-            ),
-            altura=120,
-            chave="descricao_boleto_avulso"
-        )
-
-        col_valor_avulso, col_venc_avulso = st.columns(2)
-
-        valor_avulso = col_valor_avulso.número_input(
-            "Valor do boleto",
-            valor_mínimo=0,00,
-            passo=0,01,
-            formato="%.2f",
-            chave="valor_boleto_avulso"
-        )
-
-        vencimento_avulso = col_venc_avulso.date_input(
-            "Vencimento do boleto",
-            valor=próximo_dia_10(),
-            valor_mínimo=data.hoje(),
-            formato="DD/MM/AAAA",
-            key="vencimento_boleto_avulso"
-        )
-
-        pode_emitir_avulso = (
-            cliente_confirmado
-            e bool(str(descrição_avulsa).strip())
-            e float(valor_avulso) > 0
-        )
-
-        clicou_emitir_avulso = st.button(
-            "💳 Emitir boleto avulso",
-            tipo="primário",
-            use_container_width=True,
-            desativado=não pode_emitir_avulso,
-            chave="emitir_boleto_avulso"
-        )
-
-        se clicou_emitir_avulso:
-            tentar:
-                with st.spinner("Gerando boleto avulso no Asaas..."):
-                    # Usa a mesma rotina de localização, notificações e
-                    # proteção contra duplicidade do fluxo já existente.
-                    boleto_avulso = emitir_boleto_asaas(
-                        f"BOX {int(numero_box_avulso)}.txt",
-                        0,0,
-                        float(valor_avulso),
-                        virada_avulso,
-                        str(descrição_avulsa).strip(),
-                        Falso
-                    )
-
-                st.session_state["resultado_boleto_avulso"] = boleto_avulso
-                st.session_state["assinatura_resultado_boleto_avulso"] = (
-                    EMPRESA_SELECIONADA,
-                    int(numero_box_avulso),
-                    round(float(valor_avulso), 2),
-                    vencimento_avulso.isoformat(),
-                    str(descrição_avulsa).strip(),
+    if buscar_cliente_avulso:
+        if numero_box_avulso is None:
+            st.warning("Informe o número do BOX.")
+        else:
+            try:
+                cliente_avulso, box_confirmado = localizar_cliente_asaas_por_box(
+                    f"BOX {int(numero_box_avulso)}.txt"
                 )
 
-            exceto Exceção como erro_boleto_avulso:
-                st.erro(
-                    f"Não foi possível emitir o boleto avulso: "
-                    f"{erro_boleto_avulso}"
+                st.session_state["cliente_avulso_encontrado"] = {
+                    "id": cliente_avulso.get("id"),
+                    "name": cliente_avulso.get("name", ""),
+                    "box": box_confirmado,
+                }
+                st.session_state["assinatura_cliente_avulso"] = (
+                    assinatura_busca_atual
                 )
 
-        assinatura_resultado_atual = Nenhuma
-        se numero_box_avulso não for Nenhum:
-            assinatura_resultado_atual = (
+            except Exception as erro_cliente:
+                st.session_state.pop("cliente_avulso_encontrado", None)
+                st.error(
+                    f"Não foi possível localizar o cliente: {erro_cliente}"
+                )
+
+    cliente_avulso_salvo = st.session_state.get(
+        "cliente_avulso_encontrado"
+    )
+
+    cliente_confirmado = (
+        cliente_avulso_salvo is not None
+        and st.session_state.get("assinatura_cliente_avulso")
+        == assinatura_busca_atual
+    )
+
+    if cliente_confirmado:
+        st.success(
+            f"Cliente encontrado: "
+            f"{cliente_avulso_salvo.get('name', '')} "
+            f"(BOX {cliente_avulso_salvo.get('box', '')})"
+        )
+    else:
+        st.info(
+            "Informe o BOX e clique em “Buscar cliente” antes de emitir."
+        )
+
+    descricao_avulsa = st.text_area(
+        "Descrição do boleto",
+        placeholder=(
+            "Ex.: Taxa de publicidade\n"
+            "Multa contratual\n"
+            "Outra descrição"
+        ),
+        height=120,
+        key="descricao_boleto_avulso"
+    )
+
+    col_valor_avulso, col_venc_avulso = st.columns(2)
+
+    valor_avulso = col_valor_avulso.number_input(
+        "Valor do boleto",
+        min_value=0.00,
+        step=0.01,
+        format="%.2f",
+        key="valor_boleto_avulso"
+    )
+
+    vencimento_avulso = col_venc_avulso.date_input(
+        "Vencimento do boleto",
+        value=proximo_dia_10(),
+        min_value=date.today(),
+        format="DD/MM/YYYY",
+        key="vencimento_boleto_avulso"
+    )
+
+    pode_emitir_avulso = (
+        cliente_confirmado
+        and bool(str(descricao_avulsa).strip())
+        and float(valor_avulso) > 0
+    )
+
+    clicou_emitir_avulso = st.button(
+        "💳 Emitir boleto avulso",
+        type="primary",
+        use_container_width=True,
+        disabled=not pode_emitir_avulso,
+        key="emitir_boleto_avulso"
+    )
+
+    if clicou_emitir_avulso:
+        try:
+            with st.spinner("Gerando boleto avulso no Asaas..."):
+                # Usa a mesma rotina de localização, notificações e
+                # proteção contra duplicidade do fluxo já existente.
+                boleto_avulso = emitir_boleto_asaas(
+                    f"BOX {int(numero_box_avulso)}.txt",
+                    0.0,
+                    float(valor_avulso),
+                    vencimento_avulso,
+                    str(descricao_avulsa).strip(),
+                    False
+                )
+
+            st.session_state["resultado_boleto_avulso"] = boleto_avulso
+            st.session_state["assinatura_resultado_boleto_avulso"] = (
                 EMPRESA_SELECIONADA,
                 int(numero_box_avulso),
                 round(float(valor_avulso), 2),
                 vencimento_avulso.isoformat(),
-                str(descrição_avulsa).strip(),
+                str(descricao_avulsa).strip(),
             )
 
-        boleto_avulso_salvo = st.session_state.get(
-            "resultado_boleto_avulso"
+        except Exception as erro_boleto_avulso:
+            st.error(
+                f"Não foi possível emitir o boleto avulso: "
+                f"{erro_boleto_avulso}"
+            )
+
+    assinatura_resultado_atual = None
+    if numero_box_avulso is not None:
+        assinatura_resultado_atual = (
+            EMPRESA_SELECIONADA,
+            int(numero_box_avulso),
+            round(float(valor_avulso), 2),
+            vencimento_avulso.isoformat(),
+            str(descricao_avulsa).strip(),
         )
 
-        se (
-            boleto_avulso_salvo
-            e st.session_state.get(
-                "assinatura_resultado_boleto_avulso"
-            ) == assinatura_resultado_atual
-        ):
-            if boleto_avulso_salvo.get("novo"):
-                st.sucesso(
-                    f"✅ Boleto avulso criado para "
-                    f"{boleto_avulso_salvo.get('clienteNome', '')} "
-                    f"(BOX {boleto_avulso_salvo.get('box', '')}) e "
-                    f"notificações padronizadas com sucesso."
-                    f"ID: {boleto_avulso_salvo.get('id', '')}"
-                )
-            outro:
-                st.info(
-                    "ℹ️ Esta cobrança já existia no Asaas. "
-                    "O sistema não gerou uma cobrança duplicada."
-                )
+    boleto_avulso_salvo = st.session_state.get(
+        "resultado_boleto_avulso"
+    )
 
-            if boleto_avulso_salvo.get("invoiceUrl"):
-                st.link_button(
-                    "🔗 Abrir cobrança no Asaas",
-                    boleto_avulso_salvo["invoiceUrl"],
-                    use_container_width=True
-                )
+    if (
+        boleto_avulso_salvo
+        and st.session_state.get(
+            "assinatura_resultado_boleto_avulso"
+        ) == assinatura_resultado_atual
+    ):
+        if boleto_avulso_salvo.get("novo"):
+            st.success(
+                f"✅ Boleto avulso criado para "
+                f"{boleto_avulso_salvo.get('clienteNome', '')} "
+                f"(BOX {boleto_avulso_salvo.get('box', '')}) e "
+                f"notificações padronizadas com sucesso. "
+                f"ID: {boleto_avulso_salvo.get('id', '')}"
+            )
+        else:
+            st.info(
+                "ℹ️ Esta cobrança já existia no Asaas. "
+                "O sistema não gerou uma cobrança duplicada."
+            )
 
-            if boleto_avulso_salvo.get("bankSlipUrl"):
-                st.link_button(
-                    "📄 Abrir boleto",
-                    boleto_avulso_salvo["bankSlipUrl"],
-                    use_container_width=True
-                )
+        if boleto_avulso_salvo.get("invoiceUrl"):
+            st.link_button(
+                "🔗 Abrir cobrança no Asaas",
+                boleto_avulso_salvo["invoiceUrl"],
+                use_container_width=True
+            )
+
+        if boleto_avulso_salvo.get("bankSlipUrl"):
+            st.link_button(
+                "📄 Abrir boleto",
+                boleto_avulso_salvo["bankSlipUrl"],
+                use_container_width=True
+            )
 
 st.divider()
 
-se "uploader_key" não estiver em st.session_state:
-    st.session_state.uploader_key = 0
+if "uploader_key" not in st.session_state:
+st.session_state.uploader_key = 0
 
 arquivos = st.file_uploader(
-    "Carregue os extratos",
-    tipo=["pdf", "xlsx", "xls", "csv"],
-    aceitar_múltiplos_arquivos=Verdadeiro,
-    help="Você pode selecionar vários arquivos de uma só vez.",
-    chave=f"uploader_{st.session_state.uploader_key}"
+"Carregue os extratos",
+type=["pdf", "xlsx", "xls", "csv"],
+accept_multiple_files=True,
+help="Você pode selecionar vários arquivos de uma só vez.",
+key=f"uploader_{st.session_state.uploader_key}"
 )
 
-se arquivos:
-    se st.botão(
-        "🗑️ Limpar todos os arquivos",
-        tipo="secundário",
-        help="Remover todos os extratos carregados desta remessa."
-    ):
-        st.session_state.uploader_key += 1
+if arquivos:
+if st.button(
+"🗑️ Limpar todos os arquivos",
+type="secondary",
+help="Remove todos os extratos carregados desta remessa."
+):
+st.session_state.uploader_key += 1
 
-        # Limpe também os editores das remessas anteriores.
-        fila_para_apagar = [
-            chave
-            para chave em list(st.session_state.keys())
-            se str(chave).startswith("editor_")
-        ]
+    # Limpa também os editores das remessas anteriores.
+    chaves_para_apagar = [
+        chave
+        for chave in list(st.session_state.keys())
+        if str(chave).startswith("editor_")
+    ]
 
-        para chave em chaves_para_apagar:
-            del st.session_state[chave]
+    for chave in chaves_para_apagar:
+        del st.session_state[chave]
 
-        st.rerun()
+    st.rerun()
 
-se não houver arquivos:
-    st.info(
-        "Selecione um ou vários arquivos PDF, Excel ou CSV para começar."
-    )
+if not arquivos:
+st.info(
+"Selecione um ou vários arquivos PDF, Excel ou CSV para começar."
+)
 
-outro:
-    st.sucesso(
-        f"{len(arquivos)} arquivo(s) carregado(s)."
-    )
+else:
+st.success(
+f"{len(arquivos)} arquivo(s) carregado(s)."
+)
 
-    resultados = []
-    exportação_de_verdade = {}
+resultados = []
+detalhes_exportacao = {}
 
-    st.subheader("Resumo dos arquivos")
-    st.caption(
-        "Clique em qualquer linha para abrir e editar as movimentações desse arquivo."
-    )
+st.subheader("Resumo dos arquivos")
+st.caption(
+    "Clique em qualquer linha para abrir e editar as movimentações daquele arquivo."
+)
 
-    total_faturamento = 0.0
-    total_royalties = 0,0
+total_faturamento = 0.0
+total_royalties = 0.0
 
-    para índice, arquivo in enumerate(arquivos):
-        tentar:
-            # Reiniciar variáveis ​​desta linha para não reaproveitar dados do arquivo anterior.
-            editada = Nenhuma
-            selecionados = Nenhum
-            faturamento = Nenhum
-            royalties = Nenhum
-            vencimento = próximo_dia_10()
+for indice, arquivo in enumerate(arquivos):
+    try:
+        # Reinicia variáveis desta linha para não reaproveitar dados do arquivo anterior.
+        editada = None
+        selecionadas = None
+        faturamento = None
+        royalties = None
+        vencimento = proximo_dia_10()
 
-            dados = processar_arquivo(arquivo)
+        dados = processar_arquivo(arquivo)
 
-            visiveis = dados[
-                dados["Classificação"].isin(
-                    ["FATURAMENTO", "REVISAR"]
-                )
-            ].cópia()
+        visiveis = dados[
+            dados["Classificação"].isin(
+                ["FATURAMENTO", "REVISAR"]
+            )
+        ].copy()
 
-            editor_chave = (
-                f"editor_{índice}_"
-                + re.sub(
-                    r"[^a-zA-Z0-9_]",
-                    "_",
-                    nome do arquivo
-                )
+        chave_editor = (
+            f"editor_{indice}_"
+            + re.sub(
+                r"[^a-zA-Z0-9_]",
+                "_",
+                arquivo.name
+            )
+        )
+
+        # Primeiro calcula com a seleção padrão para exibir no título.
+        selecionadas_padrao = visiveis[
+            visiveis["Considerar"] == True
+        ].copy()
+
+        faturamento_padrao = (
+            pd.to_numeric(
+                selecionadas_padrao["Valor"],
+                errors="coerce"
+            )
+            .fillna(0)
+            .sum()
+        )
+
+        royalties_padrao = (
+            faturamento_padrao
+            * PERCENTUAL_ROYALTIES
+        )
+
+        valor_faturamento_titulo = formatar_moeda(
+            faturamento_padrao
+        ).replace("$", r"\$")
+
+        valor_royalties_titulo = formatar_moeda(
+            royalties_padrao
+        ).replace("$", r"\$")
+
+        # Exibição padronizada do BOX no resumo.
+        # Não depende do texto completo do arquivo e evita que o navegador
+        # traduza "box" para "caixa".
+        numero_box_resumo = extrair_numero_box(arquivo.name)
+
+        if numero_box_resumo is not None:
+            # Caracteres Unicode visualmente equivalentes impedem o
+            # tradutor automático do navegador de interpretar BOX como palavra inglesa.
+            nome_resumo = f"BΟX {numero_box_resumo:02d}"  # O é ômicron grego
+        else:
+            nome_resumo = Path(arquivo.name).stem
+
+        titulo_linha = (
+            f"📄 {nome_resumo}"
+            f"   |   Faturamento: :green[{valor_faturamento_titulo}]"
+            f"   |   Royalties 4%: :green[{valor_royalties_titulo}]"
+        )
+
+        with st.expander(
+            titulo_linha,
+            expanded=False
+        ):
+            st.caption(
+                "Desmarque qualquer valor que não queira considerar no faturamento."
             )
 
-            # Primeiro calcule com a seleção padrão para exibir no título.
-            selecionadoss_padrao = visiveis[
-                visiveis["Considerar"] == Verdadeiro
-            ].cópia()
+            editada = st.data_editor(
+                visiveis[
+                    [
+                        "Data",
+                        "Descrição",
+                        "Valor",
+                        "Classificação",
+                        "Considerar",
+                    ]
+                ],
+                use_container_width=True,
+                hide_index=True,
+                key=chave_editor,
+                column_config={
+                    "Considerar":
+                        st.column_config.CheckboxColumn(
+                            "Considerar"
+                        ),
+                    "Valor":
+                        st.column_config.NumberColumn(
+                            "Valor",
+                            format="R$ %.2f"
+                        ),
+                },
+                disabled=[
+                    "Data",
+                    "Descrição",
+                    "Valor",
+                    "Classificação",
+                ],
+            )
 
-            faturamento_padrao = (
-                pd.para_numérico(
-                    selecionado_padrao["Valor"],
-                    erros="coagir"
+            selecionadas = editada[
+                editada["Considerar"] == True
+            ].copy()
+
+            faturamento = (
+                pd.to_numeric(
+                    selecionadas["Valor"],
+                    errors="coerce"
                 )
                 .fillna(0)
-                .soma()
+                .sum()
             )
 
-            royalties_padrao = (
-                faturamento_padrão
-                * ROYALTIES_PERCENTUAIS
+
+
+            # ====================================================
+            # OUTRO EXTRATO / MAQUININHA
+            # ====================================================
+
+            chave_area_outro = f"outro_extrato_area_{indice}"
+
+            st.markdown(
+                f"""
+                <style>
+                .st-key-{chave_area_outro} {{
+                    background-color: #f0fdf4 !important;
+                    border: 1px solid #86efac !important;
+                    border-radius: 14px !important;
+                    padding: 18px 20px 16px 20px !important;
+                    margin-top: 8px !important;
+                    margin-bottom: 22px !important;
+                }}
+
+                .st-key-{chave_area_outro} [data-testid="stFileUploader"] {{
+                    background: transparent !important;
+                }}
+
+                .st-key-{chave_area_outro} [data-testid="stExpander"] {{
+                    background: rgba(255, 255, 255, 0.72) !important;
+                    border-radius: 10px !important;
+                }}
+                </style>
+                """,
+                unsafe_allow_html=True
             )
 
-            valor_faturamento_titulo = formatar_moeda(
-                faturamento_padrão
-            ).replace("$", r"\$")
-
-            valor_royalties_titulo = formatar_moeda(
-                royalties_padrao
-            ).replace("$", r"\$")
-
-            # Exibição padronizada do BOX no resumo.
-            # Não depende do texto completo do arquivo e evita que o navegador
-            # traduza "box" para "caixa".
-            numero_box_resumo = extrair_numero_box(arquivo.name)
-
-            se numero_box_resumo não for None:
-                # Caracteres Unicode visualmente equivalentes impedem o
-                # tradutor automático do navegador de interpretação BOX como palavra inglesa.
-                nome_resumo = f"BΟX {numero_box_resumo:02d}" # O é ômicron grego
-            outro:
-                nome_resumo = Caminho(arquivo.nome).stem
-
-            título_linha = (
-                f"📄 {nome_resumo}"
-                f" | Faturamento: :green[{valor_faturamento_titulo}]"
-                f" | Royalties 4%: :green[{valor_royalties_titulo}]"
-            )
-
-            com st.expander(
-                titulo_linha,
-                expandido=Falso
+            with st.container(
+                border=False,
+                key=chave_area_outro
             ):
+                st.markdown("#### Outro extrato / maquininha")
                 st.caption(
-                    "Desmarque qualquer valor que não queira considerar no faturamento."
+                    "Área destinada às entradas de extratos adicionais "
+                    "(Stone, InfinitePay, Mercado Pago e outros formatos). "
+                    "O valor confirmado aqui será somado ao faturamento total."
                 )
 
-                editada = st.data_editor(
-                    visivo
-                        [
-                            "Dados",
-                            "Ded",
-                            "Valentia",
-                            "Classificação",
-                            "Considerar",
-                        ]
-                    ],
-                    use_container_width=True,
-                    ocultar_índice=Verdadeiro,
-                    chave=editor_chave,
-                    configuração_coluna={
-                        "Considerar":
-                            st.column_config.CheckboxColumn(
-                                "Considerar"
-                            ),
-                        "Valentia":
-                            st.column_config.NumberColumn(
-                                "Valentia",
-                                formato="R$ %.2f"
-                            ),
-                    },
-                    desativado=[
-                        "Dados",
-                        "Ded",
-                        "Valentia",
-                        "Classificação",
-                    ],
+                outros_arquivos = st.file_uploader(
+                    "Carregar outro extrato",
+                    type=["pdf", "xlsx", "xls", "csv", "ofx"],
+                    accept_multiple_files=True,
+                    help=(
+                        "Aceita PDF, Excel, CSV e OFX. "
+                        "O sistema reconhece automaticamente Stone, "
+                        "InfinitePay e Mercado Pago e também tenta "
+                        "interpretar outros formatos de extrato."
+                    ),
+                    key=f"outro_extrato_uploader_{indice}"
                 )
 
-                selecionados = editada[
-                    editada["Considerar"] == True
-                ].cópia()
-
-                faturamento = (
-                    pd.para_numérico(
-                        selecionado["Valor"],
-                        erros="coagir"
-                    )
-                    .fillna(0)
-                    .soma()
+                valor_outros_extratos = 0.0
+                quantidade_outros_extratos = 0
+                chave_confirmacao_outro = (
+                    f"outro_extrato_confirmado_{indice}"
+                )
+                chave_assinatura_outro = (
+                    f"outro_extrato_assinatura_{indice}"
                 )
 
-
-
-                # ====================================================
-                # OUTRO EXTRATO / MAQUININHA
-                # ====================================================
-
-                chave_area_outro = f"outro_extrato_area_{índice}"
-
-                st.markdown(
-                    f"""
-                    <style>
-                    .st-key-{chave_area_outro} {{
-                        cor de fundo: #f0fdf4 !importante;
-                        borda: 1px sólida #86efac !importante;
-                        border-radius: 14px !important;
-                        preenchimento: 18px 20px 16px 20px !importante;
-                        margem superior: 8px !importante;
-                        margem-inferior: 22px !importante;
-                    }}
-
-                    .st-key-{chave_area_outro} [data-testid="stFileUploader"] {{
-                        fundo: transparente !importante;
-                    }}
-
-                    .st-key-{chave_area_outro} [data-testid="stExpander"] {{
-                        fundo: rgba(255, 255, 255, 0.72) !importante;
-                        border-radius: 10px !important;
-                    }}
-                    </style>
-                    "",
-                    unsafe_allow_html=True
-                )
-
-                com st.container(
-                    borda=False,
-                    chave=chave_área_outro
-                ):
-                    st.markdown("#### Outro extrato / maquininha")
-                    st.caption(
-                        "Área destinada às entradas de extratos adicionais"
-                        "(Stone, InfinitePay, Mercado Pago e outros formatos). "
-                        "O valor confirmado aqui será somado ao faturamento total."
-                    )
-
-                    outros_arquivos = st.file_uploader(
-                        "Carregar outro extrato",
-                        tipo=["pdf", "xlsx", "xls", "csv", "ofx"],
-                        aceitar_múltiplos_arquivos=Verdadeiro,
-                        ajuda=(
-                            "Aceita PDF, Excel, CSV e OFX."
-                            "O sistema sincronizado automaticamente Stone,"
-                            "InfinitePay e Mercado Pago e também tenta"
-                            "interpretar outros formatos de extrato."
-                        ),
-                        key=f"outro_extrato_uploader_{indice}"
-                    )
-
-                    valor_outros_extratos = 0.0
-                    quantidade_outros_extratos = 0
-                    chave_confirmacao_outro = (
-                        f"outro_extrato_confirmado_{indice}"
-                    )
-                    chave_assinatura_outro = (
-                        f"outro_extrato_assinatura_{índice}"
-                    )
-
-                    se outros_arquivos:
-                        assinatura_atual_outro = (
-                            assinatura_arquivos_adicionais(
-                                outros_arquivos
-                            )
-                        )
-
-                        se (
-                            st.session_state.get(
-                                chave_assinatura_outro
-                            )
-                            != assinatura_atual_outro
-                        ):
-                            st.session_state[
-                                chave_assinatura_outro
-                            ] = assinatura_atual_outro
-
-                            st.session_state[
-                                chave_confirmacao_outro
-                            ] = Falso
-
-                        totais_por_arquivo = []
-
-                        para índice_outro, arquivo_outro em enumerate(
+                if outros_arquivos:
+                    assinatura_atual_outro = (
+                        assinatura_arquivos_adicionais(
                             outros_arquivos
-                        ):
-                            tentar:
+                        )
+                    )
+
+                    if (
+                        st.session_state.get(
+                            chave_assinatura_outro
+                        )
+                        != assinatura_atual_outro
+                    ):
+                        st.session_state[
+                            chave_assinatura_outro
+                        ] = assinatura_atual_outro
+
+                        st.session_state[
+                            chave_confirmacao_outro
+                        ] = False
+
+                    totais_por_arquivo = []
+
+                    for indice_outro, arquivo_outro in enumerate(
+                        outros_arquivos
+                    ):
+                        try:
+                            (
+                                dados_outro,
+                                origem_outro,
+                            ) = processar_outro_extrato(
+                                arquivo_outro
+                            )
+
+                            # Segurança contra o erro de CheckboxColumn
+                            # receber FLOAT em vez de booleano.
+                            dados_outro["Considerar"] = (
+                                dados_outro["Considerar"]
+                                .fillna(False)
+                                .astype(bool)
+                            )
+
+                            chave_editor_outro = (
+                                f"editor_outro_{indice}_"
+                                f"{indice_outro}_"
+                                f"{assinatura_atual_outro[:12]}"
+                            )
+
+                            with st.expander(
                                 (
+                                    f"🔎 Ver detalhes — "
+                                    f"{arquivo_outro.name} "
+                                    f"({origem_outro})"
+                                ),
+                                expanded=False
+                            ):
+                                st.caption(
+                                    "Desmarque qualquer entrada que "
+                                    "não queira somar ao faturamento."
+                                )
+
+                                editado_outro = st.data_editor(
                                     dados_outro,
+                                    use_container_width=True,
+                                    hide_index=True,
+                                    key=chave_editor_outro,
+                                    column_config={
+                                        "Considerar":
+                                            st.column_config.CheckboxColumn(
+                                                "Considerar"
+                                            ),
+                                        "Valor":
+                                            st.column_config.NumberColumn(
+                                                "Valor",
+                                                format="R$ %.2f"
+                                            ),
+                                    },
+                                    disabled=[
+                                        "Data",
+                                        "Descrição",
+                                        "Valor",
+                                        "Classificação",
+                                    ],
+                                )
+
+                            selecionado_outro = editado_outro[
+                                editado_outro["Considerar"] == True
+                            ].copy()
+
+                            total_arquivo_outro = (
+                                pd.to_numeric(
+                                    selecionado_outro["Valor"],
+                                    errors="coerce"
+                                )
+                                .fillna(0)
+                                .sum()
+                            )
+
+                            quantidade_arquivo_outro = len(
+                                selecionado_outro
+                            )
+
+                            valor_outros_extratos += float(
+                                total_arquivo_outro
+                            )
+
+                            quantidade_outros_extratos += (
+                                quantidade_arquivo_outro
+                            )
+
+                            totais_por_arquivo.append(
+                                (
+                                    arquivo_outro.name,
                                     origem_outro,
-                                ) = som_outro_extrato(
-                                    arquivo_outro
+                                    float(total_arquivo_outro),
                                 )
-
-                                # Segurança contra erro de CheckboxColumn
-                                # receba FLOAT em vez de booleano.
-                                dados_outro["Considerar"] = (
-                                    dados_outro["Considerar"]
-                                    .fillna(False)
-                                    .astype(bool)
-                                )
-
-                                chave_editor_outro = (
-                                    f"editor_outro_{indice}_"
-                                    f"{indice_outro}_"
-                                    f"{assinatura_atual_outro[:12]}"
-                                )
-
-                                com st.expander(
-                                    (
-                                        f"🔎 Ver sempre — "
-                                        f"{arquivo_outro.name} "
-                                        f"({origem_outro})"
-                                    ),
-                                    expandido=Falso
-                                ):
-                                    st.caption(
-                                        "Desmarque qualquer entrada que "
-                                        "não quero somar ao faturamento."
-                                    )
-
-                                    editado_outro = st.data_editor(
-                                        dados_outro,
-                                        use_container_width=True,
-                                        ocultar_índice=Verdadeiro,
-                                        chave=chave_editor_outro,
-                                        configuração_coluna={
-                                            "Considerar":
-                                                st.column_config.CheckboxColumn(
-                                                    "Considerar"
-                                                ),
-                                            "Valentia":
-                                                st.column_config.NumberColumn(
-                                                    "Valentia",
-                                                    formato="R$ %.2f"
-                                                ),
-                                        },
-                                        desativado=[
-                                            "Dados",
-                                            "Ded",
-                                            "Valentia",
-                                            "Classificação",
-                                        ],
-                                    )
-
-                                selecionado_outro = editado_outro[
-                                    editado_outro["Considerar"] == Verdadeiro
-                                ].cópia()
-
-                                total_arquivo_outro = (
-                                    pd.para_numérico(
-                                        selecionado_outro["Valor"],
-                                        erros="coagir"
-                                    )
-                                    .fillna(0)
-                                    .soma()
-                                )
-
-                                quantidade_arquivo_outro = len(
-                                    selecionado_outro
-                                )
-
-                                valor_outros_extratos += float(
-                                    total_arquivo_outro
-                                )
-
-                                quantidade_outros_extratos += (
-                                    outro_arquivo
-                                )
-
-                                totais_por_arquivo.append(
-                                    (
-                                        arquivo_outro.name,
-                                        origem_outro,
-                                        float(total_arquivo_outro),
-                                    )
-                                )
-
-                            exceto Exceção como erro_outro:
-                                st.erro(
-                                    f"Erro ao"
-                                    f"{arquivo_outro.name}: "
-                                    f"{erro_outro}"
-                                )
-
-                        para (
-                            nome_outro,
-                            origem_outro,
-                            total_outro,
-                        ) em totais_por_arquivo:
-                            st.caption(
-                                f"{origem_outro} • {nome_outro} • "
-                                f"Entradas: "
-                                f"{formatar_moeda(total_outro)}"
                             )
 
-                        col_total_outro, col_ok_outro, col_espaco_outro = st.columns(
-                            [1,05, 0,60, 2,35]
-                        )
-
-                        col_total_outro.metric(
-                            "Total do outro extrato",
-                            formatar_moeda(
-                                valor_outros_extratos
+                        except Exception as erro_outro:
+                            st.error(
+                                f"Erro ao processar "
+                                f"{arquivo_outro.name}: "
+                                f"{erro_outro}"
                             )
+
+                    for (
+                        nome_outro,
+                        origem_outro,
+                        total_outro,
+                    ) in totais_por_arquivo:
+                        st.caption(
+                            f"{origem_outro} • {nome_outro} • "
+                            f"Entradas selecionadas: "
+                            f"{formatar_moeda(total_outro)}"
                         )
 
-                        col_ok_outro.markdown(
-                            "<div style='height: 26px;'></div>",
-                            unsafe_allow_html=True
+                    col_total_outro, col_ok_outro, col_espaco_outro = st.columns(
+                        [1.05, 0.60, 2.35]
+                    )
+
+                    col_total_outro.metric(
+                        "Total do outro extrato",
+                        formatar_moeda(
+                            valor_outros_extratos
+                        )
+                    )
+
+                    col_ok_outro.markdown(
+                        "<div style='height: 26px;'></div>",
+                        unsafe_allow_html=True
+                    )
+
+                    if chave_confirmacao_outro not in st.session_state:
+                        st.session_state[
+                            chave_confirmacao_outro
+                        ] = False
+
+                    if not st.session_state[
+                        chave_confirmacao_outro
+                    ]:
+                        clicou_ok_outro = col_ok_outro.button(
+                            "OK — Adicionar",
+                            type="secondary",
+                            use_container_width=True,
+                            disabled=(
+                                valor_outros_extratos <= 0
+                            ),
+                            key=f"confirmar_outro_{indice}"
                         )
 
-                        se chave_confirmacao_outro não estiver em st.session_state:
+                        if clicou_ok_outro:
                             st.session_state[
                                 chave_confirmacao_outro
-                            ] = Falso
+                            ] = True
+                    else:
+                        col_ok_outro.success(
+                            "✅ Adicionado ao faturamento"
+                        )
 
-                        se não st.session_state[
-                            chave_confirmacao_outro
-                        ]:
-                            clicou_ok_outro = col_ok_outro.button(
-                                "OK —fera",
-                                tipo="secundário",
-                                use_container_width=True,
-                                desativado=(
-                                    valor_outros_extratos <= 0
-                                ),
-                                key=f"confirmar_outro_{indice}"
-                            )
-
-                            se clicou_ok_outro:
-                                st.session_state[
-                                    chave_confirmacao_outro
-                                ] = Verdadeiro
-                        outro:
-                            col_ok_outro.success(
-                                "✅ Adicionado ao faturamento"
-                            )
-
-                            se col_ok_outro.button(
-                                "Removedor do faturamento",
-                                use_container_width=True,
-                                chave=f"remover_outro_{índice}"
-                            ):
-                                st.session_state[
-                                    chave_confirmacao_outro
-                                ] = Falso
-                                st.rerun()
-
-                        se st.session_state.get(
-                            chave_confirmacao_outro,
-                            Falso
+                        if col_ok_outro.button(
+                            "Remover do faturamento",
+                            use_container_width=True,
+                            key=f"remover_outro_{indice}"
                         ):
-                            faturamento = (
-                                flutuar (faturamento)
-                                + float(valor_outros_extratos)
-                            )
+                            st.session_state[
+                                chave_confirmacao_outro
+                            ] = False
+                            st.rerun()
 
-                            st.caption(
-                                "O valor acima já está incluído no faturamento total."
-                                "Se você desmarcar uma entrada em “Ver detalhes”, "
-                                "o total será recalculado automaticamente."
-                            )
-                        outro:
-                            passar
+                    if st.session_state.get(
+                        chave_confirmacao_outro,
+                        False
+                    ):
+                        faturamento = (
+                            float(faturamento)
+                            + float(valor_outros_extratos)
+                        )
+
+                        st.caption(
+                            "O valor acima já está incluído no faturamento total. "
+                            "Se você desmarcar uma entrada em “Ver detalhes”, "
+                            "o total será recalculado automaticamente."
+                        )
+                    else:
+                        pass
 
 
-                st.markdown("#### Adicionar valor ao faturamento")
+            st.markdown("#### Adicionar valor ao faturamento")
 
-                # Layout organizado
-                col_esq, col_centro, col_dir = st.columns([0,85, 1,15, 0,75])
-    
-                # ==========================================
-                # COLUNA ESQUERDA
-                # ==========================================
-    
-                adicional_texto = col_esq.text_input(
-                    "Valor adicional ao faturamento",
-                    valor="0,00",
-                    key=f"adicional_boleto_{índice}",
-                    ajuda=(
-                        "Digite um valor positivo para somar ou negativo para diminuir o faturamento. "
-                        "Ex.: 500,00 soma; -500,00 diminuída. Os royalties de 4% serão recalculados sobre o novo total."
-                    )
+            # Layout organizado
+            col_esq, col_centro, col_dir = st.columns([0.85, 1.15, 0.75])
+
+            # ==========================================
+            # COLUNA ESQUERDA
+            # ==========================================
+
+            adicional_texto = col_esq.text_input(
+                "Valor adicional ao faturamento",
+                value="0,00",
+                key=f"adicional_boleto_{indice}",
+                help=(
+                    "Digite um valor positivo para somar ou negativo para diminuir o faturamento. "
+                    "Ex.: 500,00 soma; -500,00 diminui. Os royalties de 4% serão recalculados sobre o novo total."
                 )
-    
-                boleto_adicional = conversor_numero(adicional_texto)
-    
-                se adicional_boleto for None:
-                    boleto_adicional = 0,0
-                    col_esq.warning("Digite um valor válido, por exemplo: 100,00")
-    
-    
-                #Recalcula faturamento e royalties
-                faturamento = (
-                    flutuar (faturamento)
-                    + float(boleto_adicional)
-                )
-    
-                royalties = (
-                    flutuar (faturamento)
-                    * ROYALTIES_PERCENTUAIS
-                )
-    
-                # Valor final do boleto editável
-                # Atualiza automaticamente quando os royalties mudam,
-                # mas preserve uma alteração manual feita pelo usuário.
-                chave_valor_boleto = f"valor_final_boleto_{índice}"
-                chave_valor_auto = f"valor_final_boleto_auto_{índice}"
-                novo_valor_auto = arredondar(float(royalties), 2)
+            )
 
-                se chave_valor_boleto não estiver em st.session_state:
-                    # Primeira exibição: usa automaticamente 4% do faturamento total.
+            adicional_boleto = converter_numero(adicional_texto)
+
+            if adicional_boleto is None:
+                adicional_boleto = 0.0
+                col_esq.warning("Digite um valor válido, por exemplo: 100,00")
+
+
+            # Recalcula faturamento e royalties
+            faturamento = (
+                float(faturamento)
+                + float(adicional_boleto)
+            )
+
+            royalties = (
+                float(faturamento)
+                * PERCENTUAL_ROYALTIES
+            )
+
+            # Valor final do boleto editável
+            # Atualiza automaticamente quando os royalties mudarem,
+            # mas preserva uma alteração manual feita pelo usuário.
+            chave_valor_boleto = f"valor_final_boleto_{indice}"
+            chave_valor_auto = f"valor_final_boleto_auto_{indice}"
+            novo_valor_auto = round(float(royalties), 2)
+
+            if chave_valor_boleto not in st.session_state:
+                # Primeira exibição: usa automaticamente 4% do faturamento total.
+                st.session_state[chave_valor_boleto] = novo_valor_auto
+
+            elif chave_valor_auto in st.session_state:
+                valor_auto_anterior = float(
+                    st.session_state[chave_valor_auto]
+                )
+
+                # Se o faturamento mudou (inclusive por valor adicional
+                # ou seleção/desseleção de entradas), recalcula os 4%
+                # e atualiza também o valor final do boleto.
+                if abs(novo_valor_auto - valor_auto_anterior) >= 0.005:
                     st.session_state[chave_valor_boleto] = novo_valor_auto
 
-                elif chave_valor_auto in st.session_state:
-                    valor_auto_anterior = float(
-                        st.session_state[chave_valor_auto]
-                    )
+            st.session_state[chave_valor_auto] = novo_valor_auto
 
-                    # Se o faturamento mudou (inclusive por valor adicional
-                    # ou seleção/desseleção de entradas), recalcula os 4%
-                    # e atualiza também o valor final do boleto.
-                    if abs(novo_valor_auto - valor_auto_anterior) >= 0,005:
-                        st.session_state[chave_valor_boleto] = novo_valor_auto
-
-                st.estado_sessão[chave_valor_auto] = novo_valor_auto
-
-                valor_final_boleto = col_esq.número_input(
-                    "Valor final do boleto",
-                    valor_mínimo=0,00,
-                    passo=0,01,
-                    formato="%.2f",
-                    chave=chave_valor_boleto
-                )
-
-                # O valor grande de Royalties acompanha o valor final do boleto.
-                # O cálculo automático de 4% continua sendo usado como valor-base
-                # antes de qualquer ajuste manual.
-                royalties = float(valor_final_boleto)
-    
-                # ==========================================
-                # COLUNA CENTRAL
-                # ==========================================
-    
-                col_centro.métrica(
-                    "Total do faturamento",
-                    formatar_moeda(faturamento)
-                )
-    
-                col_centro.métrica(
-                    "Royalties 4%",
-                    formatar_moeda(royalties)
-                )
-    
-                # ==========================================
-                # COLUNA DIREITA
-                # ==========================================
-    
-                col_dir.métrica(
-                    "Entradas considerando",
-                    (
-                        len(selecionadas)
-                        + (
-                            outros_extratos
-                            se st.session_state.get(
-                                chave_confirmacao_outro,
-                                Falso
-                            )
-                            caso contrário 0
-                        )
-                    )
-                )
-    
-                    
-                st.markdown(f"#### Cobrança Asaas — {EMPRESA_SELECIONADA}")
-                col_venc, col_botao = st.colunas([2, 1])
-                descricao_boleto = "Royalties"
-                vencimento = col_venc.date_input(
-                    "Vencimento do boleto",
-                    valor=próximo_dia_10(),
-                    valor_mínimo=data.hoje(),
-                    formato="DD/MM/AAAA",
-                    chave=f"vencimento_{índice}"
-                )
-    
-                chave_boleto = (
-                    f"boleto_{índice}_"
-                    + re.sub(r"[^a-zA-Z0-9_]", "_", arquivo.name)
-                )
-    
-    
-                if EMPRESA_SELECIONADA == "Líder Franquia":
-                        emitir_nota_apos_pagamento = col_botao.checkbox(
-                            "Emitir nota fiscal de Royalties após o pagamento",
-                            valor=Falso,
-                            chave=f"emitir_nota_{índice}"
-                    )
-                outro:
-                        emitir_nota_apos_pagamento = Falso
-    
-                clicou_emitir_boleto = col_botao.button(
-                    "💳 Emitir boleto",
-                    chave=chave_boleto,
-                    tipo="primário",
-                    use_container_width=True,
-                    desativado=valor_final_boleto <= 0
-                )
-    
-                se clicou_emitir_boleto:
-                    tentar:
-                        with st.spinner("Gerando boleto no Asaas..."):
-                            boleto = emitir_boleto_asaas(
-                                nome.do.arquivo,
-                                Vaso sanitário,
-                                valor_final_boleto,
-                                não,
-                                descricao_boleto,
-                                emitir_nota_apos_pagamento
-                            )
-
-                        st.session_state[f"resultado_boleto_{indice}"] = boleto
-
-                    exceto Exceção como erro_boleto:
-                        st.erro(
-                            f"Não foi possível emitir o boleto: {erro_boleto}"
-                        )
-
-                boleto_salvo = st.session_state.get(
-                    f"resultado_boleto_{indice}"
-                )
-
-                se boleto_salvo:
-                    se boleto_salvo.get("novo"):
-                        st.sucesso(
-                            f"✅ Boleto criado para "
-                            f"{boleto_salvo.get('clienteNome', '')} "
-                            f"(BOX {boleto_salvo.get('box', '')}) "
-                            f"e notificações padronizadas com sucesso."
-                            f"ID: {boleto_salvo.get('id', '')}"
-                        )
-                    outro:
-                        st.info(
-                            "ℹ️ Esta cobrança já existia no Asaas. "
-                            "O sistema não gerou uma cobrança duplicada."
-                        )
-
-                    se boleto_salvo.get("invoiceUrl"):
-                        st.link_button(
-                            "🔗 Abrir cobrança no Asaas",
-                            boleto_salvo["invoiceUrl"],
-                            use_container_width=True
-                        )
-
-                    if boleto_salvo.get("bankSlipUrl"):
-                        st.link_button(
-                            "📄 Abrir boleto",
-                            boleto_salvo["bankSlipUrl"],
-                            use_container_width=True
-                        )
-
-            resultados.append({
-                "Arquivo": nome.do.arquivo,
-                "Faturamento": faturamento,
-                "Royalties 4%": royalties,
-            })
-
-            aviso_exportação[
-                nome do arquivo
-            ] = editada.copy()
-
-            total_faturamento += faturamento
-            total_royalties += royalties
-
-        exceto Exception como erro:
-            st.erro(
-                f"Erro ao processar {arquivo.name}: {erro}"
+            valor_final_boleto = col_esq.number_input(
+                "Valor final do boleto",
+                min_value=0.00,
+                step=0.01,
+                format="%.2f",
+                key=chave_valor_boleto
             )
 
-            resultados.append({
-                "Arquivo": nome.do.arquivo,
-                "Faturamento": 0,0,
-                "Royalties 4%": 0,0,
-            })
+            # O valor grande de Royalties acompanha o valor final do boleto.
+            # O cálculo automático de 4% continua sendo usado como valor-base
+            # antes de qualquer ajuste manual.
+            royalties = float(valor_final_boleto)
 
-    st.divider()
+            # ==========================================
+            # COLUNA CENTRAL
+            # ==========================================
 
-    col_total1, col_total2 = st.columns(2)
+            col_centro.metric(
+                "Total do faturamento",
+                formatar_moeda(faturamento)
+            )
 
-    col_total1.métrica(
-        "Faturamento total geral",
-        formatar_moeda(total_faturamento)
-    )
-    
-    col_total2.métrica(
-        "Royalties 4% no total",
-        formatar_moeda(total_royalties)
-    )
-    
-    # ========================================================
-    # DOWNLOAD DO RELATÓRIO GERAL
-    # ========================================================
-    
-    resumo = pd.DataFrame(resultados)
+            col_centro.metric(
+                "Royalties 4%",
+                formatar_moeda(royalties)
+            )
 
-    excel_geral = gerar_excel_geral(
-    resumo,
-    exportação_do_imigrante
+            # ==========================================
+            # COLUNA DIREITA
+            # ==========================================
+
+            col_dir.metric(
+                "Entradas consideradas",
+                (
+                    len(selecionadas)
+                    + (
+                        quantidade_outros_extratos
+                        if st.session_state.get(
+                            chave_confirmacao_outro,
+                            False
+                        )
+                        else 0
+                    )
+                )
+            )
+
+                
+            st.markdown(f"#### Cobrança Asaas — {EMPRESA_SELECIONADA}")
+            col_venc, col_botao = st.columns([2, 1])
+            descricao_boleto = "Royalties"
+            vencimento = col_venc.date_input(
+                "Vencimento do boleto",
+                value=proximo_dia_10(),
+                min_value=date.today(),
+                format="DD/MM/YYYY",
+                key=f"vencimento_{indice}"
+            )
+
+            chave_boleto = (
+                f"boleto_{indice}_"
+                + re.sub(r"[^a-zA-Z0-9_]", "_", arquivo.name)
+            )
+
+
+            if EMPRESA_SELECIONADA == "Lider Franquia":
+                    emitir_nota_apos_pagamento = col_botao.checkbox(
+                        "Emitir nota fiscal de Royalties após o pagamento",
+                        value=False,
+                        key=f"emitir_nota_{indice}"
+                )
+            else:
+                    emitir_nota_apos_pagamento = False
+
+            clicou_emitir_boleto = col_botao.button(
+                "💳 Emitir boleto",
+                key=chave_boleto,
+                type="primary",
+                use_container_width=True,
+                disabled=valor_final_boleto <= 0
+            )
+
+            if clicou_emitir_boleto:
+                try:
+                    with st.spinner("Gerando boleto no Asaas..."):
+                        boleto = emitir_boleto_asaas(
+                            arquivo.name,
+                            faturamento,
+                            valor_final_boleto,
+                            vencimento,
+                            descricao_boleto,
+                            emitir_nota_apos_pagamento
+                        )
+
+                    st.session_state[f"resultado_boleto_{indice}"] = boleto
+
+                except Exception as erro_boleto:
+                    st.error(
+                        f"Não foi possível emitir o boleto: {erro_boleto}"
+                    )
+
+            boleto_salvo = st.session_state.get(
+                f"resultado_boleto_{indice}"
+            )
+
+            if boleto_salvo:
+                if boleto_salvo.get("novo"):
+                    st.success(
+                        f"✅ Boleto criado para "
+                        f"{boleto_salvo.get('clienteNome', '')} "
+                        f"(BOX {boleto_salvo.get('box', '')}) "
+                        f"e notificações padronizadas com sucesso. "
+                        f"ID: {boleto_salvo.get('id', '')}"
+                    )
+                else:
+                    st.info(
+                        "ℹ️ Esta cobrança já existia no Asaas. "
+                        "O sistema não gerou uma cobrança duplicada."
+                    )
+
+                if boleto_salvo.get("invoiceUrl"):
+                    st.link_button(
+                        "🔗 Abrir cobrança no Asaas",
+                        boleto_salvo["invoiceUrl"],
+                        use_container_width=True
+                    )
+
+                if boleto_salvo.get("bankSlipUrl"):
+                    st.link_button(
+                        "📄 Abrir boleto",
+                        boleto_salvo["bankSlipUrl"],
+                        use_container_width=True
+                    )
+
+        resultados.append({
+            "Arquivo": arquivo.name,
+            "Faturamento": faturamento,
+            "Royalties 4%": royalties,
+        })
+
+        detalhes_exportacao[
+            arquivo.name
+        ] = editada.copy()
+
+        total_faturamento += faturamento
+        total_royalties += royalties
+
+    except Exception as erro:
+        st.error(
+            f"Erro ao processar {arquivo.name}: {erro}"
+        )
+
+        resultados.append({
+            "Arquivo": arquivo.name,
+            "Faturamento": 0.0,
+            "Royalties 4%": 0.0,
+        })
+
+st.divider()
+
+col_total1, col_total2 = st.columns(2)
+
+col_total1.metric(
+    "Faturamento total geral",
+    formatar_moeda(total_faturamento)
 )
-    
-    st.download_button(
-        "📥 Baixar relatório geral em Excel",
-        dados=excel_geral,
-        file_name="relatorio_geral_faturamento.xlsx",
-        mime=(
-            "application/vnd.openxmlformats-officedocument."
-            "spreadsheetml.sheet"
-        ),
-    )
+
+col_total2.metric(
+    "Royalties 4% total",
+    formatar_moeda(total_royalties)
+)
+
+# ========================================================
+# DOWNLOAD DO RELATÓRIO GERAL
+# ========================================================
+
+resumo = pd.DataFrame(resultados)
+
+excel_geral = gerar_excel_geral(
+resumo,
+detalhes_exportacao
+
+)
+
+st.download_button(
+    "📥 Baixar relatório geral em Excel",
+    data=excel_geral,
+    file_name="relatorio_geral_faturamento.xlsx",
+    mime=(
+        "application/vnd.openxmlformats-officedocument."
+        "spreadsheetml.sheet"
+    ),
+)
+Fechar
