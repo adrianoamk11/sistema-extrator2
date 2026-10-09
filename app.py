@@ -2901,140 +2901,141 @@ else:
         ),
     )
 
-    # Histórico discreto, apresentado somente após o relatório geral.
-    st.markdown("""
-    <style>
-    .st-key-historico_discreto [data-testid="stExpander"] summary p,
-    .st-key-historico_discreto [data-testid="stExpander"] summary p * {
-        font-size: 13px !important;
-        font-weight: 400 !important;
-        line-height: 1.25 !important;
-    }
-    .st-key-historico_discreto [data-testid="stExpander"] {
-        margin-top: 0 !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    with st.container(key="historico_discreto"):
-        with st.expander("📚 Histórico mensal de boletos", expanded=False):
-            st.caption(
-                "Consulta somente leitura ao Asaas da empresa selecionada. "
-                "Exibe boletos identificados pela referência gerada neste extrator; "
-                "cobranças criadas manualmente ou por outros sistemas podem não aparecer. "
-                "Nenhum boleto é apagado."
-            )
-            col_mes, col_ano, col_consultar = st.columns([2, 1, 1])
-            meses_pt = [
-                "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-                "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
-            ]
-            mes_historico = col_mes.selectbox(
-                "Mês", range(1, 13), index=date.today().month - 1,
-                format_func=lambda numero: meses_pt[numero - 1], key="historico_mes",
-            )
-            ano_historico = col_ano.number_input(
-                "Ano", min_value=2020, max_value=2100, value=date.today().year,
-                step=1, key="historico_ano",
-            )
-            with col_consultar:
-                st.write("")
-                consultar = st.button("🔎 Consultar", key="consultar_historico")
 
-            assinatura_consulta = (EMPRESA_SELECIONADA, int(ano_historico), int(mes_historico))
-            if consultar:
-                try:
-                    with st.spinner("Consultando boletos e clientes no Asaas..."):
-                        cobrancas = consultar_historico_asaas(int(ano_historico), int(mes_historico))
-                        ids = {str(c.get("customer")) for c in cobrancas if c.get("customer")}
-                        nomes = clientes_historico_asaas(ids)
-                        linhas = []
-                        for cobranca in cobrancas:
-                            cliente_id = str(cobranca.get("customer") or "")
-                            nome = nomes.get(cliente_id, "Cliente não identificado")
-                            box = extrair_numero_box(nome)
-                            descricao = str(cobranca.get("description") or "")
-                            linhas.append({
-                                "Emissão": str(cobranca.get("dateCreated") or "")[:10],
-                                "BOX": box,
-                                "Franqueado": nome,
-                                "Descrição": descricao,
-                                "Valor (R$)": float(cobranca.get("value") or 0),
-                                "Vencimento": str(cobranca.get("dueDate") or "")[:10],
-                                "Situação": str(cobranca.get("status") or ""),
-                                "ID Asaas": str(cobranca.get("id") or ""),
-                                "Boleto": str(cobranca.get("bankSlipUrl") or cobranca.get("invoiceUrl") or ""),
-                            })
-                        tabela_historico = pd.DataFrame(linhas, columns=[
-                            "Emissão", "BOX", "Franqueado", "Descrição", "Valor (R$)",
-                            "Vencimento", "Situação", "ID Asaas", "Boleto",
-                        ])
-                        # Ordem numérica crescente dos BOX (7, 38, 71, 250).
-                        # BOX sem número identificado ficam ao final.
-                        tabela_historico["BOX"] = pd.to_numeric(
-                            tabela_historico["BOX"], errors="coerce"
-                        ).astype("Int64")
-                        tabela_historico = tabela_historico.sort_values(
-                            by=["BOX", "Emissão"],
-                            ascending=[True, True],
-                            na_position="last",
-                            kind="stable",
-                        ).reset_index(drop=True)
-                        st.session_state["historico_dados"] = tabela_historico
-                        st.session_state["historico_assinatura"] = assinatura_consulta
-                except Exception as erro:
-                    st.session_state.pop("historico_dados", None)
-                    st.session_state.pop("historico_assinatura", None)
-                    st.error(f"Não foi possível consultar o histórico: {erro}")
+# Histórico discreto: na tela inicial e após o relatório geral quando houver extratos.
+st.markdown("""
+<style>
+.st-key-historico_discreto [data-testid="stExpander"] summary p,
+.st-key-historico_discreto [data-testid="stExpander"] summary p * {
+    font-size: 13px !important;
+    font-weight: 400 !important;
+    line-height: 1.25 !important;
+}
+.st-key-historico_discreto [data-testid="stExpander"] {
+    margin-top: 0 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+with st.container(key="historico_discreto"):
+    with st.expander("📚 Histórico mensal de boletos", expanded=False):
+        st.caption(
+            "Consulta somente leitura ao Asaas da empresa selecionada. "
+            "Exibe boletos identificados pela referência gerada neste extrator; "
+            "cobranças criadas manualmente ou por outros sistemas podem não aparecer. "
+            "Nenhum boleto é apagado."
+        )
+        col_mes, col_ano, col_consultar = st.columns([2, 1, 1])
+        meses_pt = [
+            "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+            "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+        ]
+        mes_historico = col_mes.selectbox(
+            "Mês", range(1, 13), index=date.today().month - 1,
+            format_func=lambda numero: meses_pt[numero - 1], key="historico_mes",
+        )
+        ano_historico = col_ano.number_input(
+            "Ano", min_value=2020, max_value=2100, value=date.today().year,
+            step=1, key="historico_ano",
+        )
+        with col_consultar:
+            st.write("")
+            consultar = st.button("🔎 Consultar", key="consultar_historico")
 
-            if st.session_state.get("historico_assinatura") == assinatura_consulta:
-                tabela = st.session_state["historico_dados"]
-                col_quantidade, col_franqueados, col_total = st.columns(3)
-                col_quantidade.metric("Boletos encontrados", len(tabela))
-                col_franqueados.metric("BOX distintos", tabela["BOX"].dropna().nunique())
-                col_total.metric("Valor total", formatar_moeda(tabela["Valor (R$)"].sum()))
-                if tabela.empty:
-                    st.info("Nenhum boleto deste extrator encontrado nesse mês e empresa.")
-                else:
-                    st.dataframe(tabela, use_container_width=True, hide_index=True,
-                        column_config={
-                            "Valor (R$)": st.column_config.NumberColumn(format="R$ %.2f"),
-                            "Boleto": st.column_config.LinkColumn("Abrir boleto"),
+        assinatura_consulta = (EMPRESA_SELECIONADA, int(ano_historico), int(mes_historico))
+        if consultar:
+            try:
+                with st.spinner("Consultando boletos e clientes no Asaas..."):
+                    cobrancas = consultar_historico_asaas(int(ano_historico), int(mes_historico))
+                    ids = {str(c.get("customer")) for c in cobrancas if c.get("customer")}
+                    nomes = clientes_historico_asaas(ids)
+                    linhas = []
+                    for cobranca in cobrancas:
+                        cliente_id = str(cobranca.get("customer") or "")
+                        nome = nomes.get(cliente_id, "Cliente não identificado")
+                        box = extrair_numero_box(nome)
+                        descricao = str(cobranca.get("description") or "")
+                        linhas.append({
+                            "Emissão": str(cobranca.get("dateCreated") or "")[:10],
+                            "BOX": box,
+                            "Franqueado": nome,
+                            "Descrição": descricao,
+                            "Valor (R$)": float(cobranca.get("value") or 0),
+                            "Vencimento": str(cobranca.get("dueDate") or "")[:10],
+                            "Situação": str(cobranca.get("status") or ""),
+                            "ID Asaas": str(cobranca.get("id") or ""),
+                            "Boleto": str(cobranca.get("bankSlipUrl") or cobranca.get("invoiceUrl") or ""),
                         })
-                    st.caption(
-                        "O total soma cobranças registradas, independentemente de estarem "
-                        "pagas, vencidas ou canceladas. Confira a coluna Situação."
-                    )
+                    tabela_historico = pd.DataFrame(linhas, columns=[
+                        "Emissão", "BOX", "Franqueado", "Descrição", "Valor (R$)",
+                        "Vencimento", "Situação", "ID Asaas", "Boleto",
+                    ])
+                    # Ordem numérica crescente dos BOX (7, 38, 71, 250).
+                    # BOX sem número identificado ficam ao final.
+                    tabela_historico["BOX"] = pd.to_numeric(
+                        tabela_historico["BOX"], errors="coerce"
+                    ).astype("Int64")
+                    tabela_historico = tabela_historico.sort_values(
+                        by=["BOX", "Emissão"],
+                        ascending=[True, True],
+                        na_position="last",
+                        kind="stable",
+                    ).reset_index(drop=True)
+                    st.session_state["historico_dados"] = tabela_historico
+                    st.session_state["historico_assinatura"] = assinatura_consulta
+            except Exception as erro:
+                st.session_state.pop("historico_dados", None)
+                st.session_state.pop("historico_assinatura", None)
+                st.error(f"Não foi possível consultar o histórico: {erro}")
 
-                st.markdown("**Conferir BOX que deveriam receber boleto**")
-                esperados_texto = st.text_area(
-                    "Informe os números dos BOX previstos (separados por vírgula, espaço ou linha)",
-                    placeholder="Ex.: 07, 38, 71, 81",
-                    key="historico_boxes_esperados",
-                )
-                if esperados_texto.strip():
-                    tokens = re.split(r"[,;\s]+", esperados_texto.strip())
-                    invalidos = [t for t in tokens if t and not re.fullmatch(r"(?:BOX[-_ ]*)?0*\d+", t, re.I)]
-                    if invalidos:
-                        st.warning("Confira os números informados: " + ", ".join(invalidos[:10]))
-                    else:
-                        previstos = {int(re.search(r"\d+", t).group()) for t in tokens if t}
-                        encontrados = {int(x) for x in tabela["BOX"].dropna().tolist()}
-                        pendentes = sorted(previstos - encontrados)
-                        st.write(f"Previstos: **{len(previstos)}** | Com boleto: **{len(previstos & encontrados)}** | Sem boleto identificado: **{len(pendentes)}**")
-                        if pendentes:
-                            st.warning("BOX sem boleto identificado neste mês: " + ", ".join(f"{x:02d}" for x in pendentes))
-                        else:
-                            st.success("Todos os BOX informados possuem ao menos um boleto identificado.")
-                        st.caption("A conferência considera qualquer boleto deste extrator, inclusive avulsos e cancelados. Verifique a descrição e a situação antes de concluir o fechamento.")
-
-                saida = BytesIO()
-                with pd.ExcelWriter(saida, engine="openpyxl") as writer:
-                    tabela.to_excel(writer, index=False, sheet_name="Boletos do mês")
-                st.download_button(
-                    "📥 Baixar histórico em Excel", data=saida.getvalue(),
-                    file_name=f"boletos_{EMPRESA_SELECIONADA.lower().replace(' ', '_')}_{ano_historico}_{mes_historico:02d}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    key="download_historico_mensal",
-                )
+        if st.session_state.get("historico_assinatura") == assinatura_consulta:
+            tabela = st.session_state["historico_dados"]
+            col_quantidade, col_franqueados, col_total = st.columns(3)
+            col_quantidade.metric("Boletos encontrados", len(tabela))
+            col_franqueados.metric("BOX distintos", tabela["BOX"].dropna().nunique())
+            col_total.metric("Valor total", formatar_moeda(tabela["Valor (R$)"].sum()))
+            if tabela.empty:
+                st.info("Nenhum boleto deste extrator encontrado nesse mês e empresa.")
             else:
-                st.info("Selecione o mês e clique em Consultar para carregar o histórico.")
+                st.dataframe(tabela, use_container_width=True, hide_index=True,
+                    column_config={
+                        "Valor (R$)": st.column_config.NumberColumn(format="R$ %.2f"),
+                        "Boleto": st.column_config.LinkColumn("Abrir boleto"),
+                    })
+                st.caption(
+                    "O total soma cobranças registradas, independentemente de estarem "
+                    "pagas, vencidas ou canceladas. Confira a coluna Situação."
+                )
+
+            st.markdown("**Conferir BOX que deveriam receber boleto**")
+            esperados_texto = st.text_area(
+                "Informe os números dos BOX previstos (separados por vírgula, espaço ou linha)",
+                placeholder="Ex.: 07, 38, 71, 81",
+                key="historico_boxes_esperados",
+            )
+            if esperados_texto.strip():
+                tokens = re.split(r"[,;\s]+", esperados_texto.strip())
+                invalidos = [t for t in tokens if t and not re.fullmatch(r"(?:BOX[-_ ]*)?0*\d+", t, re.I)]
+                if invalidos:
+                    st.warning("Confira os números informados: " + ", ".join(invalidos[:10]))
+                else:
+                    previstos = {int(re.search(r"\d+", t).group()) for t in tokens if t}
+                    encontrados = {int(x) for x in tabela["BOX"].dropna().tolist()}
+                    pendentes = sorted(previstos - encontrados)
+                    st.write(f"Previstos: **{len(previstos)}** | Com boleto: **{len(previstos & encontrados)}** | Sem boleto identificado: **{len(pendentes)}**")
+                    if pendentes:
+                        st.warning("BOX sem boleto identificado neste mês: " + ", ".join(f"{x:02d}" for x in pendentes))
+                    else:
+                        st.success("Todos os BOX informados possuem ao menos um boleto identificado.")
+                    st.caption("A conferência considera qualquer boleto deste extrator, inclusive avulsos e cancelados. Verifique a descrição e a situação antes de concluir o fechamento.")
+
+            saida = BytesIO()
+            with pd.ExcelWriter(saida, engine="openpyxl") as writer:
+                tabela.to_excel(writer, index=False, sheet_name="Boletos do mês")
+            st.download_button(
+                "📥 Baixar histórico em Excel", data=saida.getvalue(),
+                file_name=f"boletos_{EMPRESA_SELECIONADA.lower().replace(' ', '_')}_{ano_historico}_{mes_historico:02d}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="download_historico_mensal",
+            )
+        else:
+            st.info("Selecione o mês e clique em Consultar para carregar o histórico.")
