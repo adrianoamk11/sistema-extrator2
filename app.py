@@ -946,14 +946,9 @@ def ler_excel_ou_csv(arquivo):
 # LEITURA DE PDF
 # ============================================================
 
-def ler_pdf(arquivo):
-    documento = fitz.open(
-        stream=arquivo.getvalue(),
-        filetype="pdf"
-    )
-
+def _ler_pdf_digital(documento):
+    """Mantém o leitor original para PDFs com camada de texto."""
     linhas = []
-
     for pagina in documento:
         linhas += [
             re.sub(r"\s+", " ", linha).strip()
@@ -961,49 +956,87 @@ def ler_pdf(arquivo):
             if linha.strip()
         ]
 
-    padrao_data = re.compile(
-        r"\b(\d{2}/\d{2}/\d{4})\b"
-    )
-
-    padrao_valor = re.compile(
-        r"R\$\s*(-?[\d\.]+,\d{2})"
-    )
-
+    padrao_data = re.compile(r"\b(\d{2}/\d{2}/\d{4})\b")
+    padrao_valor = re.compile(r"R\$\s*(-?[\d\.]+,\d{2})")
     data_atual = ""
     contexto = []
     registros = []
-
     for linha in linhas:
         datas = padrao_data.findall(linha)
-
         if datas:
             data_atual = datas[0]
-
-        valores = padrao_valor.findall(linha)
-
-        for valor_texto in valores:
-            descricao = " ".join(
-                contexto[-3:] + [linha]
-            )
-
-            descricao = padrao_valor.sub(
-                "",
-                descricao
-            ).strip()
-
+        for valor_texto in padrao_valor.findall(linha):
+            descricao = " ".join(contexto[-3:] + [linha])
+            descricao = padrao_valor.sub("", descricao).strip()
             registros.append({
                 "Data": data_atual,
                 "Descrição": descricao,
                 "Valor": converter_numero(valor_texto),
             })
-
         contexto.append(linha)
+    return registros
+
+
+def _ler_pdf_imagem_asaas(documento):
+    """OCR apenas quando o PDF não possui texto extraível.
+
+    Exige pytesseract, Pillow e Tesseract instalados no servidor.
+    Considera apenas linhas iniciadas por data e terminadas por valor,
+    evitando confundir saldos de abertura/fechamento com movimentações.
+    """
+    try:
+        import pytesseract
+        from PIL import Image
+    except ImportError as exc:
+        raise ValueError(
+            "Este PDF é uma imagem. Instale pytesseract e Pillow "
+            "no requirements.txt e tesseract-ocr no packages.txt."
+        ) from exc
+
+    padrao_linha = re.compile(
+        r"^\s*(\d{2}/\d{2}/\d{4})\s+(.+?)\s+"
+        r"R\$\s*([+\-−]?\s*[\d.]+,\d{2})\s*$",
+        re.IGNORECASE,
+    )
+    registros = []
+    for pagina in documento:
+        # 2x oferece boa leitura mantendo consumo moderado de memória.
+        pix = pagina.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
+        imagem = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
+        texto = pytesseract.image_to_string(imagem, config="--psm 6")
+        for linha in texto.splitlines():
+            linha = re.sub(r"\s+", " ", linha).strip()
+            encontrado = padrao_linha.match(linha)
+            if not encontrado:
+                continue
+            data, descricao, valor_texto = encontrado.groups()
+            valor = converter_numero(valor_texto.replace("−", "-").replace(" ", ""))
+            if valor is None:
+                continue
+            # OCR pode confundir a primeira letra de 'Cobrança'.
+            # A combinação 'recebida - fatura' é específica do Asaas.
+            descricao_norm = normalizar(descricao)
+            if "recebida" in descricao_norm and "fatura" in descricao_norm:
+                descricao = "Cobrança recebida - " + re.sub(
+                    r"^.*?recebida\s*-\s*", "", descricao, count=1, flags=re.IGNORECASE
+                )
+            registros.append({"Data": data, "Descrição": descricao, "Valor": valor})
+    return registros
+
+
+def ler_pdf(arquivo):
+    with fitz.open(stream=arquivo.getvalue(), filetype="pdf") as documento:
+        texto_total = sum(len(pagina.get_text().strip()) for pagina in documento)
+        if texto_total:
+            registros = _ler_pdf_digital(documento)
+        else:
+            registros = _ler_pdf_imagem_asaas(documento)
 
     if not registros:
         raise ValueError(
-            "Não encontrei movimentações legíveis neste PDF."
+            "Não encontrei movimentações legíveis neste PDF. "
+            "Se for um PDF digitalizado, confira a nitidez da imagem."
         )
-
     return pd.DataFrame(registros)
 
 
