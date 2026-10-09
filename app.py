@@ -2131,6 +2131,33 @@ st.divider()
 # ============================================================
 # Somente leitura: nunca cria, altera ou exclui cobranças.
 
+# Tradução apenas visual dos status retornados pelo Asaas.
+# Status desconhecidos continuam visíveis para conferência.
+STATUS_ASAAS_PT = {
+    "PENDING": "Pendente",
+    "OVERDUE": "Vencido",
+    "CONFIRMED": "Pagamento confirmado",
+    "RECEIVED": "Pago",
+    "RECEIVED_IN_CASH": "Pago em dinheiro",
+    "REFUNDED": "Reembolsado",
+    "REFUND_REQUESTED": "Reembolso solicitado",
+    "REFUND_IN_PROGRESS": "Reembolso em andamento",
+    "CHARGEBACK_REQUESTED": "Contestação solicitada",
+    "CHARGEBACK_DISPUTE": "Contestação em disputa",
+    "AWAITING_CHARGEBACK_REVERSAL": "Aguardando reversão da contestação",
+    "DUNNING_REQUESTED": "Negativação solicitada",
+    "DUNNING_RECEIVED": "Negativação recebida",
+    "AWAITING_RISK_ANALYSIS": "Aguardando análise de risco",
+    "CANCELLED": "Cancelado",
+    "DELETED": "Excluído",
+}
+
+
+def traduzir_status_asaas(status):
+    codigo = str(status or "").strip().upper()
+    return STATUS_ASAAS_PT.get(codigo, codigo or "Não informado")
+
+
 def consultar_historico_asaas(ano, mes):
     inicio = date(ano, mes, 1)
     fim = inicio + relativedelta(months=1) - timedelta(days=1)
@@ -2963,7 +2990,7 @@ with st.container(key="historico_discreto"):
                             "Descrição": descricao,
                             "Valor (R$)": float(cobranca.get("value") or 0),
                             "Vencimento": str(cobranca.get("dueDate") or "")[:10],
-                            "Situação": str(cobranca.get("status") or ""),
+                            "Situação": traduzir_status_asaas(cobranca.get("status")),
                             "ID Asaas": str(cobranca.get("id") or ""),
                             "Boleto": str(cobranca.get("bankSlipUrl") or cobranca.get("invoiceUrl") or ""),
                         })
