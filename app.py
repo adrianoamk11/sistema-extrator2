@@ -2964,10 +2964,22 @@ else:
                                 "ID Asaas": str(cobranca.get("id") or ""),
                                 "Boleto": str(cobranca.get("bankSlipUrl") or cobranca.get("invoiceUrl") or ""),
                             })
-                        st.session_state["historico_dados"] = pd.DataFrame(linhas, columns=[
+                        tabela_historico = pd.DataFrame(linhas, columns=[
                             "Emissão", "BOX", "Franqueado", "Descrição", "Valor (R$)",
                             "Vencimento", "Situação", "ID Asaas", "Boleto",
                         ])
+                        # Ordem numérica crescente dos BOX (7, 38, 71, 250).
+                        # BOX sem número identificado ficam ao final.
+                        tabela_historico["BOX"] = pd.to_numeric(
+                            tabela_historico["BOX"], errors="coerce"
+                        ).astype("Int64")
+                        tabela_historico = tabela_historico.sort_values(
+                            by=["BOX", "Emissão"],
+                            ascending=[True, True],
+                            na_position="last",
+                            kind="stable",
+                        ).reset_index(drop=True)
+                        st.session_state["historico_dados"] = tabela_historico
                         st.session_state["historico_assinatura"] = assinatura_consulta
                 except Exception as erro:
                     st.session_state.pop("historico_dados", None)
