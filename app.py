@@ -2174,11 +2174,13 @@ def consultar_historico_asaas(ano, mes):
         referencia = str(pagamento.get("externalReference") or "")
         if not referencia.startswith("lider-royalties-"):
             continue
-        if str(pagamento.get("billingType") or "").upper() != "BOLETO":
-            continue
+        # Não filtrar por billingType: a cobrança emitida pelo extrator
+        # pode ser quitada por outra modalidade disponibilizada pelo Asaas.
+        # A referência exclusiva "lider-royalties-" identifica a origem.
         criado = str(pagamento.get("dateCreated") or "")[:10]
         if not (inicio.isoformat() <= criado <= fim.isoformat()):
             continue
+        # Inclui PENDING, OVERDUE, CONFIRMED, RECEIVED e demais situações.
         registros.append(pagamento)
     return registros
 
