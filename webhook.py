@@ -9,10 +9,12 @@ ASAAS_API_KEY = os.environ.get("ASAAS_API_KEY")
 ASAAS_BASE_URL = os.environ.get("ASAAS_BASE_URL", "https://api.asaas.com/v3").rstrip("/")
 WEBHOOK_TOKEN = os.environ.get("ASAAS_WEBHOOK_TOKEN")
 
-# Estes campos precisam ser validados no Asaas e com a contabilidade.
-# Nunca usar os antigos "06522" / "17.07" como valores implícitos.
-NFSE_MUNICIPAL_SERVICE_CODE = os.environ.get("NFSE_MUNICIPAL_SERVICE_CODE", "").strip()
-NFSE_MUNICIPAL_SERVICE_NAME = os.environ.get("NFSE_MUNICIPAL_SERVICE_NAME", "").strip()
+# Códigos conferidos no cadastro de serviço do Asaas (Portal Nacional).
+# Código de tributação nacional 170801 e NBS 1.1110.00.00 constam
+# no cadastro; a API de agendamento utiliza municipalServiceCode.
+# A alíquota ISS continua obrigatória por configuração, até validação fiscal.
+NFSE_MUNICIPAL_SERVICE_CODE = os.environ.get("NFSE_MUNICIPAL_SERVICE_CODE", "06522001").strip()
+NFSE_MUNICIPAL_SERVICE_NAME = os.environ.get("NFSE_MUNICIPAL_SERVICE_NAME", "Franquia (franchising)").strip()
 NFSE_ISS_PERCENT = os.environ.get("NFSE_ISS_PERCENT", "").strip()
 
 
@@ -23,6 +25,8 @@ def cabecalhos_asaas():
 def configuracao_fiscal():
     if not all((NFSE_MUNICIPAL_SERVICE_CODE, NFSE_MUNICIPAL_SERVICE_NAME, NFSE_ISS_PERCENT)):
         raise ValueError("Configuracao fiscal de NFS-e pendente de validacao")
+    if NFSE_MUNICIPAL_SERVICE_CODE == "06522":
+        raise ValueError("Codigo municipal antigo nao permitido")
     try:
         iss = float(NFSE_ISS_PERCENT.replace(",", "."))
     except ValueError as exc:
