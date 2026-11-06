@@ -52,7 +52,7 @@ if not st.session_state.autenticado:
         with st.form("formulario_login"):
             usuario = st.text_input("Usuário", key="login_usuario")
             senha = st.text_input("Senha", type="password", key="login_senha")
-            entrar = st.form_submit_button("Entrar", type="primary")
+            entrar = st.form_submit_button("Entrar")
 
         if entrar:
             if (
