@@ -87,9 +87,9 @@ def detalhes_erro_asaas(resposta):
         codigo = str(erro.get("code") or "sem_codigo")[:60]
         descricao = str(erro.get("description") or "sem_descricao")[:300]
         # Evita registrar caracteres de controle e valores de token completos.
-        codigo = re.sub(r"[^\\w.:-]", "_", codigo)
-        descricao = re.sub(r"[\\r\\n\\t]", " ", descricao)
-        descricao = re.sub(r"(?i)(access[_ -]?token|api[_ -]?key|authorization)\\s*[:=]\\s*\\S+", r"\\1=[protegido]", descricao)
+        codigo = re.sub(r"[^\w.:-]", "_", codigo)
+        descricao = re.sub(r"[\r\n\t]", " ", descricao)
+        descricao = re.sub(r"(?i)(access[_ -]?token|api[_ -]?key|authorization)\s*[:=]\s*\S+", r"\1=[protegido]", descricao)
         detalhes.append(f"{codigo}: {descricao}")
     return " | ".join(detalhes) if detalhes else "lista de erros vazia"
 
