@@ -45,20 +45,30 @@ if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
 
 if not st.session_state.autenticado:
-    st.title("Acesso ao sistema")
+    # Centraliza e limita a largura da tela de acesso em computadores.
+    esquerda, login_coluna, direita = st.columns([1, 1.15, 1])
+    with login_coluna:
+        st.title("Acesso ao sistema")
+        with st.form("formulario_login"):
+            usuario = st.text_input("Usuário", key="login_usuario")
+            senha = st.text_input("Senha", type="password", key="login_senha")
+            entrar = st.form_submit_button("Entrar")
 
-    usuario = st.text_input("Usuário")
-    senha = st.text_input("Senha", type="password")
+        if entrar:
+            if (
+                usuario == st.secrets["LOGIN_USUARIO"]
+                and senha == st.secrets["LOGIN_SENHA"]
+            ):
+                st.session_state.autenticado = True
+                st.session_state.pop("login_senha", None)
+                st.rerun()
+            else:
+                st.error("Usuário ou senha incorretos.")
 
-    if st.button("Entrar"):
-        if (
-            usuario == st.secrets["LOGIN_USUARIO"]
-            and senha == st.secrets["LOGIN_SENHA"]
-        ):
-            st.session_state.autenticado = True
-            st.rerun()
-        else:
-            st.error("Usuário ou senha incorretos.")
+        st.caption(
+            "Para preencher usuário e senha mais rapidamente nas próximas visitas, "
+            "use o gerenciador de senhas do navegador."
+        )
 
     st.stop()
 st.markdown("""
