@@ -1,9 +1,11 @@
 """Teste isolado da tela de entrada, sem acionar cobranças ou Asaas."""
+from pathlib import Path
+
 from streamlit.testing.v1 import AppTest
 
 
 def test_login_exibe_campos_e_botao():
-    app = AppTest.from_file("app.py", default_timeout=25).run()
+    app = AppTest.from_file(Path(__file__).resolve().parents[1] / "app.py", default_timeout=25).run()
     assert len(app.exception) == 0, [str(e.message) for e in app.exception]
     assert [campo.label for campo in app.text_input] == ["Usuário", "Senha"]
     assert any(botao.label == "Entrar" for botao in app.button)
