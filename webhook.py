@@ -1,4 +1,5 @@
 import os
+import re
 import sqlite3
 from contextlib import closing
 from datetime import datetime
@@ -14,11 +15,10 @@ ASAAS_API_KEY = os.environ.get("ASAAS_API_KEY")
 ASAAS_BASE_URL = os.environ.get("ASAAS_BASE_URL", "https://api.asaas.com/v3").rstrip("/")
 WEBHOOK_TOKEN = os.environ.get("ASAAS_WEBHOOK_TOKEN")
 
-# Códigos conferidos no cadastro de serviço do Asaas (Portal Nacional).
-# Código de tributação nacional 170801 e NBS 1.1110.00.00 constam
-# no cadastro; a API de agendamento utiliza municipalServiceCode.
-# A alíquota ISS continua obrigatória por configuração, até validação fiscal.
-NFSE_MUNICIPAL_SERVICE_CODE = os.environ.get("NFSE_MUNICIPAL_SERVICE_CODE", "").strip()
+# A conta emissora usa o Portal Nacional. O código enviado ao Asaas
+# tem pontuação e só inclui complemento quando ele existe na NFS-e.
+NFSE_MUNICIPAL_SERVICE_CODE = os.environ.get("NFSE_PORTAL_SERVICE_CODE", "").strip()
+NFSE_NBS_CODE = os.environ.get("NFSE_NBS_CODE", "").strip()
 NFSE_MUNICIPAL_SERVICE_NAME = os.environ.get("NFSE_MUNICIPAL_SERVICE_NAME", "Franquia (franchising)").strip()
 NFSE_ISS_PERCENT = os.environ.get("NFSE_ISS_PERCENT", "").strip()
 NFSE_DB_PATH = os.environ.get("NFSE_DB_PATH", "").strip()
@@ -32,8 +32,10 @@ def cabecalhos_asaas():
 def configuracao_fiscal():
     if not all((NFSE_MUNICIPAL_SERVICE_CODE, NFSE_MUNICIPAL_SERVICE_NAME, NFSE_ISS_PERCENT)):
         raise ValueError("Configuracao fiscal de NFS-e pendente de validacao")
-    if NFSE_MUNICIPAL_SERVICE_CODE == "06522":
-        raise ValueError("Codigo municipal local nao corresponde ao cadastro esperado no Portal Nacional")
+    if not re.fullmatch(r"[0-9]{2}\.[0-9]{2}\.[0-9]{2}(?:\.[0-9]{3})?", NFSE_MUNICIPAL_SERVICE_CODE):
+        raise ValueError("Codigo de servico do Portal Nacional invalido")
+    if not re.fullmatch(r"[0-9]{9}", NFSE_NBS_CODE):
+        raise ValueError("Codigo NBS invalido")
     try:
         iss = float(NFSE_ISS_PERCENT.replace(",", "."))
     except ValueError as exc:
@@ -162,7 +164,7 @@ def webhook_asaas():
         "effectiveDate": datetime.now(FUSO_FISCAL).date().isoformat(),
         "municipalServiceCode": NFSE_MUNICIPAL_SERVICE_CODE,
         "municipalServiceName": NFSE_MUNICIPAL_SERVICE_NAME,
-        "taxes": {"retainIss": False, "iss": iss},
+        "taxes": {"retainIss": False, "iss": iss, "nbsCode": NFSE_NBS_CODE},
     }
 
     try:

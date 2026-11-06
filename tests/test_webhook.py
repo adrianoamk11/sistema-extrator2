@@ -30,7 +30,8 @@ class WebhookTests(unittest.TestCase):
             ASAAS_BASE_URL="https://asaas.invalid/v3",
             ASAAS_API_KEY="chave-ficticia",
             WEBHOOK_TOKEN="token-ficticio",
-            NFSE_MUNICIPAL_SERVICE_CODE="06522001",
+            NFSE_MUNICIPAL_SERVICE_CODE="17.08.01",
+            NFSE_NBS_CODE="111100000",
             NFSE_ISS_PERCENT="2,00",
             NFSE_DB_PATH=self.db_path,
         ))
@@ -88,7 +89,8 @@ class WebhookTests(unittest.TestCase):
             {"NFSE_ISS_PERCENT": "0"},
             {"NFSE_ISS_PERCENT": "6"},
             {"NFSE_MUNICIPAL_SERVICE_CODE": ""},
-            {"NFSE_MUNICIPAL_SERVICE_CODE": "06522"},
+            {"NFSE_MUNICIPAL_SERVICE_CODE": "06522001"},
+            {"NFSE_NBS_CODE": ""},
         ):
             with self.subTest(valores=valores), patch.multiple(webhook, **valores):
                 self.assertEqual(self.enviar().status_code, 503)
@@ -119,11 +121,11 @@ class WebhookTests(unittest.TestCase):
         args, kwargs = self.post.call_args
         self.assertEqual(args, ("https://asaas.invalid/v3/invoices",))
         payload = kwargs["json"]
-        self.assertEqual(payload["municipalServiceCode"], "06522001")
+        self.assertEqual(payload["municipalServiceCode"], "17.08.01")
         self.assertEqual(payload["externalReference"], "lider-nfse-pay_teste")
         self.assertEqual(payload["payment"], "pay_teste")
         self.assertEqual(payload["value"], 100)
-        self.assertEqual(payload["taxes"], {"retainIss": False, "iss": 2.0})
+        self.assertEqual(payload["taxes"], {"retainIss": False, "iss": 2.0, "nbsCode": "111100000"})
         self.assertIs(payload["updatePayment"], False)
         self.get.return_value = resposta(pagina({"payment": "pay_teste"}))
         self.assertEqual(self.enviar().status_code, 200)
