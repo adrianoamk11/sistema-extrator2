@@ -531,8 +531,23 @@ def emitir_boleto_asaas(
         descricao_final
     )
 
+    referencia_base = external_reference
     if emitir_nota:
-        external_reference = f"{external_reference}|NFSE|"
+        external_reference = f"{referencia_base}|NFSE|"
+
+    # Não criar outro boleto se a mesma operação já foi cobrada com a
+    # opção de nota fiscal diferente. A cobrança existente deve ser conciliada.
+    referencia_alternativa = (
+        referencia_base if emitir_nota else f"{referencia_base}|NFSE|"
+    )
+    cobranca_alternativa = buscar_cobranca_existente(referencia_alternativa)
+    if cobranca_alternativa:
+        raise RuntimeError(
+            "Já existe uma cobrança para esta operação no Asaas "
+            f"({cobranca_alternativa.get('id', 'ID não informado')}). "
+            "A opção de nota fiscal é diferente. Não foi criado outro boleto; "
+            "concilie a cobrança existente antes de prosseguir."
+        )
 
     existente = buscar_cobranca_existente(external_reference)
     if existente:

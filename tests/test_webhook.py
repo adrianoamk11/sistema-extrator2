@@ -166,6 +166,42 @@ class WebhookTests(unittest.TestCase):
         self.assertEqual(self.enviar().status_code, 503)
         self.post.assert_called_once()
 
+    def test_rejeicao_400_registra_motivo_sem_repetir_nota(self):
+        import sqlite3
+        self.post.return_value = resposta({
+            "errors": [{"code": "invalid_service", "description": "Código fiscal não aceito"}]
+        }, 400)
+        resultado = self.enviar()
+        self.assertEqual(resultado.status_code, 503)
+        self.assertEqual(resultado.json["status_asaas"], 400)
+        with sqlite3.connect(self.db_path) as conexao:
+            registrado = conexao.execute(
+                "SELECT status_http, detalhes FROM nfse_rejeicoes WHERE payment_id = ?",
+                ("pay_teste",),
+            ).fetchone()
+        self.assertEqual(registrado, (400, "invalid_service: Código fiscal não aceito"))
+        self.assertEqual(self.enviar().status_code, 503)
+        self.post.assert_called_once()
+
+    def test_erro_500_nao_finge_rejeicao_confirmada(self):
+        import sqlite3
+        self.post.return_value = resposta({"errors": []}, 500)
+        self.assertEqual(self.enviar().status_code, 503)
+        with sqlite3.connect(self.db_path) as conexao:
+            tabelas = conexao.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='nfse_rejeicoes'"
+            ).fetchall()
+        self.assertEqual(tabelas, [])
+        self.assertEqual(self.enviar().status_code, 503)
+        self.post.assert_called_once()
+
+    def test_mascara_credenciais_em_mensagem_de_erro(self):
+        msg = webhook.detalhes_erro_asaas(resposta({
+            "errors": [{"code": "field", "description": "API_KEY=segredo muito sensível"}]
+        }, 400))
+        self.assertNotIn("segredo", msg)
+        self.assertIn("[protegido]", msg)
+
     def test_banco_inacessivel_bloqueia_emissao(self):
         with patch.object(webhook, "NFSE_DB_PATH", f"{self.db_path}/inexistente/db"):
             self.assertEqual(self.enviar().status_code, 503)

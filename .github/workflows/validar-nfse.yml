@@ -1,0 +1,19 @@
+name: Validar correcao NFS-e e cobrancas
+on:
+  push:
+    branches: [corrigir-nfse-conciliacao]
+  workflow_dispatch:
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Instalar bibliotecas de teste
+        run: pip install pytest flask requests
+      - name: Conferir sintaxe
+        run: python -m compileall -q app.py webhook.py tests/
+      - name: Rodar testes isolados sem Asaas
+        run: python -m pytest -q tests/test_webhook.py tests/test_duplicidade_boleto.py
