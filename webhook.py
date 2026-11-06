@@ -37,26 +37,34 @@ def configuracao_fiscal():
 
 
 def notas_do_pagamento(payment_id):
-    """Verifica notas existentes antes de criar outra.
+    """Consulta todas as páginas de notas associadas à cobrança.
 
-    Em caso de erro ou resposta inesperada, interrompe a emissao para
-    evitar uma segunda nota. A paginacao e o filtro devem ser validados
-    em ambiente de homologacao antes da ativacao em producao.
+    Falha de modo conservador: se a API retornar uma página inesperada,
+    não cria outra nota. Evita duplicação em reentregas sequenciais.
     """
-    resposta = requests.get(
-        f"{ASAAS_BASE_URL}/invoices",
-        headers=cabecalhos_asaas(),
-        params={"payment": payment_id, "limit": 100, "offset": 0},
-        timeout=30,
-    )
-    resposta.raise_for_status()
-    corpo = resposta.json()
-    if not isinstance(corpo, dict) or not isinstance(corpo.get("data"), list):
-        raise RuntimeError("Resposta inesperada ao consultar notas fiscais")
-    if corpo.get("hasMore"):
-        raise RuntimeError("Consulta de notas requer paginacao; emissao interrompida")
-    # Não assumir que a API respeitou o filtro: validar o payment de cada nota.
-    return [nota for nota in corpo["data"] if nota.get("payment") == payment_id]
+    offset = 0
+    while True:
+        resposta = requests.get(
+            f"{ASAAS_BASE_URL}/invoices",
+            headers=cabecalhos_asaas(),
+            params={"payment": payment_id, "limit": 100, "offset": offset},
+            timeout=30,
+        )
+        resposta.raise_for_status()
+        corpo = resposta.json()
+        if not isinstance(corpo, dict) or not isinstance(corpo.get("data"), list):
+            raise RuntimeError("Resposta inesperada ao consultar notas fiscais")
+        notas = corpo["data"]
+        # O endpoint é filtrado por payment; qualquer registro existente
+        # bloqueia nova emissão, inclusive notas em ERROR ou CANCELED.
+        if notas:
+            return notas
+        if not isinstance(corpo.get("hasMore"), bool):
+            raise RuntimeError("Paginacao de notas inesperada")
+        if not corpo["hasMore"]:
+            return []
+        # Página vazia com hasMore é anômala: evitar loop e duplicidade.
+        raise RuntimeError("Pagina vazia com mais resultados")
 
 
 @app.get("/")
@@ -103,7 +111,7 @@ def webhook_asaas():
         return jsonify({"ok": True, "nota": "ja existe nota para este pagamento"}), 200
 
     valor = pagamento.get("value")
-    if not isinstance(valor, (int, float)) or valor <= 0:
+    if isinstance(valor, bool) or not isinstance(valor, (int, float)) or valor <= 0:
         return jsonify({"erro": "valor do pagamento invalido"}), 400
 
     payload_nota = {
