@@ -70,6 +70,48 @@ def notas_do_pagamento(payment_id):
     return []
 
 
+def detalhes_erro_asaas(resposta):
+    """Extrai erro de validação sem registrar payloads ou credenciais."""
+    try:
+        dados = resposta.json()
+    except ValueError:
+        return "resposta sem JSON de erro"
+
+    if not isinstance(dados, dict) or not isinstance(dados.get("errors"), list):
+        return "resposta sem lista de erros reconhecida"
+
+    detalhes = []
+    for erro in dados["errors"][:5]:
+        if not isinstance(erro, dict):
+            continue
+        codigo = str(erro.get("code") or "sem_codigo")[:60]
+        descricao = str(erro.get("description") or "sem_descricao")[:300]
+        # Evita registrar caracteres de controle e valores de token completos.
+        codigo = re.sub(r"[^\\w.:-]", "_", codigo)
+        descricao = re.sub(r"[\\r\\n\\t]", " ", descricao)
+        descricao = re.sub(r"(?i)(access[_ -]?token|api[_ -]?key|authorization)\\s*[:=]\\s*\\S+", r"\\1=[protegido]", descricao)
+        detalhes.append(f"{codigo}: {descricao}")
+    return " | ".join(detalhes) if detalhes else "lista de erros vazia"
+
+
+def registrar_rejeicao_asaas(payment_id, status_http, detalhes):
+    """Guarda erro definitivo em disco para conciliação, sem liberar reenvio automático."""
+    if not os.path.isabs(NFSE_DB_PATH):
+        raise ValueError("Caminho absoluto para o banco de NFS-e obrigatório")
+    with closing(sqlite3.connect(NFSE_DB_PATH, timeout=3)) as conexao, conexao:
+        conexao.execute(
+            "CREATE TABLE IF NOT EXISTS nfse_rejeicoes "
+            "(payment_id TEXT PRIMARY KEY, status_http INTEGER NOT NULL, "
+            "detalhes TEXT NOT NULL, registrada_em TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"
+        )
+        conexao.execute(
+            "INSERT INTO nfse_rejeicoes (payment_id, status_http, detalhes) VALUES (?, ?, ?) "
+            "ON CONFLICT(payment_id) DO UPDATE SET status_http=excluded.status_http, "
+            "detalhes=excluded.detalhes, registrada_em=CURRENT_TIMESTAMP",
+            (payment_id, status_http, detalhes),
+        )
+
+
 def reservar_emissao(payment_id):
     """Confirma a reserva em disco antes de enviar uma única tentativa ao Asaas."""
     if not os.path.isabs(NFSE_DB_PATH):
@@ -180,8 +222,25 @@ def webhook_asaas():
         return jsonify({"ok": False, "nota": "falha de comunicacao"}), 503
 
     if not 200 <= resposta.status_code < 300:
-        app.logger.error("Asaas recusou a criacao da NFS-e: HTTP %s", resposta.status_code)
-        return jsonify({"ok": False, "nota": "falha na criacao", "status_asaas": resposta.status_code}), 503
+        # HTTP 4xx: pedido recusado. A reserva continua para impedir duplicatas,
+        # e a mensagem de validação é registrada para conciliação manual.
+        # HTTP 5xx: resultado pode ser incerto; não assumir que não houve criação.
+        if 400 <= resposta.status_code < 500:
+            detalhes = detalhes_erro_asaas(resposta)
+            try:
+                registrar_rejeicao_asaas(payment_id, resposta.status_code, detalhes)
+            except (ValueError, sqlite3.Error):
+                app.logger.error("Falha ao persistir rejeicao de NFS-e: %s", payment_id)
+            app.logger.error(
+                "Asaas recusou NFS-e da cobrança %s (HTTP %s): %s",
+                payment_id, resposta.status_code, detalhes,
+            )
+        else:
+            app.logger.error(
+                "Resposta incerta na criacao de NFS-e da cobrança %s: HTTP %s",
+                payment_id, resposta.status_code,
+            )
+        return jsonify({"ok": False, "nota": "requer conciliacao", "status_asaas": resposta.status_code}), 503
 
     try:
         dados = resposta.json()
