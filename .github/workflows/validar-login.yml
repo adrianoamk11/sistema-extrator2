@@ -22,3 +22,34 @@ jobs:
         run: python -m compileall -q app.py webhook.py
       - name: Testar tela de login sem usar credenciais reais
         run: python -m pytest -q tests/test_login.py
+      - name: Instalar Chromium de teste
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+      - name: Iniciar Streamlit apenas para o teste
+        run: |
+          mkdir -p .streamlit
+          printf 'LOGIN_USUARIO = "usuario-de-teste"\nLOGIN_SENHA = "senha-de-teste"\n' > .streamlit/secrets.toml
+          streamlit run app.py --server.headless true --server.port 8501 > /tmp/streamlit-test.log 2>&1 &
+          python - <<'PY'
+          import time
+          import requests
+          for _ in range(60):
+              try:
+                  if requests.get("http://127.0.0.1:8501/_stcore/health", timeout=2).ok:
+                      break
+              except requests.RequestException:
+                  pass
+              time.sleep(1)
+          else:
+              raise RuntimeError("Servidor de teste não iniciou")
+          PY
+      - name: Verificar layout e erro de senha no navegador
+        run: python tests/test_login_browser.py
+      - name: Guardar capturas do teste
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: capturas-login
+          path: capturas/
+          if-no-files-found: ignore
