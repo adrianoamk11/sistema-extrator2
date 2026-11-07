@@ -63,6 +63,8 @@ def test_endpoint_desligado_por_padrao(monkeypatch):
 
 
 def test_endpoint_ligado_requer_token_e_banco(monkeypatch, tmp_path):
+    import fiscal_v2_webhook
+    monkeypatch.setattr(fiscal_v2_webhook, "diagnostico_persistencia", lambda *_: "OK")
     monkeypatch.setenv("FISCAL_V2_RECEPCAO_SANDBOX", "SIM")
     monkeypatch.setenv("FISCAL_V2_WEBHOOK_TOKEN", "segredo")
     monkeypatch.setenv("FISCAL_V2_EVENT_DB", str(tmp_path / "eventos.sqlite3"))
@@ -127,3 +129,25 @@ def test_preflight_nunca_faz_get_sem_chave(monkeypatch):
     import fiscal_v2_webhook
     monkeypatch.delenv("ASAAS_SANDBOX_API_KEY", raising=False)
     assert fiscal_v2_webhook.verificar_prontidao_fiscal_sandbox()["fiscal_info"] == "CHAVE_AUSENTE"
+
+
+def test_sem_disco_persistente_rejeita_webhook(monkeypatch, tmp_path):
+    monkeypatch.setenv("FISCAL_V2_RECEPCAO_SANDBOX", "SIM")
+    monkeypatch.setenv("FISCAL_V2_EVENT_DB", str(tmp_path / "instavel.sqlite3"))
+    with app_v2.test_client() as client:
+        resposta = client.post(
+            "/webhook/asaas/v2",
+            json=evento(),
+            headers={"asaas-access-token": "segredo"},
+        )
+    assert resposta.status_code == 503
+    assert not (tmp_path / "instavel.sqlite3").exists()
+
+
+def test_health_sem_revelar_credenciais(monkeypatch):
+    monkeypatch.setenv("ASAAS_PRODUCAO_CONSULTA_KEY", "segredo-falso")
+    with app_v2.test_client() as client:
+        resposta = client.get("/fiscal-v2/health")
+    assert resposta.status_code == 200
+    assert b"segredo-falso" not in resposta.data
+    assert resposta.json["emissao_automatica"] == "desativada"
