@@ -3,6 +3,11 @@ import pandas as pd
 import fitz
 import time
 from st_keyup import st_keyup
+from recorrencia_avulsa import (
+    criar_recorrencia,
+    listar_recorrencias_extrator,
+    suspender_recorrencia,
+)
 from busca_clientes_cidade import listar_clientes_para_autocomplete, filtrar_autocomplete
 from extratos_bancos_pdf import extrair_pdf_bancario
 import re
@@ -2275,59 +2280,208 @@ def exibir_boleto_avulso():
             min_value=date.today(), format="DD/MM/YYYY",
             key="vencimento_boleto_avulso",
         )
+        recorrencia_mensal = st.checkbox(
+            "Recorrência mensal — repetir até eu cancelar",
+            value=False,
+            key="ativar_recorrencia_boleto_avulso",
+            help=(
+                "O Asaas emitirá as cobranças mensalmente com o mesmo valor e "
+                "dia do primeiro vencimento. Não há data final automática."
+            ),
+        )
+        if recorrencia_mensal:
+            st.info(
+                "O Asaas fará novas cobranças mensais até a suspensão da recorrência. "
+                "O primeiro vencimento é a data informada acima. "
+                "Nenhuma nota fiscal será configurada por esta opção."
+            )
         assinatura_resultado_atual = (
             assinatura, round(float(valor_avulso), 2),
             vencimento_avulso.isoformat(), str(descricao_avulsa).strip(),
+            bool(recorrencia_mensal),
         ) if cliente_confirmado else None
         pode_emitir = (
             cliente_confirmado and bool(str(descricao_avulsa).strip())
             and float(valor_avulso) > 0
         )
         if st.button(
-            "💳 Emitir boleto avulso", type="primary", use_container_width=True,
+            (
+                "🔁 Criar recorrência mensal" if recorrencia_mensal
+                else "💳 Emitir boleto avulso"
+            ),
+            type="primary", use_container_width=True,
             disabled=not pode_emitir, key="emitir_boleto_avulso",
         ):
             try:
-                # Mesmo BOX -> mesma referência, independentemente da forma de busca.
-                # Quando não há BOX no cadastro, identifica pelo ID do Asaas.
                 referencia = (
                     f"BOX {box}.txt" if box is not None
                     else f'CLIENTE {selecionado["id"]}.txt'
                 )
-                with st.spinner("Gerando boleto avulso no Asaas..."):
-                    boleto = emitir_boleto_asaas(
-                        referencia, 0.0, float(valor_avulso),
+                if recorrencia_mensal:
+                    # Evita transformar uma cobrança avulsa existente em
+                    # uma segunda obrigação na mesma data e com mesmo valor.
+                    referencia_avulsa = criar_referencia_externa(
+                        referencia, float(valor_avulso),
                         vencimento_avulso, str(descricao_avulsa).strip(),
-                        False, cliente_selecionado_id=selecionado["id"],
                     )
-                st.session_state["resultado_boleto_avulso"] = boleto
-                st.session_state["assinatura_resultado_boleto_avulso"] = (
-                    assinatura_resultado_atual
-                )
+                    if buscar_cobranca_existente(referencia_avulsa):
+                        raise RuntimeError(
+                            "Já existe boleto avulso para este cliente, valor, "
+                            "descrição e primeiro vencimento. "
+                            "Concilie antes de criar a recorrência."
+                        )
+                    # Mantém o padrão de notificações do cliente utilizado
+                    # pelo boleto avulso atual, sem criar um segundo webhook.
+                    with st.spinner("Conferindo e criando assinatura mensal no Asaas..."):
+                        padronizar_notificacoes_asaas(selecionado["id"])
+                        recorrencia, nova = criar_recorrencia(
+                            ASAAS_BASE_URL, cabecalhos_asaas(),
+                            selecionado["id"], float(valor_avulso),
+                            vencimento_avulso, str(descricao_avulsa).strip(),
+                            get=requests.get, post=requests.post,
+                        )
+                    st.session_state["resultado_recorrencia_avulsa"] = {
+                        "id": recorrencia["id"], "novo": nova,
+                    }
+                    st.session_state["assinatura_resultado_recorrencia_avulsa"] = (
+                        assinatura_resultado_atual
+                    )
+                    st.session_state.pop("cache_lista_recorrencias", None)
+                else:
+                    with st.spinner("Gerando boleto avulso no Asaas..."):
+                        boleto = emitir_boleto_asaas(
+                            referencia, 0.0, float(valor_avulso),
+                            vencimento_avulso, str(descricao_avulsa).strip(),
+                            False, cliente_selecionado_id=selecionado["id"],
+                        )
+                    st.session_state["resultado_boleto_avulso"] = boleto
+                    st.session_state["assinatura_resultado_boleto_avulso"] = (
+                        assinatura_resultado_atual
+                    )
             except Exception as erro:
-                st.error(f"Não foi possível emitir o boleto avulso: {erro}")
+                st.error(f"Não foi possível concluir a operação: {erro}")
 
-        boleto_salvo = st.session_state.get("resultado_boleto_avulso")
-        if (boleto_salvo and assinatura_resultado_atual is not None
-                and st.session_state.get("assinatura_resultado_boleto_avulso")
-                == assinatura_resultado_atual):
-            if boleto_salvo.get("novo"):
-                st.success(
-                    f'Boleto criado para {boleto_salvo.get("clienteNome", "")}. '
-                    f'ID: {boleto_salvo.get("id", "")}'
+        if recorrencia_mensal:
+            recorrencia_salva = st.session_state.get("resultado_recorrencia_avulsa")
+            if (recorrencia_salva
+                    and st.session_state.get("assinatura_resultado_recorrencia_avulsa")
+                    == assinatura_resultado_atual):
+                if recorrencia_salva["novo"]:
+                    st.success(
+                        "Recorrência mensal criada no Asaas. "
+                        f'Identificador: {recorrencia_salva["id"]}. '
+                        "Continue acompanhando as cobranças no Asaas."
+                    )
+                else:
+                    st.info(
+                        "Esta recorrência já estava cadastrada no Asaas. "
+                        "Nenhuma nova recorrência foi criada."
+                    )
+        else:
+            boleto_salvo = st.session_state.get("resultado_boleto_avulso")
+            if (boleto_salvo and assinatura_resultado_atual is not None
+                    and st.session_state.get("assinatura_resultado_boleto_avulso")
+                    == assinatura_resultado_atual):
+                if boleto_salvo.get("novo"):
+                    st.success(
+                        f'Boleto criado para {boleto_salvo.get("clienteNome", "")}. '
+                        f'ID: {boleto_salvo.get("id", "")}'
+                    )
+                else:
+                    st.info("Essa cobrança já existia no Asaas. Nenhuma duplicidade criada.")
+                if boleto_salvo.get("invoiceUrl"):
+                    st.link_button(
+                        "🔗 Abrir cobrança no Asaas", boleto_salvo["invoiceUrl"],
+                        use_container_width=True,
+                    )
+                if boleto_salvo.get("bankSlipUrl"):
+                    st.link_button(
+                        "📄 Abrir boleto", boleto_salvo["bankSlipUrl"],
+                        use_container_width=True,
+                    )
+
+        if st.toggle(
+            "Exibir e gerenciar recorrências ativas",
+            key="abrir_lista_recorrencias_avulsas",
+            value=False,
+        ):
+            with st.expander("Recorrências mensais — consultar e cancelar", expanded=False):
+                st.caption(
+                    "A consulta mostra apenas as recorrências de boletos mensais "
+                    "criadas por este Extrator na empresa selecionada."
                 )
-            else:
-                st.info("Essa cobrança já existia no Asaas. Nenhuma duplicidade criada.")
-            if boleto_salvo.get("invoiceUrl"):
-                st.link_button(
-                    "🔗 Abrir cobrança no Asaas", boleto_salvo["invoiceUrl"],
-                    use_container_width=True,
-                )
-            if boleto_salvo.get("bankSlipUrl"):
-                st.link_button(
-                    "📄 Abrir boleto", boleto_salvo["bankSlipUrl"],
-                    use_container_width=True,
-                )
+                if st.button(
+                    "Atualizar recorrências", key="atualizar_recorrencias_avulsas",
+                ):
+                    st.session_state.pop("cache_lista_recorrencias", None)
+                chave_cache = (EMPRESA_SELECIONADA, ASAAS_BASE_URL)
+                cache = st.session_state.get("cache_lista_recorrencias")
+                if not cache or cache.get("chave") != chave_cache or (
+                    time.monotonic() - cache.get("quando", 0) > 120
+                ):
+                    try:
+                        with st.spinner("Consultando recorrências no Asaas..."):
+                            lista = listar_recorrencias_extrator(
+                                ASAAS_BASE_URL, cabecalhos_asaas(),
+                                get=requests.get, status="ACTIVE",
+                            )
+                        st.session_state["cache_lista_recorrencias"] = {
+                            "chave": chave_cache, "quando": time.monotonic(),
+                            "lista": lista,
+                        }
+                    except Exception as erro_lista:
+                        st.error(f"Falha ao consultar recorrências: {erro_lista}")
+                        lista = []
+                else:
+                    lista = cache["lista"]
+                if not lista:
+                    st.caption("Nenhuma recorrência ativa encontrada nesta empresa.")
+                else:
+                    st.caption(f"{len(lista)} recorrência(s) ativa(s).")
+                    opcoes_rec = {r["id"]: r for r in lista}
+                    rec_id = st.selectbox(
+                        "Selecione a recorrência a consultar",
+                        list(opcoes_rec),
+                        index=None,
+                        placeholder="Escolha uma assinatura ativa",
+                        format_func=lambda ident: (
+                            f'{opcoes_rec[ident]["description"]} — '
+                            f'R$ {float(opcoes_rec[ident]["value"] or 0):.2f} — '
+                            f'{opcoes_rec[ident]["nextDueDate"]} ({ident})'
+                        ),
+                        key="recorrencia_avulsa_selecionada",
+                    )
+                    if rec_id in opcoes_rec:
+                        rec = opcoes_rec[rec_id]
+                        st.write(f'Cliente Asaas: **{rec["customer"]}**')
+                        st.write(f'Descrição: **{rec["description"]}**')
+                        st.write(f'Próximo vencimento: **{rec["nextDueDate"]}**')
+                        st.warning(
+                            "Suspender interrompe novas cobranças. "
+                            "Boletos já emitidos permanecem no Asaas."
+                        )
+                        confirma = st.checkbox(
+                            "Confirmo a suspensão de novas cobranças desta recorrência",
+                            key=f"confirmar_suspensao_recorrencia_avulsa_{rec_id}",
+                        )
+                        if st.button(
+                            "Suspender recorrência", type="secondary",
+                            disabled=not confirma,
+                            key="suspender_recorrencia_avulsa",
+                        ):
+                            try:
+                                with st.spinner("Suspendendo novas cobranças..."):
+                                    _, mudou = suspender_recorrencia(
+                                        ASAAS_BASE_URL, cabecalhos_asaas(),
+                                        rec_id, get=requests.get, put=requests.put,
+                                    )
+                                st.session_state.pop("cache_lista_recorrencias", None)
+                                st.success(
+                                    "Recorrência suspensa; novas cobranças interrompidas."
+                                    if mudou else "Essa recorrência já estava suspensa."
+                                )
+                            except Exception as erro_suspensao:
+                                st.error(f"Falha ao suspender: {erro_suspensao}")
 
 
 if (st.session_state.pagina_lider == "Boleto avulso"
