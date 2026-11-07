@@ -83,3 +83,45 @@ def webhook_fiscal_v2():
         os.environ.get("FISCAL_V2_EVENT_DB", ""),
     )
     return jsonify(resposta), status
+
+def verificar_conexao_sandbox():
+    """Somente GET; não registra chave, resposta da conta ou dados pessoais."""
+    import requests
+
+    chave = os.environ.get("ASAAS_SANDBOX_API_KEY", "").strip()
+    if not chave:
+        app_v2.logger.warning("Fiscal V2 Sandbox: chave não configurada.")
+        return "CHAVE_AUSENTE"
+    try:
+        resposta = requests.get(
+            "https://api-sandbox.asaas.com/v3/myAccount/status/",
+            headers={
+                "access_token": chave,
+                "Accept": "application/json",
+                "User-Agent": "LiderFiscalV2Sandbox/1.0",
+            },
+            timeout=12,
+            allow_redirects=False,
+        )
+    except requests.RequestException as erro:
+        app_v2.logger.warning(
+            "Fiscal V2 Sandbox: consulta falhou (%s).",
+            type(erro).__name__,
+        )
+        return "SEM_RESPOSTA"
+
+    codigo = resposta.status_code
+    if codigo == 200:
+        app_v2.logger.warning("Fiscal V2 Sandbox: autenticação OK (HTTP 200).")
+        return "CONECTADO"
+    if codigo == 401:
+        app_v2.logger.warning("Fiscal V2 Sandbox: autenticação recusada (HTTP 401).")
+        return "NAO_AUTORIZADO"
+    app_v2.logger.warning("Fiscal V2 Sandbox: resposta HTTP %s.", codigo)
+    return "HTTP_" + str(codigo)
+
+
+# Executa apenas quando configurada, ao iniciar o serviço de homologação.
+# O endpoint de webhook continua desligado e a verificação não emite NFS-e.
+if os.environ.get("FISCAL_V2_CONEXAO_CHECK") == "SIM":
+    verificar_conexao_sandbox()
