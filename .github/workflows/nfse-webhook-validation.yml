@@ -1,0 +1,30 @@
+name: Validate NFS-e webhook
+on:
+  push:
+    branches:
+      - fix/nfse-webhook-pending-reconciliation-20261106
+  pull_request:
+    paths:
+      - webhook.py
+      - app.py
+      - tests/**
+      - .github/workflows/nfse-webhook-validation.yml
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install app and test dependencies
+        run: python -m pip install flask requests pandas openpyxl streamlit pytest
+      - name: Verify syntax
+        run: python -m compileall -q webhook.py app.py tests
+      - name: Run regression tests
+        run: python -m pytest tests -q

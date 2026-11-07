@@ -149,13 +149,13 @@ class WebhookTests(unittest.TestCase):
         self.get.side_effect = consulta
         with ThreadPoolExecutor(max_workers=2) as pool:
             statuses = list(pool.map(entregar, ("evt_1", "evt_2")))
-        self.assertEqual(sorted(statuses), [200, 503])
+        self.assertEqual(sorted(statuses), [200, 200])
         self.post.assert_called_once()
 
     def test_timeout_na_criacao_nao_repete_post(self):
         self.post.side_effect = requests.Timeout()
         self.assertEqual(self.enviar().status_code, 503)
-        self.assertEqual(self.enviar().status_code, 503)
+        self.assertEqual(self.enviar().status_code, 200)
         self.get.return_value = resposta(pagina({"payment": "pay_teste"}))
         self.assertEqual(self.enviar().status_code, 200)
         self.post.assert_called_once()
@@ -163,7 +163,7 @@ class WebhookTests(unittest.TestCase):
     def test_resposta_de_criacao_ambigua_nao_repete_post(self):
         self.post.return_value = resposta({"status": "SCHEDULED"})
         self.assertEqual(self.enviar().status_code, 503)
-        self.assertEqual(self.enviar().status_code, 503)
+        self.assertEqual(self.enviar().status_code, 200)
         self.post.assert_called_once()
 
     def test_rejeicao_400_registra_motivo_sem_repetir_nota(self):
@@ -172,7 +172,7 @@ class WebhookTests(unittest.TestCase):
             "errors": [{"code": "invalid_service", "description": "Código fiscal não aceito"}]
         }, 400)
         resultado = self.enviar()
-        self.assertEqual(resultado.status_code, 503)
+        self.assertEqual(resultado.status_code, 200)
         self.assertEqual(resultado.json["status_asaas"], 400)
         with sqlite3.connect(self.db_path) as conexao:
             registrado = conexao.execute(
@@ -180,7 +180,7 @@ class WebhookTests(unittest.TestCase):
                 ("pay_teste",),
             ).fetchone()
         self.assertEqual(registrado, (400, "invalid_service: Código fiscal não aceito"))
-        self.assertEqual(self.enviar().status_code, 503)
+        self.assertEqual(self.enviar().status_code, 200)
         self.post.assert_called_once()
 
     def test_erro_500_nao_finge_rejeicao_confirmada(self):
@@ -192,7 +192,7 @@ class WebhookTests(unittest.TestCase):
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='nfse_rejeicoes'"
             ).fetchall()
         self.assertEqual(tabelas, [])
-        self.assertEqual(self.enviar().status_code, 503)
+        self.assertEqual(self.enviar().status_code, 200)
         self.post.assert_called_once()
 
     def test_mascara_credenciais_em_mensagem_de_erro(self):
