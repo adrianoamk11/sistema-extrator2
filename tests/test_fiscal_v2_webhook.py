@@ -73,3 +73,34 @@ def test_endpoint_ligado_requer_token_e_banco(monkeypatch, tmp_path):
             headers={"asaas-access-token": "segredo"}
         )
     assert response.status_code == 200
+
+
+def test_verificacao_sandbox_sem_chave_nao_chama_api(monkeypatch):
+    import fiscal_v2_webhook
+    monkeypatch.delenv("ASAAS_SANDBOX_API_KEY", raising=False)
+    assert fiscal_v2_webhook.verificar_conexao_sandbox() == "CHAVE_AUSENTE"
+
+
+def test_verificacao_sandbox_get_somente_e_nao_expoe_resposta(monkeypatch):
+    import requests
+    import fiscal_v2_webhook
+    from unittest.mock import Mock
+    monkeypatch.setenv("ASAAS_SANDBOX_API_KEY", "chave-ficticia")
+    retorno = Mock(status_code=200)
+    fake_get = Mock(return_value=retorno)
+    monkeypatch.setattr(requests, "get", fake_get)
+    assert fiscal_v2_webhook.verificar_conexao_sandbox() == "CONECTADO"
+    assert fake_get.call_count == 1
+    args, kwargs = fake_get.call_args
+    assert args[0] == "https://api-sandbox.asaas.com/v3/myAccount/status/"
+    assert kwargs["headers"]["access_token"] == "chave-ficticia"
+    assert kwargs["allow_redirects"] is False
+
+
+def test_verificacao_sandbox_recusa_credencial_invalida(monkeypatch):
+    import requests
+    import fiscal_v2_webhook
+    from unittest.mock import Mock
+    monkeypatch.setenv("ASAAS_SANDBOX_API_KEY", "chave-ficticia")
+    monkeypatch.setattr(requests, "get", Mock(return_value=Mock(status_code=401)))
+    assert fiscal_v2_webhook.verificar_conexao_sandbox() == "NAO_AUTORIZADO"
