@@ -29,13 +29,27 @@ def cabecalhos_asaas():
     return {"access_token": ASAAS_API_KEY, "Content-Type": "application/json"}
 
 
+
+def normalizar_nbs(codigo):
+    """O catálogo Asaas aceita NBS pontuado: 1.1110.00.00.
+
+    Converte 9 dígitos apenas para a representação canônica de NBS.
+    Não altera o significado da classificação fiscal.
+    """
+    valor = str(codigo or "").strip()
+    if re.fullmatch(r"[0-9]{9}", valor):
+        valor = f"{valor[0]}.{valor[1:5]}.{valor[5:7]}.{valor[7:9]}"
+    if not re.fullmatch(r"[0-9]\\.[0-9]{4}\\.[0-9]{2}\\.[0-9]{2}", valor):
+        raise ValueError("Codigo NBS invalido")
+    return valor
+
+
 def configuracao_fiscal():
     if not all((NFSE_MUNICIPAL_SERVICE_CODE, NFSE_MUNICIPAL_SERVICE_NAME, NFSE_ISS_PERCENT)):
         raise ValueError("Configuracao fiscal de NFS-e pendente de validacao")
     if not re.fullmatch(r"[0-9]{2}\.[0-9]{2}\.[0-9]{2}(?:\.[0-9]{3})?", NFSE_MUNICIPAL_SERVICE_CODE):
         raise ValueError("Codigo de servico do Portal Nacional invalido")
-    if not re.fullmatch(r"[0-9]{9}", NFSE_NBS_CODE):
-        raise ValueError("Codigo NBS invalido")
+    normalizar_nbs(NFSE_NBS_CODE)
     try:
         iss = float(NFSE_ISS_PERCENT.replace(",", "."))
     except ValueError as exc:
@@ -210,7 +224,7 @@ def webhook_asaas():
         "effectiveDate": datetime.now(FUSO_FISCAL).date().isoformat(),
         "municipalServiceCode": NFSE_MUNICIPAL_SERVICE_CODE,
         "municipalServiceName": NFSE_MUNICIPAL_SERVICE_NAME,
-        "taxes": {"retainIss": False, "iss": iss, "nbsCode": NFSE_NBS_CODE},
+        "taxes": {"retainIss": False, "iss": iss, "nbsCode": normalizar_nbs(NFSE_NBS_CODE)},
     }
 
     try:
