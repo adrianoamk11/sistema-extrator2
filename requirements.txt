@@ -8,3 +8,4 @@ requests>=2.31
 gunicorn>=22.0
 pytesseract
 Pillow
+streamlit-keyup==1.0.0
