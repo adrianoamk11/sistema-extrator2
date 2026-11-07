@@ -23,7 +23,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install app and test dependencies
-        run: python -m pip install flask requests pandas openpyxl streamlit pytest
+        run: python -m pip install flask requests pandas openpyxl streamlit pytest pymupdf
       - name: Verify syntax
         run: python -m compileall -q webhook.py app.py tests
       - name: Run regression tests
