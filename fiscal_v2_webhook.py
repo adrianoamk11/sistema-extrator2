@@ -210,3 +210,10 @@ if os.environ.get("FISCAL_V2_CONCILIAR_961543418") == "SIM":
     import json
     relatorio = investigar(os.environ.get("ASAAS_PRODUCAO_CONSULTA_KEY", "").strip())
     app_v2.logger.warning("Fiscal V2 fatura 961543418: %s", json.dumps(relatorio))
+
+
+if os.environ.get("FISCAL_V2_NBS_CHECK") == "SIM":
+    from fiscal_v2_nbs_diagnostico import diagnosticar_catalogo
+    import json
+    resultado_nbs=diagnosticar_catalogo()
+    app_v2.logger.warning("Fiscal V2 catalogo NBS: %s",json.dumps(resultado_nbs,ensure_ascii=False))
