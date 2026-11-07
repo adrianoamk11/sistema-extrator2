@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import fitz
+from busca_clientes_cidade import procurar_clientes_por_cidade
 from extratos_bancos_pdf import extrair_pdf_bancario
 import re
 import unicodedata
@@ -169,17 +170,23 @@ st.markdown("""
 .lider-nav .extratos { background: #DCEAFF; color: #1D4ED8 !important; }
 .lider-nav .historico { background: #FFEDD5; color: #9A3412 !important; }
 [data-testid="stSidebar"] .stButton button {
-  background: #FFF0BF !important;
-  color: #8C5600 !important;
-  border: 1px solid #F4D783 !important;
   border-radius: 11px !important;
   font-weight: 700 !important;
   min-height: 44px;
 }
-[data-testid="stSidebar"] .stButton button:hover {
-  background: #FFE4A1 !important;
-  border-color: #E5A800 !important;
+[data-testid="stSidebar"] .st-key-navegar_Início button {
+  background: #D2F2DE !important; color: #14532D !important; border-color: #C3E9D0 !important;
 }
+[data-testid="stSidebar"] .st-key-navegar_Extratos button {
+  background: #DCEAFF !important; color: #1D4ED8 !important; border-color: #BED7FC !important;
+}
+[data-testid="stSidebar"] .st-key-navegar_Histórico button {
+  background: #FFEDD5 !important; color: #9A3412 !important; border-color: #FED7AA !important;
+}
+[data-testid="stSidebar"] .st-key-abrir_fechar_boleto_avulso button {
+  background: #FFF0BF !important; color: #8C5600 !important; border-color: #F4D783 !important;
+}
+[data-testid="stSidebar"] .stButton button:hover { filter: brightness(.95); }
 .lider-hero {
   background: linear-gradient(105deg,#143F2C 0%,#177A45 67%,#219B64 100%);
   border-radius: 18px;
@@ -243,15 +250,18 @@ LOGO_PATH = BASE_DIR / "logo_lider.png"
 with st.sidebar:
     if LOGO_PATH.exists():
         st.image(str(LOGO_PATH), use_container_width=True)
-    st.markdown(
-        '<div class="lider-sidebar-caption">Navegação</div>'
-        '<nav class="lider-nav">'
-        '<a class="inicio" href="#inicio">⌂ &nbsp; Início</a>'
-        '<a class="extratos" href="#extratos">▤ &nbsp; Extratos</a>'
-        '<a class="historico" href="#historico">◷ &nbsp; Histórico</a>'
-        '</nav>',
-        unsafe_allow_html=True,
-    )
+    st.markdown('<div class="lider-sidebar-caption">Navegação</div>', unsafe_allow_html=True)
+    if "pagina_lider" not in st.session_state:
+        st.session_state.pagina_lider = "Extratos"
+    for rotulo, pagina in (
+        ("🏠 Início", "Início"),
+        ("📘 Extratos", "Extratos"),
+        ("🕘 Histórico", "Histórico"),
+    ):
+        if st.button(rotulo, key=f"navegar_{pagina}", use_container_width=True,
+                     type="primary" if st.session_state.pagina_lider == pagina else "secondary"):
+            st.session_state.pagina_lider = pagina
+            st.rerun()
 
 st.markdown(
     '<meta name="google" content="notranslate">'
@@ -293,6 +303,11 @@ with st.sidebar:
         st.session_state.mostrar_boleto_avulso = (
             not st.session_state.mostrar_boleto_avulso
         )
+        if st.session_state.mostrar_boleto_avulso:
+            st.session_state.pagina_lider = "Boleto avulso"
+        else:
+            st.session_state.pagina_lider = "Extratos"
+        st.rerun()
 
 st.markdown('<div class="lider-section-title">Processamento de extratos</div>', unsafe_allow_html=True)
 
@@ -642,9 +657,27 @@ def emitir_boleto_asaas(
     valor_cobranca,
     vencimento,
     descricao_boleto,
-    emitir_nota=False
+    emitir_nota=False,
+    cliente_selecionado_id=None,
 ):
-    cliente, numero_box = localizar_cliente_asaas_por_box(nome_arquivo)
+    if cliente_selecionado_id is None:
+        cliente, numero_box = localizar_cliente_asaas_por_box(nome_arquivo)
+    else:
+        # Busca avulsa por cidade: recupera o cadastro indicado, sem
+        # selecionar automaticamente um pagador só pelo nome da cidade.
+        identificador = str(cliente_selecionado_id).strip()
+        if not re.fullmatch(r"cus_[A-Za-z0-9]+", identificador):
+            raise RuntimeError("Identificador de cliente Asaas inválido.")
+        resposta_cliente = requests.get(
+            f"{ASAAS_BASE_URL}/customers/{identificador}",
+            headers=cabecalhos_asaas(),
+            timeout=30,
+        )
+        resposta_cliente.raise_for_status()
+        cliente = resposta_cliente.json()
+        if cliente.get("id") != identificador:
+            raise RuntimeError("O Asaas retornou um cadastro diferente do selecionado.")
+        numero_box = extrair_numero_box(str(cliente.get("name") or ""))
     customer_id = cliente.get("id")
     nome_cliente = cliente.get("name", "")
 
@@ -2088,11 +2121,31 @@ st.markdown(
 
 
 
+# Página inicial independente, sem criar métricas ou consultas financeiras.
+if st.session_state.pagina_lider == "Início":
+    st.subheader("Bem-vindo ao Extrator Líder")
+    st.caption("Acesse as funções existentes pelos atalhos abaixo.")
+    inicio_extratos, inicio_historico = st.columns(2)
+    with inicio_extratos:
+        with st.container(border=True):
+            st.markdown("### 📘 Extratos")
+            st.write("Importe, confira e processe seus arquivos financeiros.")
+            if st.button("Abrir extratos", key="inicio_abrir_extratos", use_container_width=True):
+                st.session_state.pagina_lider = "Extratos"
+                st.rerun()
+    with inicio_historico:
+        with st.container(border=True):
+            st.markdown("### 🕘 Histórico")
+            st.write("Consulte cobranças anteriores diretamente no Asaas.")
+            if st.button("Consultar histórico", key="inicio_abrir_historico", use_container_width=True):
+                st.session_state.pagina_lider = "Histórico"
+                st.rerun()
+
 # ============================================================
 # BOLETO AVULSO
 # ============================================================
 
-if st.session_state.mostrar_boleto_avulso:
+if st.session_state.pagina_lider == "Boleto avulso" and st.session_state.mostrar_boleto_avulso:
     with st.container(border=True):
         st.subheader("Boleto avulso")
         st.caption(
@@ -2100,80 +2153,117 @@ if st.session_state.mostrar_boleto_avulso:
             "Esta cobrança não gera nota fiscal."
         )
 
-        col_box, col_buscar = st.columns([2, 1])
-
-        numero_box_avulso = col_box.number_input(
-            "Número do BOX",
-            min_value=1,
-            step=1,
-            value=None,
-            placeholder="Ex.: 25",
-            key="box_boleto_avulso"
+        modo_busca_avulso = st.radio(
+            "Localizar o cliente por",
+            ["BOX", "Cidade"],
+            horizontal=True,
+            key="modo_busca_cliente_avulso",
         )
-
-        buscar_cliente_avulso = col_buscar.button(
-            "🔎 Buscar cliente",
-            use_container_width=True,
-            key="buscar_cliente_boleto_avulso"
-        )
-
-        # Se a empresa ou o BOX mudar, uma identificação antiga não pode
-        # ser usada para uma nova cobrança.
-        assinatura_busca_atual = (
-            EMPRESA_SELECIONADA,
-            int(numero_box_avulso) if numero_box_avulso is not None else None
-        )
-
-        if (
-            st.session_state.get("assinatura_cliente_avulso")
-            != assinatura_busca_atual
-        ):
-            st.session_state.pop("cliente_avulso_encontrado", None)
-
-        if buscar_cliente_avulso:
-            if numero_box_avulso is None:
-                st.warning("Informe o número do BOX.")
-            else:
-                try:
-                    cliente_avulso, box_confirmado = localizar_cliente_asaas_por_box(
-                        f"BOX {int(numero_box_avulso)}.txt"
-                    )
-
-                    st.session_state["cliente_avulso_encontrado"] = {
-                        "id": cliente_avulso.get("id"),
-                        "name": cliente_avulso.get("name", ""),
-                        "box": box_confirmado,
-                    }
-                    st.session_state["assinatura_cliente_avulso"] = (
-                        assinatura_busca_atual
-                    )
-
-                except Exception as erro_cliente:
-                    st.session_state.pop("cliente_avulso_encontrado", None)
-                    st.error(
-                        f"Não foi possível localizar o cliente: {erro_cliente}"
-                    )
-
-        cliente_avulso_salvo = st.session_state.get(
-            "cliente_avulso_encontrado"
-        )
-
-        cliente_confirmado = (
-            cliente_avulso_salvo is not None
-            and st.session_state.get("assinatura_cliente_avulso")
-            == assinatura_busca_atual
-        )
-
-        if cliente_confirmado:
-            st.success(
-                f"Cliente encontrado: "
-                f"{cliente_avulso_salvo.get('name', '')} "
-                f"(BOX {cliente_avulso_salvo.get('box', '')})"
+        col_busca, col_buscar = st.columns([2, 1])
+        numero_box_avulso = None
+        cidade_avulsa = ""
+        if modo_busca_avulso == "BOX":
+            numero_box_avulso = col_busca.number_input(
+                "Número do BOX", min_value=1, step=1, value=None,
+                placeholder="Ex.: 25", key="box_boleto_avulso"
             )
         else:
-            st.info(
-                "Informe o BOX e clique em “Buscar cliente” antes de emitir."
+            cidade_avulsa = col_busca.text_input(
+                "Cidade do cadastro",
+                placeholder="Ex.: Balneário Camboriú, Itapema, Jundiaí",
+                key="cidade_boleto_avulso",
             )
+        buscar_cliente_avulso = col_buscar.button(
+            "🔎 Buscar cliente", use_container_width=True,
+            key="buscar_cliente_boleto_avulso"
+        )
+        assinatura_busca_atual = (
+            EMPRESA_SELECIONADA, modo_busca_avulso,
+            (int(numero_box_avulso) if numero_box_avulso is not None else None)
+            if modo_busca_avulso == "BOX" else normalizar(cidade_avulsa),
+        )
+        if st.session_state.get("assinatura_cliente_avulso") != assinatura_busca_atual:
+            st.session_state.pop("cliente_avulso_encontrado", None)
+        if st.session_state.get("assinatura_lista_cidade_avulso") != assinatura_busca_atual:
+            st.session_state.pop("clientes_cidade_avulso", None)
+
+        if buscar_cliente_avulso:
+            st.session_state.pop("cliente_avulso_encontrado", None)
+            st.session_state.pop("resultado_boleto_avulso", None)
+            if modo_busca_avulso == "BOX" and numero_box_avulso is None:
+                st.warning("Informe o número do BOX.")
+            elif modo_busca_avulso == "Cidade" and len(normalizar(cidade_avulsa)) < 3:
+                st.warning("Informe pelo menos três letras da cidade.")
+            else:
+                try:
+                    if modo_busca_avulso == "BOX":
+                        cliente_avulso, box_confirmado = localizar_cliente_asaas_por_box(
+                            f"BOX {int(numero_box_avulso)}.txt"
+                        )
+                        st.session_state["cliente_avulso_encontrado"] = {
+                            "id": cliente_avulso.get("id"),
+                            "name": cliente_avulso.get("name", ""),
+                            "box": box_confirmado,
+                        }
+                        st.session_state["assinatura_cliente_avulso"] = assinatura_busca_atual
+                    else:
+                        clientes_cidade = procurar_clientes_por_cidade(
+                            ASAAS_BASE_URL, cabecalhos_asaas(), cidade_avulsa
+                        )
+                        st.session_state["clientes_cidade_avulso"] = clientes_cidade
+                        st.session_state["assinatura_lista_cidade_avulso"] = assinatura_busca_atual
+                        st.session_state.pop("cliente_cidade_escolhido", None)
+                        if not clientes_cidade:
+                            st.warning("Não encontrei cadastro com essa cidade no Asaas.")
+                except Exception as erro_cliente:
+                    st.session_state.pop("clientes_cidade_avulso", None)
+                    st.session_state.pop("cliente_avulso_encontrado", None)
+                    st.error(f"Não foi possível localizar o cliente: {erro_cliente}")
+
+        if (
+            modo_busca_avulso == "Cidade"
+            and st.session_state.get("assinatura_lista_cidade_avulso") == assinatura_busca_atual
+            and st.session_state.get("clientes_cidade_avulso")
+        ):
+            candidatos = st.session_state["clientes_cidade_avulso"]
+            opcoes = {c["id"]: c for c in candidatos}
+            escolhido = st.selectbox(
+                "Selecione o cadastro correto antes de emitir",
+                list(opcoes),
+                index=None,
+                placeholder="Escolha um cliente entre os resultados",
+                format_func=lambda codigo: (
+                    f'{opcoes[codigo]["name"]} — '
+                    f'{opcoes[codigo].get("cityName") or "cidade no nome"} '
+                    f'({codigo})'
+                ),
+                key="cliente_cidade_escolhido",
+            )
+            if escolhido in opcoes:
+                selecionado = opcoes[escolhido]
+                st.session_state["cliente_avulso_encontrado"] = {
+                    "id": selecionado["id"], "name": selecionado["name"],
+                    "box": extrair_numero_box(selecionado["name"]),
+                }
+                st.session_state["assinatura_cliente_avulso"] = assinatura_busca_atual
+            else:
+                st.session_state.pop("cliente_avulso_encontrado", None)
+
+        cliente_avulso_salvo = st.session_state.get("cliente_avulso_encontrado")
+        cliente_confirmado = bool(
+            cliente_avulso_salvo
+            and st.session_state.get("assinatura_cliente_avulso") == assinatura_busca_atual
+            and cliente_avulso_salvo.get("id")
+        )
+        if cliente_confirmado:
+            st.success(
+                f'Cliente selecionado: {cliente_avulso_salvo.get("name", "")} '
+                f'(BOX {cliente_avulso_salvo.get("box") or "não informado"})'
+            )
+        elif modo_busca_avulso == "BOX":
+            st.info("Informe o BOX e clique em Buscar cliente antes de emitir.")
+        else:
+            st.info("Pesquise a cidade e selecione o cadastro correto antes de emitir.")
 
         descricao_avulsa = st.text_area(
             "Descrição do boleto",
@@ -2223,19 +2313,28 @@ if st.session_state.mostrar_boleto_avulso:
                 with st.spinner("Gerando boleto avulso no Asaas..."):
                     # Usa a mesma rotina de localização, notificações e
                     # proteção contra duplicidade do fluxo já existente.
+                    referencia_cliente = (
+                        f"BOX {int(numero_box_avulso)}.txt"
+                        if modo_busca_avulso == "BOX"
+                        else f'CLIENTE {cliente_avulso_salvo["id"]}.txt'
+                    )
                     boleto_avulso = emitir_boleto_asaas(
-                        f"BOX {int(numero_box_avulso)}.txt",
+                        referencia_cliente,
                         0.0,
                         float(valor_avulso),
                         vencimento_avulso,
                         str(descricao_avulsa).strip(),
-                        False
+                        False,
+                        cliente_selecionado_id=(
+                            cliente_avulso_salvo["id"] if modo_busca_avulso == "Cidade"
+                            else None
+                        ),
                     )
 
                 st.session_state["resultado_boleto_avulso"] = boleto_avulso
                 st.session_state["assinatura_resultado_boleto_avulso"] = (
-                    EMPRESA_SELECIONADA,
-                    int(numero_box_avulso),
+                    EMPRESA_SELECIONADA, modo_busca_avulso,
+                    cliente_avulso_salvo["id"],
                     round(float(valor_avulso), 2),
                     vencimento_avulso.isoformat(),
                     str(descricao_avulsa).strip(),
@@ -2248,10 +2347,10 @@ if st.session_state.mostrar_boleto_avulso:
                 )
 
         assinatura_resultado_atual = None
-        if numero_box_avulso is not None:
+        if cliente_confirmado:
             assinatura_resultado_atual = (
-                EMPRESA_SELECIONADA,
-                int(numero_box_avulso),
+                EMPRESA_SELECIONADA, modo_busca_avulso,
+                cliente_avulso_salvo["id"],
                 round(float(valor_avulso), 2),
                 vencimento_avulso.isoformat(),
                 str(descricao_avulsa).strip(),
@@ -2399,708 +2498,709 @@ def clientes_historico_asaas(ids_clientes):
 
 
 
-if "uploader_key" not in st.session_state:
-    st.session_state.uploader_key = 0
+if st.session_state.pagina_lider == "Extratos":
+    if "uploader_key" not in st.session_state:
+        st.session_state.uploader_key = 0
 
-st.markdown('<div id="extratos"></div>', unsafe_allow_html=True)
-arquivos = st.file_uploader(
-    "Carregue os extratos",
-    type=["pdf", "xlsx", "xls", "csv"],
-    accept_multiple_files=True,
-    help="Você pode selecionar vários arquivos de uma só vez.",
-    key=f"uploader_{st.session_state.uploader_key}"
-)
-
-if arquivos:
-    if st.button(
-        "🗑️ Limpar todos os arquivos",
-        type="secondary",
-        help="Remove todos os extratos carregados desta remessa."
-    ):
-        st.session_state.uploader_key += 1
-
-        # Limpa também os editores das remessas anteriores.
-        chaves_para_apagar = [
-            chave
-            for chave in list(st.session_state.keys())
-            if str(chave).startswith("editor_")
-        ]
-
-        for chave in chaves_para_apagar:
-            del st.session_state[chave]
-
-        st.rerun()
-
-if not arquivos:
-    st.info(
-        "Selecione um ou vários arquivos PDF, Excel ou CSV para começar."
+    st.markdown('<div id="extratos"></div>', unsafe_allow_html=True)
+    arquivos = st.file_uploader(
+        "Carregue os extratos",
+        type=["pdf", "xlsx", "xls", "csv"],
+        accept_multiple_files=True,
+        help="Você pode selecionar vários arquivos de uma só vez.",
+        key=f"uploader_{st.session_state.uploader_key}"
     )
 
-else:
-    st.success(
-        f"{len(arquivos)} arquivo(s) carregado(s)."
-    )
+    if arquivos:
+        if st.button(
+            "🗑️ Limpar todos os arquivos",
+            type="secondary",
+            help="Remove todos os extratos carregados desta remessa."
+        ):
+            st.session_state.uploader_key += 1
 
-    resultados = []
-    detalhes_exportacao = {}
+            # Limpa também os editores das remessas anteriores.
+            chaves_para_apagar = [
+                chave
+                for chave in list(st.session_state.keys())
+                if str(chave).startswith("editor_")
+            ]
 
-    st.subheader("Resumo dos arquivos")
-    st.caption(
-        "Clique em qualquer linha para abrir e editar as movimentações daquele arquivo."
-    )
+            for chave in chaves_para_apagar:
+                del st.session_state[chave]
 
-    total_faturamento = 0.0
-    total_royalties = 0.0
+            st.rerun()
 
-    for indice, arquivo in enumerate(arquivos):
-        try:
-            # Reinicia variáveis desta linha para não reaproveitar dados do arquivo anterior.
-            editada = None
-            selecionadas = None
-            faturamento = None
-            royalties = None
-            vencimento = proximo_dia_10()
+    if not arquivos:
+        st.info(
+            "Selecione um ou vários arquivos PDF, Excel ou CSV para começar."
+        )
 
-            dados = processar_arquivo(arquivo)
+    else:
+        st.success(
+            f"{len(arquivos)} arquivo(s) carregado(s)."
+        )
 
-            visiveis = dados[
-                dados["Classificação"].isin(
-                    ["FATURAMENTO", "REVISAR"]
-                )
-            ].copy()
+        resultados = []
+        detalhes_exportacao = {}
 
-            chave_editor = (
-                f"editor_{indice}_"
-                + re.sub(
-                    r"[^a-zA-Z0-9_]",
-                    "_",
-                    arquivo.name
-                )
-            )
+        st.subheader("Resumo dos arquivos")
+        st.caption(
+            "Clique em qualquer linha para abrir e editar as movimentações daquele arquivo."
+        )
 
-            # Primeiro calcula com a seleção padrão para exibir no título.
-            selecionadas_padrao = visiveis[
-                visiveis["Considerar"] == True
-            ].copy()
+        total_faturamento = 0.0
+        total_royalties = 0.0
 
-            faturamento_padrao = (
-                pd.to_numeric(
-                    selecionadas_padrao["Valor"],
-                    errors="coerce"
-                )
-                .fillna(0)
-                .sum()
-            )
+        for indice, arquivo in enumerate(arquivos):
+            try:
+                # Reinicia variáveis desta linha para não reaproveitar dados do arquivo anterior.
+                editada = None
+                selecionadas = None
+                faturamento = None
+                royalties = None
+                vencimento = proximo_dia_10()
 
-            royalties_padrao = (
-                faturamento_padrao
-                * PERCENTUAL_ROYALTIES
-            )
+                dados = processar_arquivo(arquivo)
 
-            valor_faturamento_titulo = formatar_moeda(
-                faturamento_padrao
-            ).replace("$", r"\$")
-
-            valor_royalties_titulo = formatar_moeda(
-                royalties_padrao
-            ).replace("$", r"\$")
-
-            # Exibição padronizada do BOX no resumo.
-            # Não depende do texto completo do arquivo e evita que o navegador
-            # traduza "box" para "caixa".
-            numero_box_resumo = extrair_numero_box(arquivo.name)
-
-            if numero_box_resumo is not None:
-                # Caracteres Unicode visualmente equivalentes impedem o
-                # tradutor automático do navegador de interpretar BOX como palavra inglesa.
-                nome_resumo = f"BΟX {numero_box_resumo:02d}"  # O é ômicron grego
-            else:
-                nome_resumo = Path(arquivo.name).stem
-
-            titulo_linha = (
-                f"📄 {nome_resumo}"
-                f"   |   Faturamento: :green[{valor_faturamento_titulo}]"
-                f"   |   Royalties 4%: :green[{valor_royalties_titulo}]"
-            )
-
-            with st.expander(
-                titulo_linha,
-                expanded=False
-            ):
-                st.caption(
-                    "Desmarque qualquer valor que não queira considerar no faturamento."
-                )
-
-                editada = st.data_editor(
-                    visiveis[
-                        [
-                            "Data",
-                            "Descrição",
-                            "Valor",
-                            "Classificação",
-                            "Considerar",
-                        ]
-                    ],
-                    use_container_width=True,
-                    hide_index=True,
-                    key=chave_editor,
-                    column_config={
-                        "Considerar":
-                            st.column_config.CheckboxColumn(
-                                "Considerar"
-                            ),
-                        "Valor":
-                            st.column_config.NumberColumn(
-                                "Valor",
-                                format="R$ %.2f"
-                            ),
-                    },
-                    disabled=[
-                        "Data",
-                        "Descrição",
-                        "Valor",
-                        "Classificação",
-                    ],
-                )
-
-                selecionadas = editada[
-                    editada["Considerar"] == True
+                visiveis = dados[
+                    dados["Classificação"].isin(
+                        ["FATURAMENTO", "REVISAR"]
+                    )
                 ].copy()
 
-                faturamento = (
+                chave_editor = (
+                    f"editor_{indice}_"
+                    + re.sub(
+                        r"[^a-zA-Z0-9_]",
+                        "_",
+                        arquivo.name
+                    )
+                )
+
+                # Primeiro calcula com a seleção padrão para exibir no título.
+                selecionadas_padrao = visiveis[
+                    visiveis["Considerar"] == True
+                ].copy()
+
+                faturamento_padrao = (
                     pd.to_numeric(
-                        selecionadas["Valor"],
+                        selecionadas_padrao["Valor"],
                         errors="coerce"
                     )
                     .fillna(0)
                     .sum()
                 )
 
-
-
-                # ====================================================
-                # OUTRO EXTRATO / MAQUININHA
-                # ====================================================
-
-                chave_area_outro = f"outro_extrato_area_{indice}"
-
-                st.markdown(
-                    f"""
-                    <style>
-                    .st-key-{chave_area_outro} {{
-                        background-color: #f0fdf4 !important;
-                        border: 1px solid #86efac !important;
-                        border-radius: 14px !important;
-                        padding: 18px 20px 16px 20px !important;
-                        margin-top: 8px !important;
-                        margin-bottom: 22px !important;
-                    }}
-
-                    .st-key-{chave_area_outro} [data-testid="stFileUploader"] {{
-                        background: transparent !important;
-                    }}
-
-                    .st-key-{chave_area_outro} [data-testid="stExpander"] {{
-                        background: rgba(255, 255, 255, 0.72) !important;
-                        border-radius: 10px !important;
-                    }}
-                    </style>
-                    """,
-                    unsafe_allow_html=True
+                royalties_padrao = (
+                    faturamento_padrao
+                    * PERCENTUAL_ROYALTIES
                 )
 
-                with st.container(
-                    border=False,
-                    key=chave_area_outro
+                valor_faturamento_titulo = formatar_moeda(
+                    faturamento_padrao
+                ).replace("$", r"\$")
+
+                valor_royalties_titulo = formatar_moeda(
+                    royalties_padrao
+                ).replace("$", r"\$")
+
+                # Exibição padronizada do BOX no resumo.
+                # Não depende do texto completo do arquivo e evita que o navegador
+                # traduza "box" para "caixa".
+                numero_box_resumo = extrair_numero_box(arquivo.name)
+
+                if numero_box_resumo is not None:
+                    # Caracteres Unicode visualmente equivalentes impedem o
+                    # tradutor automático do navegador de interpretar BOX como palavra inglesa.
+                    nome_resumo = f"BΟX {numero_box_resumo:02d}"  # O é ômicron grego
+                else:
+                    nome_resumo = Path(arquivo.name).stem
+
+                titulo_linha = (
+                    f"📄 {nome_resumo}"
+                    f"   |   Faturamento: :green[{valor_faturamento_titulo}]"
+                    f"   |   Royalties 4%: :green[{valor_royalties_titulo}]"
+                )
+
+                with st.expander(
+                    titulo_linha,
+                    expanded=False
                 ):
-                    st.markdown("#### Outro extrato / maquininha")
                     st.caption(
-                        "Área destinada às entradas de extratos adicionais "
-                        "(Stone, InfinitePay, Mercado Pago e outros formatos). "
-                        "O valor confirmado aqui será somado ao faturamento total."
+                        "Desmarque qualquer valor que não queira considerar no faturamento."
                     )
 
-                    outros_arquivos = st.file_uploader(
-                        "Carregar outro extrato",
-                        type=["pdf", "xlsx", "xls", "csv", "ofx"],
-                        accept_multiple_files=True,
-                        help=(
-                            "Aceita PDF, Excel, CSV e OFX. "
-                            "O sistema reconhece automaticamente Stone, "
-                            "InfinitePay e Mercado Pago e também tenta "
-                            "interpretar outros formatos de extrato."
-                        ),
-                        key=f"outro_extrato_uploader_{indice}"
-                    )
-
-                    valor_outros_extratos = 0.0
-                    quantidade_outros_extratos = 0
-                    chave_confirmacao_outro = (
-                        f"outro_extrato_confirmado_{indice}"
-                    )
-                    chave_assinatura_outro = (
-                        f"outro_extrato_assinatura_{indice}"
-                    )
-
-                    if outros_arquivos:
-                        assinatura_atual_outro = (
-                            assinatura_arquivos_adicionais(
-                                outros_arquivos
-                            )
-                        )
-
-                        if (
-                            st.session_state.get(
-                                chave_assinatura_outro
-                            )
-                            != assinatura_atual_outro
-                        ):
-                            st.session_state[
-                                chave_assinatura_outro
-                            ] = assinatura_atual_outro
-
-                            st.session_state[
-                                chave_confirmacao_outro
-                            ] = False
-
-                        totais_por_arquivo = []
-
-                        for indice_outro, arquivo_outro in enumerate(
-                            outros_arquivos
-                        ):
-                            try:
-                                (
-                                    dados_outro,
-                                    origem_outro,
-                                ) = processar_outro_extrato(
-                                    arquivo_outro
-                                )
-
-                                # Segurança contra o erro de CheckboxColumn
-                                # receber FLOAT em vez de booleano.
-                                dados_outro["Considerar"] = (
-                                    dados_outro["Considerar"]
-                                    .fillna(False)
-                                    .astype(bool)
-                                )
-
-                                chave_editor_outro = (
-                                    f"editor_outro_{indice}_"
-                                    f"{indice_outro}_"
-                                    f"{assinatura_atual_outro[:12]}"
-                                )
-
-                                with st.expander(
-                                    (
-                                        f"🔎 Ver detalhes — "
-                                        f"{arquivo_outro.name} "
-                                        f"({origem_outro})"
-                                    ),
-                                    expanded=False
-                                ):
-                                    st.caption(
-                                        "Desmarque qualquer entrada que "
-                                        "não queira somar ao faturamento."
-                                    )
-
-                                    editado_outro = st.data_editor(
-                                        dados_outro,
-                                        use_container_width=True,
-                                        hide_index=True,
-                                        key=chave_editor_outro,
-                                        column_config={
-                                            "Considerar":
-                                                st.column_config.CheckboxColumn(
-                                                    "Considerar"
-                                                ),
-                                            "Valor":
-                                                st.column_config.NumberColumn(
-                                                    "Valor",
-                                                    format="R$ %.2f"
-                                                ),
-                                        },
-                                        disabled=[
-                                            "Data",
-                                            "Descrição",
-                                            "Valor",
-                                            "Classificação",
-                                        ],
-                                    )
-
-                                selecionado_outro = editado_outro[
-                                    editado_outro["Considerar"] == True
-                                ].copy()
-
-                                total_arquivo_outro = (
-                                    pd.to_numeric(
-                                        selecionado_outro["Valor"],
-                                        errors="coerce"
-                                    )
-                                    .fillna(0)
-                                    .sum()
-                                )
-
-                                quantidade_arquivo_outro = len(
-                                    selecionado_outro
-                                )
-
-                                valor_outros_extratos += float(
-                                    total_arquivo_outro
-                                )
-
-                                quantidade_outros_extratos += (
-                                    quantidade_arquivo_outro
-                                )
-
-                                totais_por_arquivo.append(
-                                    (
-                                        arquivo_outro.name,
-                                        origem_outro,
-                                        float(total_arquivo_outro),
-                                    )
-                                )
-
-                            except Exception as erro_outro:
-                                st.error(
-                                    f"Erro ao processar "
-                                    f"{arquivo_outro.name}: "
-                                    f"{erro_outro}"
-                                )
-
-                        for (
-                            nome_outro,
-                            origem_outro,
-                            total_outro,
-                        ) in totais_por_arquivo:
-                            st.caption(
-                                f"{origem_outro} • {nome_outro} • "
-                                f"Entradas selecionadas: "
-                                f"{formatar_moeda(total_outro)}"
-                            )
-
-                        col_total_outro, col_ok_outro, col_espaco_outro = st.columns(
-                            [1.05, 0.60, 2.35]
-                        )
-
-                        col_total_outro.metric(
-                            "Total do outro extrato",
-                            formatar_moeda(
-                                valor_outros_extratos
-                            )
-                        )
-
-                        col_ok_outro.markdown(
-                            "<div style='height: 26px;'></div>",
-                            unsafe_allow_html=True
-                        )
-
-                        if chave_confirmacao_outro not in st.session_state:
-                            st.session_state[
-                                chave_confirmacao_outro
-                            ] = False
-
-                        if not st.session_state[
-                            chave_confirmacao_outro
-                        ]:
-                            clicou_ok_outro = col_ok_outro.button(
-                                "OK — Adicionar",
-                                type="secondary",
-                                use_container_width=True,
-                                disabled=(
-                                    valor_outros_extratos <= 0
+                    editada = st.data_editor(
+                        visiveis[
+                            [
+                                "Data",
+                                "Descrição",
+                                "Valor",
+                                "Classificação",
+                                "Considerar",
+                            ]
+                        ],
+                        use_container_width=True,
+                        hide_index=True,
+                        key=chave_editor,
+                        column_config={
+                            "Considerar":
+                                st.column_config.CheckboxColumn(
+                                    "Considerar"
                                 ),
-                                key=f"confirmar_outro_{indice}"
+                            "Valor":
+                                st.column_config.NumberColumn(
+                                    "Valor",
+                                    format="R$ %.2f"
+                                ),
+                        },
+                        disabled=[
+                            "Data",
+                            "Descrição",
+                            "Valor",
+                            "Classificação",
+                        ],
+                    )
+
+                    selecionadas = editada[
+                        editada["Considerar"] == True
+                    ].copy()
+
+                    faturamento = (
+                        pd.to_numeric(
+                            selecionadas["Valor"],
+                            errors="coerce"
+                        )
+                        .fillna(0)
+                        .sum()
+                    )
+
+
+
+                    # ====================================================
+                    # OUTRO EXTRATO / MAQUININHA
+                    # ====================================================
+
+                    chave_area_outro = f"outro_extrato_area_{indice}"
+
+                    st.markdown(
+                        f"""
+                        <style>
+                        .st-key-{chave_area_outro} {{
+                            background-color: #f0fdf4 !important;
+                            border: 1px solid #86efac !important;
+                            border-radius: 14px !important;
+                            padding: 18px 20px 16px 20px !important;
+                            margin-top: 8px !important;
+                            margin-bottom: 22px !important;
+                        }}
+
+                        .st-key-{chave_area_outro} [data-testid="stFileUploader"] {{
+                            background: transparent !important;
+                        }}
+
+                        .st-key-{chave_area_outro} [data-testid="stExpander"] {{
+                            background: rgba(255, 255, 255, 0.72) !important;
+                            border-radius: 10px !important;
+                        }}
+                        </style>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+                    with st.container(
+                        border=False,
+                        key=chave_area_outro
+                    ):
+                        st.markdown("#### Outro extrato / maquininha")
+                        st.caption(
+                            "Área destinada às entradas de extratos adicionais "
+                            "(Stone, InfinitePay, Mercado Pago e outros formatos). "
+                            "O valor confirmado aqui será somado ao faturamento total."
+                        )
+
+                        outros_arquivos = st.file_uploader(
+                            "Carregar outro extrato",
+                            type=["pdf", "xlsx", "xls", "csv", "ofx"],
+                            accept_multiple_files=True,
+                            help=(
+                                "Aceita PDF, Excel, CSV e OFX. "
+                                "O sistema reconhece automaticamente Stone, "
+                                "InfinitePay e Mercado Pago e também tenta "
+                                "interpretar outros formatos de extrato."
+                            ),
+                            key=f"outro_extrato_uploader_{indice}"
+                        )
+
+                        valor_outros_extratos = 0.0
+                        quantidade_outros_extratos = 0
+                        chave_confirmacao_outro = (
+                            f"outro_extrato_confirmado_{indice}"
+                        )
+                        chave_assinatura_outro = (
+                            f"outro_extrato_assinatura_{indice}"
+                        )
+
+                        if outros_arquivos:
+                            assinatura_atual_outro = (
+                                assinatura_arquivos_adicionais(
+                                    outros_arquivos
+                                )
                             )
 
-                            if clicou_ok_outro:
-                                st.session_state[
-                                    chave_confirmacao_outro
-                                ] = True
-                        else:
-                            col_ok_outro.success(
-                                "✅ Adicionado ao faturamento"
-                            )
-
-                            if col_ok_outro.button(
-                                "Remover do faturamento",
-                                use_container_width=True,
-                                key=f"remover_outro_{indice}"
+                            if (
+                                st.session_state.get(
+                                    chave_assinatura_outro
+                                )
+                                != assinatura_atual_outro
                             ):
+                                st.session_state[
+                                    chave_assinatura_outro
+                                ] = assinatura_atual_outro
+
                                 st.session_state[
                                     chave_confirmacao_outro
                                 ] = False
-                                st.rerun()
 
-                        if st.session_state.get(
-                            chave_confirmacao_outro,
-                            False
-                        ):
-                            faturamento = (
-                                float(faturamento)
-                                + float(valor_outros_extratos)
+                            totais_por_arquivo = []
+
+                            for indice_outro, arquivo_outro in enumerate(
+                                outros_arquivos
+                            ):
+                                try:
+                                    (
+                                        dados_outro,
+                                        origem_outro,
+                                    ) = processar_outro_extrato(
+                                        arquivo_outro
+                                    )
+
+                                    # Segurança contra o erro de CheckboxColumn
+                                    # receber FLOAT em vez de booleano.
+                                    dados_outro["Considerar"] = (
+                                        dados_outro["Considerar"]
+                                        .fillna(False)
+                                        .astype(bool)
+                                    )
+
+                                    chave_editor_outro = (
+                                        f"editor_outro_{indice}_"
+                                        f"{indice_outro}_"
+                                        f"{assinatura_atual_outro[:12]}"
+                                    )
+
+                                    with st.expander(
+                                        (
+                                            f"🔎 Ver detalhes — "
+                                            f"{arquivo_outro.name} "
+                                            f"({origem_outro})"
+                                        ),
+                                        expanded=False
+                                    ):
+                                        st.caption(
+                                            "Desmarque qualquer entrada que "
+                                            "não queira somar ao faturamento."
+                                        )
+
+                                        editado_outro = st.data_editor(
+                                            dados_outro,
+                                            use_container_width=True,
+                                            hide_index=True,
+                                            key=chave_editor_outro,
+                                            column_config={
+                                                "Considerar":
+                                                    st.column_config.CheckboxColumn(
+                                                        "Considerar"
+                                                    ),
+                                                "Valor":
+                                                    st.column_config.NumberColumn(
+                                                        "Valor",
+                                                        format="R$ %.2f"
+                                                    ),
+                                            },
+                                            disabled=[
+                                                "Data",
+                                                "Descrição",
+                                                "Valor",
+                                                "Classificação",
+                                            ],
+                                        )
+
+                                    selecionado_outro = editado_outro[
+                                        editado_outro["Considerar"] == True
+                                    ].copy()
+
+                                    total_arquivo_outro = (
+                                        pd.to_numeric(
+                                            selecionado_outro["Valor"],
+                                            errors="coerce"
+                                        )
+                                        .fillna(0)
+                                        .sum()
+                                    )
+
+                                    quantidade_arquivo_outro = len(
+                                        selecionado_outro
+                                    )
+
+                                    valor_outros_extratos += float(
+                                        total_arquivo_outro
+                                    )
+
+                                    quantidade_outros_extratos += (
+                                        quantidade_arquivo_outro
+                                    )
+
+                                    totais_por_arquivo.append(
+                                        (
+                                            arquivo_outro.name,
+                                            origem_outro,
+                                            float(total_arquivo_outro),
+                                        )
+                                    )
+
+                                except Exception as erro_outro:
+                                    st.error(
+                                        f"Erro ao processar "
+                                        f"{arquivo_outro.name}: "
+                                        f"{erro_outro}"
+                                    )
+
+                            for (
+                                nome_outro,
+                                origem_outro,
+                                total_outro,
+                            ) in totais_por_arquivo:
+                                st.caption(
+                                    f"{origem_outro} • {nome_outro} • "
+                                    f"Entradas selecionadas: "
+                                    f"{formatar_moeda(total_outro)}"
+                                )
+
+                            col_total_outro, col_ok_outro, col_espaco_outro = st.columns(
+                                [1.05, 0.60, 2.35]
                             )
 
-                            st.caption(
-                                "O valor acima já está incluído no faturamento total. "
-                                "Se você desmarcar uma entrada em “Ver detalhes”, "
-                                "o total será recalculado automaticamente."
+                            col_total_outro.metric(
+                                "Total do outro extrato",
+                                formatar_moeda(
+                                    valor_outros_extratos
+                                )
                             )
-                        else:
-                            pass
 
+                            col_ok_outro.markdown(
+                                "<div style='height: 26px;'></div>",
+                                unsafe_allow_html=True
+                            )
 
-                st.markdown("#### Adicionar valor ao faturamento")
+                            if chave_confirmacao_outro not in st.session_state:
+                                st.session_state[
+                                    chave_confirmacao_outro
+                                ] = False
 
-                # Layout organizado
-                col_esq, col_centro, col_dir = st.columns([0.85, 1.15, 0.75])
-    
-                # ==========================================
-                # COLUNA ESQUERDA
-                # ==========================================
-    
-                adicional_texto = col_esq.text_input(
-                    "Valor adicional ao faturamento",
-                    value="0,00",
-                    key=f"adicional_boleto_{indice}",
-                    help=(
-                        "Digite um valor positivo para somar ou negativo para diminuir o faturamento. "
-                        "Ex.: 500,00 soma; -500,00 diminui. Os royalties de 4% serão recalculados sobre o novo total."
-                    )
-                )
-    
-                adicional_boleto = converter_numero(adicional_texto)
-    
-                if adicional_boleto is None:
-                    adicional_boleto = 0.0
-                    col_esq.warning("Digite um valor válido, por exemplo: 100,00")
-    
-    
-                # Recalcula faturamento e royalties
-                faturamento = (
-                    float(faturamento)
-                    + float(adicional_boleto)
-                )
-    
-                royalties = (
-                    float(faturamento)
-                    * PERCENTUAL_ROYALTIES
-                )
-    
-                # Valor final do boleto editável
-                # Atualiza automaticamente quando os royalties mudarem,
-                # mas preserva uma alteração manual feita pelo usuário.
-                chave_valor_boleto = f"valor_final_boleto_{indice}"
-                chave_valor_auto = f"valor_final_boleto_auto_{indice}"
-                novo_valor_auto = round(float(royalties), 2)
+                            if not st.session_state[
+                                chave_confirmacao_outro
+                            ]:
+                                clicou_ok_outro = col_ok_outro.button(
+                                    "OK — Adicionar",
+                                    type="secondary",
+                                    use_container_width=True,
+                                    disabled=(
+                                        valor_outros_extratos <= 0
+                                    ),
+                                    key=f"confirmar_outro_{indice}"
+                                )
 
-                if chave_valor_boleto not in st.session_state:
-                    # Primeira exibição: usa automaticamente 4% do faturamento total.
-                    st.session_state[chave_valor_boleto] = novo_valor_auto
+                                if clicou_ok_outro:
+                                    st.session_state[
+                                        chave_confirmacao_outro
+                                    ] = True
+                            else:
+                                col_ok_outro.success(
+                                    "✅ Adicionado ao faturamento"
+                                )
 
-                elif chave_valor_auto in st.session_state:
-                    valor_auto_anterior = float(
-                        st.session_state[chave_valor_auto]
-                    )
+                                if col_ok_outro.button(
+                                    "Remover do faturamento",
+                                    use_container_width=True,
+                                    key=f"remover_outro_{indice}"
+                                ):
+                                    st.session_state[
+                                        chave_confirmacao_outro
+                                    ] = False
+                                    st.rerun()
 
-                    # Se o faturamento mudou (inclusive por valor adicional
-                    # ou seleção/desseleção de entradas), recalcula os 4%
-                    # e atualiza também o valor final do boleto.
-                    if abs(novo_valor_auto - valor_auto_anterior) >= 0.005:
-                        st.session_state[chave_valor_boleto] = novo_valor_auto
-
-                st.session_state[chave_valor_auto] = novo_valor_auto
-
-                valor_final_boleto = col_esq.number_input(
-                    "Valor final do boleto",
-                    min_value=0.00,
-                    step=0.01,
-                    format="%.2f",
-                    key=chave_valor_boleto
-                )
-
-                # O valor grande de Royalties acompanha o valor final do boleto.
-                # O cálculo automático de 4% continua sendo usado como valor-base
-                # antes de qualquer ajuste manual.
-                royalties = float(valor_final_boleto)
-    
-                # ==========================================
-                # COLUNA CENTRAL
-                # ==========================================
-    
-                col_centro.metric(
-                    "Total do faturamento",
-                    formatar_moeda(faturamento)
-                )
-    
-                col_centro.metric(
-                    "Royalties 4%",
-                    formatar_moeda(royalties)
-                )
-    
-                # ==========================================
-                # COLUNA DIREITA
-                # ==========================================
-    
-                col_dir.metric(
-                    "Entradas consideradas",
-                    (
-                        len(selecionadas)
-                        + (
-                            quantidade_outros_extratos
                             if st.session_state.get(
                                 chave_confirmacao_outro,
                                 False
-                            )
-                            else 0
+                            ):
+                                faturamento = (
+                                    float(faturamento)
+                                    + float(valor_outros_extratos)
+                                )
+
+                                st.caption(
+                                    "O valor acima já está incluído no faturamento total. "
+                                    "Se você desmarcar uma entrada em “Ver detalhes”, "
+                                    "o total será recalculado automaticamente."
+                                )
+                            else:
+                                pass
+
+
+                    st.markdown("#### Adicionar valor ao faturamento")
+
+                    # Layout organizado
+                    col_esq, col_centro, col_dir = st.columns([0.85, 1.15, 0.75])
+        
+                    # ==========================================
+                    # COLUNA ESQUERDA
+                    # ==========================================
+        
+                    adicional_texto = col_esq.text_input(
+                        "Valor adicional ao faturamento",
+                        value="0,00",
+                        key=f"adicional_boleto_{indice}",
+                        help=(
+                            "Digite um valor positivo para somar ou negativo para diminuir o faturamento. "
+                            "Ex.: 500,00 soma; -500,00 diminui. Os royalties de 4% serão recalculados sobre o novo total."
                         )
                     )
-                )
-    
-                    
-                st.markdown(f"#### Cobrança Asaas — {EMPRESA_SELECIONADA}")
-                col_venc, col_botao = st.columns([2, 1])
-                descricao_boleto = "Royalties"
-                vencimento = col_venc.date_input(
-                    "Vencimento do boleto",
-                    value=proximo_dia_10(),
-                    min_value=date.today(),
-                    format="DD/MM/YYYY",
-                    key=f"vencimento_{indice}"
-                )
-    
-                chave_boleto = (
-                    f"boleto_{indice}_"
-                    + re.sub(r"[^a-zA-Z0-9_]", "_", arquivo.name)
-                )
-    
-    
-                if EMPRESA_SELECIONADA == "Lider Franquia":
-                        emitir_nota_apos_pagamento = col_botao.checkbox(
-                            "Emitir nota fiscal de Royalties após o pagamento",
-                            value=False,
-                            key=f"emitir_nota_{indice}"
+        
+                    adicional_boleto = converter_numero(adicional_texto)
+        
+                    if adicional_boleto is None:
+                        adicional_boleto = 0.0
+                        col_esq.warning("Digite um valor válido, por exemplo: 100,00")
+        
+        
+                    # Recalcula faturamento e royalties
+                    faturamento = (
+                        float(faturamento)
+                        + float(adicional_boleto)
                     )
-                else:
-                        emitir_nota_apos_pagamento = False
-    
-                clicou_emitir_boleto = col_botao.button(
-                    "💳 Emitir boleto",
-                    key=chave_boleto,
-                    type="primary",
-                    use_container_width=True,
-                    disabled=valor_final_boleto <= 0
-                )
-    
-                if clicou_emitir_boleto:
-                    try:
-                        with st.spinner("Gerando boleto no Asaas..."):
-                            boleto = emitir_boleto_asaas(
-                                arquivo.name,
-                                faturamento,
-                                valor_final_boleto,
-                                vencimento,
-                                descricao_boleto,
-                                emitir_nota_apos_pagamento
-                            )
+        
+                    royalties = (
+                        float(faturamento)
+                        * PERCENTUAL_ROYALTIES
+                    )
+        
+                    # Valor final do boleto editável
+                    # Atualiza automaticamente quando os royalties mudarem,
+                    # mas preserva uma alteração manual feita pelo usuário.
+                    chave_valor_boleto = f"valor_final_boleto_{indice}"
+                    chave_valor_auto = f"valor_final_boleto_auto_{indice}"
+                    novo_valor_auto = round(float(royalties), 2)
 
-                        st.session_state[f"resultado_boleto_{indice}"] = boleto
+                    if chave_valor_boleto not in st.session_state:
+                        # Primeira exibição: usa automaticamente 4% do faturamento total.
+                        st.session_state[chave_valor_boleto] = novo_valor_auto
 
-                    except Exception as erro_boleto:
-                        st.error(
-                            f"Não foi possível emitir o boleto: {erro_boleto}"
+                    elif chave_valor_auto in st.session_state:
+                        valor_auto_anterior = float(
+                            st.session_state[chave_valor_auto]
                         )
 
-                boleto_salvo = st.session_state.get(
-                    f"resultado_boleto_{indice}"
-                )
+                        # Se o faturamento mudou (inclusive por valor adicional
+                        # ou seleção/desseleção de entradas), recalcula os 4%
+                        # e atualiza também o valor final do boleto.
+                        if abs(novo_valor_auto - valor_auto_anterior) >= 0.005:
+                            st.session_state[chave_valor_boleto] = novo_valor_auto
 
-                if boleto_salvo:
-                    if boleto_salvo.get("novo"):
-                        st.success(
-                            f"✅ Boleto criado para "
-                            f"{boleto_salvo.get('clienteNome', '')} "
-                            f"(BOX {boleto_salvo.get('box', '')}) "
-                            f"e notificações padronizadas com sucesso. "
-                            f"ID: {boleto_salvo.get('id', '')}"
+                    st.session_state[chave_valor_auto] = novo_valor_auto
+
+                    valor_final_boleto = col_esq.number_input(
+                        "Valor final do boleto",
+                        min_value=0.00,
+                        step=0.01,
+                        format="%.2f",
+                        key=chave_valor_boleto
+                    )
+
+                    # O valor grande de Royalties acompanha o valor final do boleto.
+                    # O cálculo automático de 4% continua sendo usado como valor-base
+                    # antes de qualquer ajuste manual.
+                    royalties = float(valor_final_boleto)
+        
+                    # ==========================================
+                    # COLUNA CENTRAL
+                    # ==========================================
+        
+                    col_centro.metric(
+                        "Total do faturamento",
+                        formatar_moeda(faturamento)
+                    )
+        
+                    col_centro.metric(
+                        "Royalties 4%",
+                        formatar_moeda(royalties)
+                    )
+        
+                    # ==========================================
+                    # COLUNA DIREITA
+                    # ==========================================
+        
+                    col_dir.metric(
+                        "Entradas consideradas",
+                        (
+                            len(selecionadas)
+                            + (
+                                quantidade_outros_extratos
+                                if st.session_state.get(
+                                    chave_confirmacao_outro,
+                                    False
+                                )
+                                else 0
+                            )
+                        )
+                    )
+        
+                        
+                    st.markdown(f"#### Cobrança Asaas — {EMPRESA_SELECIONADA}")
+                    col_venc, col_botao = st.columns([2, 1])
+                    descricao_boleto = "Royalties"
+                    vencimento = col_venc.date_input(
+                        "Vencimento do boleto",
+                        value=proximo_dia_10(),
+                        min_value=date.today(),
+                        format="DD/MM/YYYY",
+                        key=f"vencimento_{indice}"
+                    )
+        
+                    chave_boleto = (
+                        f"boleto_{indice}_"
+                        + re.sub(r"[^a-zA-Z0-9_]", "_", arquivo.name)
+                    )
+        
+        
+                    if EMPRESA_SELECIONADA == "Lider Franquia":
+                            emitir_nota_apos_pagamento = col_botao.checkbox(
+                                "Emitir nota fiscal de Royalties após o pagamento",
+                                value=False,
+                                key=f"emitir_nota_{indice}"
                         )
                     else:
-                        st.info(
-                            "ℹ️ Esta cobrança já existia no Asaas. "
-                            "O sistema não gerou uma cobrança duplicada."
-                        )
+                            emitir_nota_apos_pagamento = False
+        
+                    clicou_emitir_boleto = col_botao.button(
+                        "💳 Emitir boleto",
+                        key=chave_boleto,
+                        type="primary",
+                        use_container_width=True,
+                        disabled=valor_final_boleto <= 0
+                    )
+        
+                    if clicou_emitir_boleto:
+                        try:
+                            with st.spinner("Gerando boleto no Asaas..."):
+                                boleto = emitir_boleto_asaas(
+                                    arquivo.name,
+                                    faturamento,
+                                    valor_final_boleto,
+                                    vencimento,
+                                    descricao_boleto,
+                                    emitir_nota_apos_pagamento
+                                )
 
-                    if boleto_salvo.get("invoiceUrl"):
-                        st.link_button(
-                            "🔗 Abrir cobrança no Asaas",
-                            boleto_salvo["invoiceUrl"],
-                            use_container_width=True
-                        )
+                            st.session_state[f"resultado_boleto_{indice}"] = boleto
 
-                    if boleto_salvo.get("bankSlipUrl"):
-                        st.link_button(
-                            "📄 Abrir boleto",
-                            boleto_salvo["bankSlipUrl"],
-                            use_container_width=True
-                        )
+                        except Exception as erro_boleto:
+                            st.error(
+                                f"Não foi possível emitir o boleto: {erro_boleto}"
+                            )
 
-            resultados.append({
-                "Arquivo": arquivo.name,
-                "Faturamento": faturamento,
-                "Royalties 4%": royalties,
-            })
+                    boleto_salvo = st.session_state.get(
+                        f"resultado_boleto_{indice}"
+                    )
 
-            detalhes_exportacao[
-                arquivo.name
-            ] = editada.copy()
+                    if boleto_salvo:
+                        if boleto_salvo.get("novo"):
+                            st.success(
+                                f"✅ Boleto criado para "
+                                f"{boleto_salvo.get('clienteNome', '')} "
+                                f"(BOX {boleto_salvo.get('box', '')}) "
+                                f"e notificações padronizadas com sucesso. "
+                                f"ID: {boleto_salvo.get('id', '')}"
+                            )
+                        else:
+                            st.info(
+                                "ℹ️ Esta cobrança já existia no Asaas. "
+                                "O sistema não gerou uma cobrança duplicada."
+                            )
 
-            total_faturamento += faturamento
-            total_royalties += royalties
+                        if boleto_salvo.get("invoiceUrl"):
+                            st.link_button(
+                                "🔗 Abrir cobrança no Asaas",
+                                boleto_salvo["invoiceUrl"],
+                                use_container_width=True
+                            )
 
-        except Exception as erro:
-            st.error(
-                f"Erro ao processar {arquivo.name}: {erro}"
-            )
+                        if boleto_salvo.get("bankSlipUrl"):
+                            st.link_button(
+                                "📄 Abrir boleto",
+                                boleto_salvo["bankSlipUrl"],
+                                use_container_width=True
+                            )
 
-            resultados.append({
-                "Arquivo": arquivo.name,
-                "Faturamento": 0.0,
-                "Royalties 4%": 0.0,
-            })
+                resultados.append({
+                    "Arquivo": arquivo.name,
+                    "Faturamento": faturamento,
+                    "Royalties 4%": royalties,
+                })
 
-    st.divider()
+                detalhes_exportacao[
+                    arquivo.name
+                ] = editada.copy()
 
-    col_total1, col_total2 = st.columns(2)
+                total_faturamento += faturamento
+                total_royalties += royalties
 
-    col_total1.metric(
-        "Faturamento total geral",
-        formatar_moeda(total_faturamento)
+            except Exception as erro:
+                st.error(
+                    f"Erro ao processar {arquivo.name}: {erro}"
+                )
+
+                resultados.append({
+                    "Arquivo": arquivo.name,
+                    "Faturamento": 0.0,
+                    "Royalties 4%": 0.0,
+                })
+
+        st.divider()
+
+        col_total1, col_total2 = st.columns(2)
+
+        col_total1.metric(
+            "Faturamento total geral",
+            formatar_moeda(total_faturamento)
+        )
+        
+        col_total2.metric(
+            "Royalties 4% total",
+            formatar_moeda(total_royalties)
+        )
+        
+        # ========================================================
+        # DOWNLOAD DO RELATÓRIO GERAL
+        # ========================================================
+        
+        resumo = pd.DataFrame(resultados)
+
+        excel_geral = gerar_excel_geral(
+        resumo,
+        detalhes_exportacao
     )
-    
-    col_total2.metric(
-        "Royalties 4% total",
-        formatar_moeda(total_royalties)
-    )
-    
-    # ========================================================
-    # DOWNLOAD DO RELATÓRIO GERAL
-    # ========================================================
-    
-    resumo = pd.DataFrame(resultados)
-
-    excel_geral = gerar_excel_geral(
-    resumo,
-    detalhes_exportacao
-)
-    
-    st.download_button(
-        "📥 Baixar relatório geral em Excel",
-        data=excel_geral,
-        file_name="relatorio_geral_faturamento.xlsx",
-        mime=(
-            "application/vnd.openxmlformats-officedocument."
-            "spreadsheetml.sheet"
-        ),
-    )
+        
+        st.download_button(
+            "📥 Baixar relatório geral em Excel",
+            data=excel_geral,
+            file_name="relatorio_geral_faturamento.xlsx",
+            mime=(
+                "application/vnd.openxmlformats-officedocument."
+                "spreadsheetml.sheet"
+            ),
+        )
 
 
 # Histórico discreto: na tela inicial e após o relatório geral quando houver extratos.
@@ -3118,126 +3218,127 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 st.markdown('<div id="historico"></div>', unsafe_allow_html=True)
-with st.container(key="historico_discreto"):
-    with st.expander("📚 Histórico mensal de boletos", expanded=False):
-        st.caption(
-            "Consulta somente leitura ao Asaas da empresa selecionada. "
-            "Exibe boletos identificados pela referência gerada neste extrator; "
-            "cobranças criadas manualmente ou por outros sistemas podem não aparecer. "
-            "Nenhum boleto é apagado."
-        )
-        col_mes, col_ano, col_consultar = st.columns([2, 1, 1])
-        meses_pt = [
-            "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-            "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
-        ]
-        mes_historico = col_mes.selectbox(
-            "Mês", range(1, 13), index=date.today().month - 1,
-            format_func=lambda numero: meses_pt[numero - 1], key="historico_mes",
-        )
-        ano_historico = col_ano.number_input(
-            "Ano", min_value=2020, max_value=2100, value=date.today().year,
-            step=1, key="historico_ano",
-        )
-        with col_consultar:
-            st.write("")
-            consultar = st.button("🔎 Consultar", key="consultar_historico")
-
-        assinatura_consulta = (EMPRESA_SELECIONADA, int(ano_historico), int(mes_historico))
-        if consultar:
-            try:
-                with st.spinner("Consultando boletos e clientes no Asaas..."):
-                    cobrancas = consultar_historico_asaas(int(ano_historico), int(mes_historico))
-                    ids = {str(c.get("customer")) for c in cobrancas if c.get("customer")}
-                    nomes = clientes_historico_asaas(ids)
-                    linhas = []
-                    for cobranca in cobrancas:
-                        cliente_id = str(cobranca.get("customer") or "")
-                        nome = nomes.get(cliente_id, "Cliente não identificado")
-                        box = extrair_numero_box(nome)
-                        descricao = str(cobranca.get("description") or "")
-                        linhas.append({
-                            "Emissão": str(cobranca.get("dateCreated") or "")[:10],
-                            "BOX": box,
-                            "Franqueado": nome,
-                            "Descrição": descricao,
-                            "Valor (R$)": float(cobranca.get("value") or 0),
-                            "Vencimento": str(cobranca.get("dueDate") or "")[:10],
-                            "Situação": traduzir_status_asaas(cobranca.get("status")),
-                            "ID Asaas": str(cobranca.get("id") or ""),
-                            "Boleto": str(cobranca.get("bankSlipUrl") or cobranca.get("invoiceUrl") or ""),
-                        })
-                    tabela_historico = pd.DataFrame(linhas, columns=[
-                        "Emissão", "BOX", "Franqueado", "Descrição", "Valor (R$)",
-                        "Vencimento", "Situação", "ID Asaas", "Boleto",
-                    ])
-                    # Ordem numérica crescente dos BOX (7, 38, 71, 250).
-                    # BOX sem número identificado ficam ao final.
-                    tabela_historico["BOX"] = pd.to_numeric(
-                        tabela_historico["BOX"], errors="coerce"
-                    ).astype("Int64")
-                    tabela_historico = tabela_historico.sort_values(
-                        by=["BOX", "Emissão"],
-                        ascending=[True, True],
-                        na_position="last",
-                        kind="stable",
-                    ).reset_index(drop=True)
-                    st.session_state["historico_dados"] = tabela_historico
-                    st.session_state["historico_assinatura"] = assinatura_consulta
-            except Exception as erro:
-                st.session_state.pop("historico_dados", None)
-                st.session_state.pop("historico_assinatura", None)
-                st.error(f"Não foi possível consultar o histórico: {erro}")
-
-        if st.session_state.get("historico_assinatura") == assinatura_consulta:
-            tabela = st.session_state["historico_dados"]
-            col_quantidade, col_franqueados, col_total = st.columns(3)
-            col_quantidade.metric("Boletos encontrados", len(tabela))
-            col_franqueados.metric("BOX distintos", tabela["BOX"].dropna().nunique())
-            col_total.metric("Valor total", formatar_moeda(tabela["Valor (R$)"].sum()))
-            if tabela.empty:
-                st.info("Nenhum boleto deste extrator encontrado nesse mês e empresa.")
-            else:
-                st.dataframe(tabela, use_container_width=True, hide_index=True,
-                    column_config={
-                        "Valor (R$)": st.column_config.NumberColumn(format="R$ %.2f"),
-                        "Boleto": st.column_config.LinkColumn("Abrir boleto"),
-                    })
-                st.caption(
-                    "O total soma cobranças registradas, independentemente de estarem "
-                    "pagas, vencidas ou canceladas. Confira a coluna Situação."
-                )
-
-            st.markdown("**Conferir BOX que deveriam receber boleto**")
-            esperados_texto = st.text_area(
-                "Informe os números dos BOX previstos (separados por vírgula, espaço ou linha)",
-                placeholder="Ex.: 07, 38, 71, 81",
-                key="historico_boxes_esperados",
+if st.session_state.pagina_lider == "Histórico":
+    with st.container(key="historico_discreto"):
+        with st.expander("📚 Histórico mensal de boletos", expanded=False):
+            st.caption(
+                "Consulta somente leitura ao Asaas da empresa selecionada. "
+                "Exibe boletos identificados pela referência gerada neste extrator; "
+                "cobranças criadas manualmente ou por outros sistemas podem não aparecer. "
+                "Nenhum boleto é apagado."
             )
-            if esperados_texto.strip():
-                tokens = re.split(r"[,;\s]+", esperados_texto.strip())
-                invalidos = [t for t in tokens if t and not re.fullmatch(r"(?:BOX[-_ ]*)?0*\d+", t, re.I)]
-                if invalidos:
-                    st.warning("Confira os números informados: " + ", ".join(invalidos[:10]))
+            col_mes, col_ano, col_consultar = st.columns([2, 1, 1])
+            meses_pt = [
+                "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+            ]
+            mes_historico = col_mes.selectbox(
+                "Mês", range(1, 13), index=date.today().month - 1,
+                format_func=lambda numero: meses_pt[numero - 1], key="historico_mes",
+            )
+            ano_historico = col_ano.number_input(
+                "Ano", min_value=2020, max_value=2100, value=date.today().year,
+                step=1, key="historico_ano",
+            )
+            with col_consultar:
+                st.write("")
+                consultar = st.button("🔎 Consultar", key="consultar_historico")
+
+            assinatura_consulta = (EMPRESA_SELECIONADA, int(ano_historico), int(mes_historico))
+            if consultar:
+                try:
+                    with st.spinner("Consultando boletos e clientes no Asaas..."):
+                        cobrancas = consultar_historico_asaas(int(ano_historico), int(mes_historico))
+                        ids = {str(c.get("customer")) for c in cobrancas if c.get("customer")}
+                        nomes = clientes_historico_asaas(ids)
+                        linhas = []
+                        for cobranca in cobrancas:
+                            cliente_id = str(cobranca.get("customer") or "")
+                            nome = nomes.get(cliente_id, "Cliente não identificado")
+                            box = extrair_numero_box(nome)
+                            descricao = str(cobranca.get("description") or "")
+                            linhas.append({
+                                "Emissão": str(cobranca.get("dateCreated") or "")[:10],
+                                "BOX": box,
+                                "Franqueado": nome,
+                                "Descrição": descricao,
+                                "Valor (R$)": float(cobranca.get("value") or 0),
+                                "Vencimento": str(cobranca.get("dueDate") or "")[:10],
+                                "Situação": traduzir_status_asaas(cobranca.get("status")),
+                                "ID Asaas": str(cobranca.get("id") or ""),
+                                "Boleto": str(cobranca.get("bankSlipUrl") or cobranca.get("invoiceUrl") or ""),
+                            })
+                        tabela_historico = pd.DataFrame(linhas, columns=[
+                            "Emissão", "BOX", "Franqueado", "Descrição", "Valor (R$)",
+                            "Vencimento", "Situação", "ID Asaas", "Boleto",
+                        ])
+                        # Ordem numérica crescente dos BOX (7, 38, 71, 250).
+                        # BOX sem número identificado ficam ao final.
+                        tabela_historico["BOX"] = pd.to_numeric(
+                            tabela_historico["BOX"], errors="coerce"
+                        ).astype("Int64")
+                        tabela_historico = tabela_historico.sort_values(
+                            by=["BOX", "Emissão"],
+                            ascending=[True, True],
+                            na_position="last",
+                            kind="stable",
+                        ).reset_index(drop=True)
+                        st.session_state["historico_dados"] = tabela_historico
+                        st.session_state["historico_assinatura"] = assinatura_consulta
+                except Exception as erro:
+                    st.session_state.pop("historico_dados", None)
+                    st.session_state.pop("historico_assinatura", None)
+                    st.error(f"Não foi possível consultar o histórico: {erro}")
+
+            if st.session_state.get("historico_assinatura") == assinatura_consulta:
+                tabela = st.session_state["historico_dados"]
+                col_quantidade, col_franqueados, col_total = st.columns(3)
+                col_quantidade.metric("Boletos encontrados", len(tabela))
+                col_franqueados.metric("BOX distintos", tabela["BOX"].dropna().nunique())
+                col_total.metric("Valor total", formatar_moeda(tabela["Valor (R$)"].sum()))
+                if tabela.empty:
+                    st.info("Nenhum boleto deste extrator encontrado nesse mês e empresa.")
                 else:
-                    previstos = {int(re.search(r"\d+", t).group()) for t in tokens if t}
-                    encontrados = {int(x) for x in tabela["BOX"].dropna().tolist()}
-                    pendentes = sorted(previstos - encontrados)
-                    st.write(f"Previstos: **{len(previstos)}** | Com boleto: **{len(previstos & encontrados)}** | Sem boleto identificado: **{len(pendentes)}**")
-                    if pendentes:
-                        st.warning("BOX sem boleto identificado neste mês: " + ", ".join(f"{x:02d}" for x in pendentes))
-                    else:
-                        st.success("Todos os BOX informados possuem ao menos um boleto identificado.")
-                    st.caption("A conferência considera qualquer boleto deste extrator, inclusive avulsos e cancelados. Verifique a descrição e a situação antes de concluir o fechamento.")
+                    st.dataframe(tabela, use_container_width=True, hide_index=True,
+                        column_config={
+                            "Valor (R$)": st.column_config.NumberColumn(format="R$ %.2f"),
+                            "Boleto": st.column_config.LinkColumn("Abrir boleto"),
+                        })
+                    st.caption(
+                        "O total soma cobranças registradas, independentemente de estarem "
+                        "pagas, vencidas ou canceladas. Confira a coluna Situação."
+                    )
 
-            saida = BytesIO()
-            with pd.ExcelWriter(saida, engine="openpyxl") as writer:
-                tabela.to_excel(writer, index=False, sheet_name="Boletos do mês")
-            st.download_button(
-                "📥 Baixar histórico em Excel", data=saida.getvalue(),
-                file_name=f"boletos_{EMPRESA_SELECIONADA.lower().replace(' ', '_')}_{ano_historico}_{mes_historico:02d}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key="download_historico_mensal",
-            )
-        else:
-            st.info("Selecione o mês e clique em Consultar para carregar o histórico.")
+                st.markdown("**Conferir BOX que deveriam receber boleto**")
+                esperados_texto = st.text_area(
+                    "Informe os números dos BOX previstos (separados por vírgula, espaço ou linha)",
+                    placeholder="Ex.: 07, 38, 71, 81",
+                    key="historico_boxes_esperados",
+                )
+                if esperados_texto.strip():
+                    tokens = re.split(r"[,;\s]+", esperados_texto.strip())
+                    invalidos = [t for t in tokens if t and not re.fullmatch(r"(?:BOX[-_ ]*)?0*\d+", t, re.I)]
+                    if invalidos:
+                        st.warning("Confira os números informados: " + ", ".join(invalidos[:10]))
+                    else:
+                        previstos = {int(re.search(r"\d+", t).group()) for t in tokens if t}
+                        encontrados = {int(x) for x in tabela["BOX"].dropna().tolist()}
+                        pendentes = sorted(previstos - encontrados)
+                        st.write(f"Previstos: **{len(previstos)}** | Com boleto: **{len(previstos & encontrados)}** | Sem boleto identificado: **{len(pendentes)}**")
+                        if pendentes:
+                            st.warning("BOX sem boleto identificado neste mês: " + ", ".join(f"{x:02d}" for x in pendentes))
+                        else:
+                            st.success("Todos os BOX informados possuem ao menos um boleto identificado.")
+                        st.caption("A conferência considera qualquer boleto deste extrator, inclusive avulsos e cancelados. Verifique a descrição e a situação antes de concluir o fechamento.")
+
+                saida = BytesIO()
+                with pd.ExcelWriter(saida, engine="openpyxl") as writer:
+                    tabela.to_excel(writer, index=False, sheet_name="Boletos do mês")
+                st.download_button(
+                    "📥 Baixar histórico em Excel", data=saida.getvalue(),
+                    file_name=f"boletos_{EMPRESA_SELECIONADA.lower().replace(' ', '_')}_{ano_historico}_{mes_historico:02d}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="download_historico_mensal",
+                )
+            else:
+                st.info("Selecione o mês e clique em Consultar para carregar o histórico.")
