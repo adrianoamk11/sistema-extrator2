@@ -139,10 +139,10 @@ st.markdown("""
   border-right: 1px solid #D7E7DF;
 }
 [data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {
-  padding-top: 2rem !important;
+  padding-top: .65rem !important;
 }
 [data-testid="stSidebar"] [data-testid="stImage"] {
-  margin: 0 0 .5rem !important;
+  margin: 0 0 .15rem !important;
 }
 .lider-sidebar-caption {
   font-size: .76rem;
@@ -150,7 +150,7 @@ st.markdown("""
   letter-spacing: .06em;
   font-weight: 800;
   text-transform: uppercase;
-  padding: .5rem .5rem .7rem;
+  padding: .15rem .5rem .35rem;
 }
 .lider-nav {
   display: flex;
@@ -251,7 +251,7 @@ LOGO_PATH = BASE_DIR / "logo_lider.png"
 # O arquivo da logomarca original é reutilizado sem alterações.
 with st.sidebar:
     if LOGO_PATH.exists():
-        st.image(str(LOGO_PATH), use_container_width=True)
+        st.image(str(LOGO_PATH), width=215)
     st.markdown('<div class="lider-sidebar-caption">Navegação</div>', unsafe_allow_html=True)
     if "pagina_lider" not in st.session_state:
         st.session_state.pagina_lider = "Extratos"
