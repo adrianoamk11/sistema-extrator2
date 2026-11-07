@@ -1,7 +1,9 @@
 import streamlit as st
 import pandas as pd
 import fitz
-from busca_clientes_cidade import procurar_clientes_por_cidade
+import time
+from st_keyup import st_keyup
+from busca_clientes_cidade import listar_clientes_para_autocomplete, filtrar_autocomplete
 from extratos_bancos_pdf import extrair_pdf_bancario
 import re
 import unicodedata
@@ -130,7 +132,7 @@ st.markdown("""
 [data-testid="stHeader"] { background: rgba(255,255,255,.82); }
 [data-testid="stMainBlockContainer"] {
   max-width: 1500px;
-  padding: 1rem 2.5rem 4rem !important;
+  padding: 4.2rem 2.5rem 4rem !important;
 }
 [data-testid="stSidebar"] {
   background: linear-gradient(180deg,#E8F5ED 0%,#F1F7FC 60%,#FFF8E7 100%) !important;
@@ -261,7 +263,6 @@ with st.sidebar:
         if st.button(rotulo, key=f"navegar_{pagina}", use_container_width=True,
                      type="primary" if st.session_state.pagina_lider == pagina else "secondary"):
             st.session_state.pagina_lider = pagina
-            st.rerun()
 
 st.markdown(
     '<meta name="google" content="notranslate">'
@@ -307,7 +308,6 @@ with st.sidebar:
             st.session_state.pagina_lider = "Boleto avulso"
         else:
             st.session_state.pagina_lider = "Extratos"
-        st.rerun()
 
 st.markdown('<div class="lider-section-title">Processamento de extratos</div>', unsafe_allow_html=True)
 
@@ -715,6 +715,31 @@ def emitir_boleto_asaas(
     referencia_alternativa = (
         referencia_base if emitir_nota else f"{referencia_base}|NFSE|"
     )
+    # Compatibilidade com boletos avulsos já criados pela busca por cidade
+    # na versão anterior: a referência usava CLIENTE {id}, mesmo com BOX.
+    # Consulta somente leitura; evita duplicidade ao alternar modos de busca.
+    if cliente_selecionado_id is not None and numero_box is not None:
+        referencia_legada = criar_referencia_externa(
+            f"CLIENTE {customer_id}.txt",
+            valor_cobranca,
+            vencimento,
+            descricao_final,
+        )
+        if referencia_legada != referencia_base:
+            existente_legado = buscar_cobranca_existente(referencia_legada)
+            if existente_legado:
+                return {
+                    "novo": False,
+                    "clienteNome": cliente.get("name"),
+                    "clienteId": customer_id,
+                    "box": numero_box,
+                    "id": existente_legado.get("id"),
+                    "invoiceUrl": existente_legado.get("invoiceUrl"),
+                    "bankSlipUrl": existente_legado.get("bankSlipUrl"),
+                    "status": existente_legado.get("status"),
+                    "externalReference": referencia_legada,
+                }
+
     cobranca_alternativa = buscar_cobranca_existente(referencia_alternativa)
     if cobranca_alternativa:
         raise RuntimeError(
@@ -2132,267 +2157,182 @@ if st.session_state.pagina_lider == "Início":
             st.write("Importe, confira e processe seus arquivos financeiros.")
             if st.button("Abrir extratos", key="inicio_abrir_extratos", use_container_width=True):
                 st.session_state.pagina_lider = "Extratos"
-                st.rerun()
     with inicio_historico:
         with st.container(border=True):
             st.markdown("### 🕘 Histórico")
             st.write("Consulte cobranças anteriores diretamente no Asaas.")
             if st.button("Consultar histórico", key="inicio_abrir_historico", use_container_width=True):
                 st.session_state.pagina_lider = "Histórico"
-                st.rerun()
 
 # ============================================================
 # BOLETO AVULSO
 # ============================================================
 
-if st.session_state.pagina_lider == "Boleto avulso" and st.session_state.mostrar_boleto_avulso:
+def clientes_avulsos_em_cache():
+    """Cache por sessão/empresa: nenhuma consulta ao Asaas a cada tecla."""
+    chave = (EMPRESA_SELECIONADA, ASAAS_BASE_URL)
+    cache = st.session_state.get("cache_busca_avulsa")
+    if (cache and cache.get("chave") == chave
+            and time.monotonic() - cache.get("quando", 0) < 120):
+        return cache["clientes"]
+    clientes = listar_clientes_para_autocomplete(
+        ASAAS_BASE_URL, cabecalhos_asaas()
+    )
+    st.session_state["cache_busca_avulsa"] = {
+        "chave": chave, "quando": time.monotonic(), "clientes": clientes,
+    }
+    return clientes
+
+
+@st.fragment
+def exibir_boleto_avulso():
     with st.container(border=True):
         st.subheader("Boleto avulso")
         st.caption(
             f"Emissão pela empresa: {EMPRESA_SELECIONADA}. "
             "Esta cobrança não gera nota fiscal."
         )
-
-        modo_busca_avulso = st.radio(
+        modo = st.radio(
             "Localizar o cliente por",
-            ["BOX", "Cidade"],
-            horizontal=True,
-            key="modo_busca_cliente_avulso",
+            ("BOX", "Cidade"), horizontal=True, key="modo_busca_cliente_avulso",
         )
-        col_busca, col_buscar = st.columns([2, 1])
-        numero_box_avulso = None
-        cidade_avulsa = ""
-        if modo_busca_avulso == "BOX":
-            numero_box_avulso = col_busca.number_input(
-                "Número do BOX", min_value=1, step=1, value=None,
-                placeholder="Ex.: 25", key="box_boleto_avulso"
-            )
+        termo = st_keyup(
+            "Digite o BOX" if modo == "BOX" else "Digite a cidade",
+            key="buscar_box_avulso_instantaneo" if modo == "BOX"
+                else "buscar_cidade_avulso_instantaneo",
+            placeholder="Ex.: 25" if modo == "BOX"
+                else "Ex.: Balneário Camboriú, Itapema, Jundiaí",
+            debounce=300,
+        ) or ""
+        # Somente consulta. Mostra todas as correspondências sem botão Buscar.
+        candidatos = []
+        min_len = 1 if modo == "BOX" else 2
+        if len(normalizar(termo)) >= min_len:
+            try:
+                with st.spinner("Consultando cadastros..." if not
+                                st.session_state.get("cache_busca_avulsa") else
+                                "Filtrando cadastros..."):
+                    candidatos = filtrar_autocomplete(
+                        clientes_avulsos_em_cache(), termo, modo
+                    )
+            except Exception as erro_busca:
+                st.error(f"Não foi possível consultar os cadastros: {erro_busca}")
         else:
-            cidade_avulsa = col_busca.text_input(
-                "Cidade do cadastro",
-                placeholder="Ex.: Balneário Camboriú, Itapema, Jundiaí",
-                key="cidade_boleto_avulso",
+            st.caption(
+                "Digite um número para localizar BOX."
+                if modo == "BOX" else
+                "Digite pelo menos duas letras para localizar cidades."
             )
-        buscar_cliente_avulso = col_buscar.button(
-            "🔎 Buscar cliente", use_container_width=True,
-            key="buscar_cliente_boleto_avulso"
-        )
-        assinatura_busca_atual = (
-            EMPRESA_SELECIONADA, modo_busca_avulso,
-            (int(numero_box_avulso) if numero_box_avulso is not None else None)
-            if modo_busca_avulso == "BOX" else normalizar(cidade_avulsa),
-        )
-        if st.session_state.get("assinatura_cliente_avulso") != assinatura_busca_atual:
-            st.session_state.pop("cliente_avulso_encontrado", None)
-        if st.session_state.get("assinatura_lista_cidade_avulso") != assinatura_busca_atual:
-            st.session_state.pop("clientes_cidade_avulso", None)
 
-        if buscar_cliente_avulso:
-            st.session_state.pop("cliente_avulso_encontrado", None)
-            st.session_state.pop("resultado_boleto_avulso", None)
-            if modo_busca_avulso == "BOX" and numero_box_avulso is None:
-                st.warning("Informe o número do BOX.")
-            elif modo_busca_avulso == "Cidade" and len(normalizar(cidade_avulsa)) < 3:
-                st.warning("Informe pelo menos três letras da cidade.")
-            else:
-                try:
-                    if modo_busca_avulso == "BOX":
-                        cliente_avulso, box_confirmado = localizar_cliente_asaas_por_box(
-                            f"BOX {int(numero_box_avulso)}.txt"
-                        )
-                        st.session_state["cliente_avulso_encontrado"] = {
-                            "id": cliente_avulso.get("id"),
-                            "name": cliente_avulso.get("name", ""),
-                            "box": box_confirmado,
-                        }
-                        st.session_state["assinatura_cliente_avulso"] = assinatura_busca_atual
-                    else:
-                        clientes_cidade = procurar_clientes_por_cidade(
-                            ASAAS_BASE_URL, cabecalhos_asaas(), cidade_avulsa
-                        )
-                        st.session_state["clientes_cidade_avulso"] = clientes_cidade
-                        st.session_state["assinatura_lista_cidade_avulso"] = assinatura_busca_atual
-                        st.session_state.pop("cliente_cidade_escolhido", None)
-                        if not clientes_cidade:
-                            st.warning("Não encontrei cadastro com essa cidade no Asaas.")
-                except Exception as erro_cliente:
-                    st.session_state.pop("clientes_cidade_avulso", None)
-                    st.session_state.pop("cliente_avulso_encontrado", None)
-                    st.error(f"Não foi possível localizar o cliente: {erro_cliente}")
-
-        if (
-            modo_busca_avulso == "Cidade"
-            and st.session_state.get("assinatura_lista_cidade_avulso") == assinatura_busca_atual
-            and st.session_state.get("clientes_cidade_avulso")
-        ):
-            candidatos = st.session_state["clientes_cidade_avulso"]
+        selecionado = None
+        if candidatos:
+            st.caption(
+                f"{len(candidatos)} cadastro(s) encontrado(s). "
+                "Selecione o cadastro correto para habilitar a emissão."
+            )
             opcoes = {c["id"]: c for c in candidatos}
-            escolhido = st.selectbox(
+            escolhido = st.radio(
                 "Selecione o cadastro correto antes de emitir",
                 list(opcoes),
                 index=None,
-                placeholder="Escolha um cliente entre os resultados",
-                format_func=lambda codigo: (
-                    f'{opcoes[codigo]["name"]} — '
-                    f'{opcoes[codigo].get("cityName") or "cidade no nome"} '
-                    f'({codigo})'
+                key=f"escolha_avulsa_{modo.lower()}",
+                format_func=lambda ident: (
+                    f'{opcoes[ident]["name"]} — '
+                    f'{opcoes[ident].get("cityName") or "cidade no nome"} '
+                    f'({ident})'
                 ),
-                key="cliente_cidade_escolhido",
             )
             if escolhido in opcoes:
                 selecionado = opcoes[escolhido]
-                st.session_state["cliente_avulso_encontrado"] = {
-                    "id": selecionado["id"], "name": selecionado["name"],
-                    "box": extrair_numero_box(selecionado["name"]),
-                }
-                st.session_state["assinatura_cliente_avulso"] = assinatura_busca_atual
-            else:
-                st.session_state.pop("cliente_avulso_encontrado", None)
+        elif len(normalizar(termo)) >= min_len:
+            st.info("Nenhum cliente correspondente encontrado no Asaas.")
 
-        cliente_avulso_salvo = st.session_state.get("cliente_avulso_encontrado")
-        cliente_confirmado = bool(
-            cliente_avulso_salvo
-            and st.session_state.get("assinatura_cliente_avulso") == assinatura_busca_atual
-            and cliente_avulso_salvo.get("id")
+        box = extrair_numero_box(selecionado["name"]) if selecionado else None
+        assinatura = (
+            EMPRESA_SELECIONADA, modo,
+            selecionado["id"] if selecionado else None,
         )
+        cliente_confirmado = selecionado is not None
         if cliente_confirmado:
             st.success(
-                f'Cliente selecionado: {cliente_avulso_salvo.get("name", "")} '
-                f'(BOX {cliente_avulso_salvo.get("box") or "não informado"})'
+                f'Cadastro selecionado: {selecionado["name"]} '
+                f'(BOX {box if box is not None else "não informado"})'
             )
-        elif modo_busca_avulso == "BOX":
-            st.info("Informe o BOX e clique em Buscar cliente antes de emitir.")
-        else:
-            st.info("Pesquise a cidade e selecione o cadastro correto antes de emitir.")
 
         descricao_avulsa = st.text_area(
             "Descrição do boleto",
-            placeholder=(
-                "Ex.: Taxa de publicidade\n"
-                "Multa contratual\n"
-                "Outra descrição"
-            ),
+            placeholder="Ex.: Taxa de publicidade\nMulta contratual\nOutra descrição",
             height=120,
-            key="descricao_boleto_avulso"
+            key="descricao_boleto_avulso",
         )
-
-        col_valor_avulso, col_venc_avulso = st.columns(2)
-
-        valor_avulso = col_valor_avulso.number_input(
-            "Valor do boleto",
-            min_value=0.00,
-            step=0.01,
-            format="%.2f",
-            key="valor_boleto_avulso"
+        col_valor, col_venc = st.columns(2)
+        valor_avulso = col_valor.number_input(
+            "Valor do boleto", min_value=0.00, step=0.01,
+            format="%.2f", key="valor_boleto_avulso",
         )
-
-        vencimento_avulso = col_venc_avulso.date_input(
-            "Vencimento do boleto",
-            value=proximo_dia_10(),
-            min_value=date.today(),
-            format="DD/MM/YYYY",
-            key="vencimento_boleto_avulso"
+        vencimento_avulso = col_venc.date_input(
+            "Vencimento do boleto", value=proximo_dia_10(),
+            min_value=date.today(), format="DD/MM/YYYY",
+            key="vencimento_boleto_avulso",
         )
-
-        pode_emitir_avulso = (
-            cliente_confirmado
-            and bool(str(descricao_avulsa).strip())
+        assinatura_resultado_atual = (
+            assinatura, round(float(valor_avulso), 2),
+            vencimento_avulso.isoformat(), str(descricao_avulsa).strip(),
+        ) if cliente_confirmado else None
+        pode_emitir = (
+            cliente_confirmado and bool(str(descricao_avulsa).strip())
             and float(valor_avulso) > 0
         )
-
-        clicou_emitir_avulso = st.button(
-            "💳 Emitir boleto avulso",
-            type="primary",
-            use_container_width=True,
-            disabled=not pode_emitir_avulso,
-            key="emitir_boleto_avulso"
-        )
-
-        if clicou_emitir_avulso:
-            try:
-                with st.spinner("Gerando boleto avulso no Asaas..."):
-                    # Usa a mesma rotina de localização, notificações e
-                    # proteção contra duplicidade do fluxo já existente.
-                    referencia_cliente = (
-                        f"BOX {int(numero_box_avulso)}.txt"
-                        if modo_busca_avulso == "BOX"
-                        else f'CLIENTE {cliente_avulso_salvo["id"]}.txt'
-                    )
-                    boleto_avulso = emitir_boleto_asaas(
-                        referencia_cliente,
-                        0.0,
-                        float(valor_avulso),
-                        vencimento_avulso,
-                        str(descricao_avulsa).strip(),
-                        False,
-                        cliente_selecionado_id=(
-                            cliente_avulso_salvo["id"] if modo_busca_avulso == "Cidade"
-                            else None
-                        ),
-                    )
-
-                st.session_state["resultado_boleto_avulso"] = boleto_avulso
-                st.session_state["assinatura_resultado_boleto_avulso"] = (
-                    EMPRESA_SELECIONADA, modo_busca_avulso,
-                    cliente_avulso_salvo["id"],
-                    round(float(valor_avulso), 2),
-                    vencimento_avulso.isoformat(),
-                    str(descricao_avulsa).strip(),
-                )
-
-            except Exception as erro_boleto_avulso:
-                st.error(
-                    f"Não foi possível emitir o boleto avulso: "
-                    f"{erro_boleto_avulso}"
-                )
-
-        assinatura_resultado_atual = None
-        if cliente_confirmado:
-            assinatura_resultado_atual = (
-                EMPRESA_SELECIONADA, modo_busca_avulso,
-                cliente_avulso_salvo["id"],
-                round(float(valor_avulso), 2),
-                vencimento_avulso.isoformat(),
-                str(descricao_avulsa).strip(),
-            )
-
-        boleto_avulso_salvo = st.session_state.get(
-            "resultado_boleto_avulso"
-        )
-
-        if (
-            boleto_avulso_salvo
-            and st.session_state.get(
-                "assinatura_resultado_boleto_avulso"
-            ) == assinatura_resultado_atual
+        if st.button(
+            "💳 Emitir boleto avulso", type="primary", use_container_width=True,
+            disabled=not pode_emitir, key="emitir_boleto_avulso",
         ):
-            if boleto_avulso_salvo.get("novo"):
+            try:
+                # Mesmo BOX -> mesma referência, independentemente da forma de busca.
+                # Quando não há BOX no cadastro, identifica pelo ID do Asaas.
+                referencia = (
+                    f"BOX {box}.txt" if box is not None
+                    else f'CLIENTE {selecionado["id"]}.txt'
+                )
+                with st.spinner("Gerando boleto avulso no Asaas..."):
+                    boleto = emitir_boleto_asaas(
+                        referencia, 0.0, float(valor_avulso),
+                        vencimento_avulso, str(descricao_avulsa).strip(),
+                        False, cliente_selecionado_id=selecionado["id"],
+                    )
+                st.session_state["resultado_boleto_avulso"] = boleto
+                st.session_state["assinatura_resultado_boleto_avulso"] = (
+                    assinatura_resultado_atual
+                )
+            except Exception as erro:
+                st.error(f"Não foi possível emitir o boleto avulso: {erro}")
+
+        boleto_salvo = st.session_state.get("resultado_boleto_avulso")
+        if (boleto_salvo and assinatura_resultado_atual is not None
+                and st.session_state.get("assinatura_resultado_boleto_avulso")
+                == assinatura_resultado_atual):
+            if boleto_salvo.get("novo"):
                 st.success(
-                    f"✅ Boleto avulso criado para "
-                    f"{boleto_avulso_salvo.get('clienteNome', '')} "
-                    f"(BOX {boleto_avulso_salvo.get('box', '')}) e "
-                    f"notificações padronizadas com sucesso. "
-                    f"ID: {boleto_avulso_salvo.get('id', '')}"
+                    f'Boleto criado para {boleto_salvo.get("clienteNome", "")}. '
+                    f'ID: {boleto_salvo.get("id", "")}'
                 )
             else:
-                st.info(
-                    "ℹ️ Esta cobrança já existia no Asaas. "
-                    "O sistema não gerou uma cobrança duplicada."
+                st.info("Essa cobrança já existia no Asaas. Nenhuma duplicidade criada.")
+            if boleto_salvo.get("invoiceUrl"):
+                st.link_button(
+                    "🔗 Abrir cobrança no Asaas", boleto_salvo["invoiceUrl"],
+                    use_container_width=True,
+                )
+            if boleto_salvo.get("bankSlipUrl"):
+                st.link_button(
+                    "📄 Abrir boleto", boleto_salvo["bankSlipUrl"],
+                    use_container_width=True,
                 )
 
-            if boleto_avulso_salvo.get("invoiceUrl"):
-                st.link_button(
-                    "🔗 Abrir cobrança no Asaas",
-                    boleto_avulso_salvo["invoiceUrl"],
-                    use_container_width=True
-                )
 
-            if boleto_avulso_salvo.get("bankSlipUrl"):
-                st.link_button(
-                    "📄 Abrir boleto",
-                    boleto_avulso_salvo["bankSlipUrl"],
-                    use_container_width=True
-                )
+if (st.session_state.pagina_lider == "Boleto avulso"
+        and st.session_state.mostrar_boleto_avulso):
+    exibir_boleto_avulso()
 
 st.divider()
 
@@ -3220,7 +3160,7 @@ st.markdown("""
 st.markdown('<div id="historico"></div>', unsafe_allow_html=True)
 if st.session_state.pagina_lider == "Histórico":
     with st.container(key="historico_discreto"):
-        with st.expander("📚 Histórico mensal de boletos", expanded=False):
+        with st.expander("📚 Histórico mensal de boletos", expanded=True):
             st.caption(
                 "Consulta somente leitura ao Asaas da empresa selecionada. "
                 "Exibe boletos identificados pela referência gerada neste extrator; "
