@@ -243,6 +243,15 @@ div[data-baseweb="input"] > div {
   border-radius: 10px !important;
 }
 [data-testid="stAlert"] { border-radius: 11px !important; }
+/* Não exibir como botão ativo quando os campos obrigatórios faltarem. */
+[data-testid="stButton"] button:disabled,
+[data-testid="stButton"] button[kind="primary"]:disabled {
+  background: #E4E7EB !important;
+  color: #65717F !important;
+  border-color: #D2D7DE !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+}
 @media(max-width: 900px) {
   [data-testid="stMainBlockContainer"] { padding: .7rem 1rem 3rem !important; }
   .lider-hero { padding: 1.2rem; }
@@ -2304,6 +2313,21 @@ def exibir_boleto_avulso():
             cliente_confirmado and bool(str(descricao_avulsa).strip())
             and float(valor_avulso) > 0
         )
+        if not pode_emitir:
+            campos_faltantes = []
+            if not cliente_confirmado:
+                campos_faltantes.append("selecionar o cliente")
+            if not str(descricao_avulsa).strip():
+                campos_faltantes.append("preencher a descrição do boleto")
+            if float(valor_avulso) <= 0:
+                campos_faltantes.append("informar um valor maior que zero")
+            st.warning(
+                "Para habilitar "
+                + ("Criar recorrência mensal" if recorrencia_mensal else "Emitir boleto avulso")
+                + ", é necessário: "
+                + "; ".join(campos_faltantes)
+                + "."
+            )
         if st.button(
             (
                 "🔁 Criar recorrência mensal" if recorrencia_mensal
