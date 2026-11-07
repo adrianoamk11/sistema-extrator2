@@ -71,11 +71,42 @@ def receber_evento(evento, token_recebido, token_configurado, db_path):
     return {"ok": True, "registrado": novo}, 200
 
 
+def diagnostico_persistencia(db_path, diretorio_persistente="/var/data"):
+    """Impede gravar eventos reais no disco efêmero da instância."""
+    import pathlib
+    try:
+        raiz = pathlib.Path(diretorio_persistente).resolve(strict=True)
+        banco = pathlib.Path(db_path).resolve(strict=False)
+    except (OSError, TypeError, ValueError):
+        return "BANCO_INVALIDO"
+    if not banco.is_relative_to(raiz) or banco == raiz:
+        return "FORA_DO_DISCO_PERSISTENTE"
+    if not os.path.ismount(str(raiz)):
+        return "DISCO_PERSISTENTE_NAO_MONTADO"
+    if not os.access(str(raiz), os.W_OK):
+        return "DISCO_SEM_ESCRITA"
+    return "OK"
+
+
+@app_v2.get("/fiscal-v2/health")
+def health_fiscal_v2():
+    # Sem revelar caminhos internos, credenciais, clientes ou informações fiscais.
+    return jsonify({
+        "servico": "Fiscal V2",
+        "recepcao": "desativada" if os.environ.get("FISCAL_V2_RECEPCAO_SANDBOX") != "SIM"
+                    else "configurada",
+        "emissao_automatica": "desativada",
+    }), 200
+
+
 @app_v2.post("/webhook/asaas/v2")
 def webhook_fiscal_v2():
     # Permanece desativado por padrão, mesmo após importação ou deploy.
     if os.environ.get("FISCAL_V2_RECEPCAO_SANDBOX") != "SIM":
         return jsonify({"erro": "não habilitado"}), 404
+    if diagnostico_persistencia(os.environ.get("FISCAL_V2_EVENT_DB", "")) != "OK":
+        # Nunca confirmar entregas de webhook sem armazenamento durável.
+        return jsonify({"erro": "persistência fiscal não está pronta"}), 503
     resposta, status = receber_evento(
         request.get_json(silent=True),
         request.headers.get("asaas-access-token"),
