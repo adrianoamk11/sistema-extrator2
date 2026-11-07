@@ -2237,6 +2237,34 @@ def consultar_historico_asaas(ano, mes):
     return registros
 
 
+def consultar_nfse_asaas_por_cobranca(payment_id):
+    """Consulta somente leitura: nunca solicita ou reenvia uma nota fiscal."""
+    identificador = str(payment_id or "").strip()
+    if not identificador.startswith("pay_"):
+        raise ValueError("Identificador da cobrança inválido.")
+
+    resposta = requests.get(
+        f"{ASAAS_BASE_URL}/invoices",
+        headers=cabecalhos_asaas(),
+        params={"payment": identificador, "limit": 100},
+        timeout=30,
+    )
+    resposta.raise_for_status()
+    corpo = resposta.json()
+    if not isinstance(corpo, dict) or not isinstance(corpo.get("data"), list):
+        raise RuntimeError("O Asaas retornou uma resposta inválida para a consulta fiscal.")
+    if corpo.get("hasMore") is not False:
+        raise RuntimeError("Consulta de notas incompleta. Não é possível confirmar o status.")
+    notas = corpo["data"]
+    if any(
+        not isinstance(nota, dict)
+        or nota.get("payment") != identificador
+        for nota in notas
+    ):
+        raise RuntimeError("Não foi possível validar a vinculação das notas à cobrança.")
+    return notas
+
+
 def clientes_historico_asaas(ids_clientes):
     nomes = {}
     for identificador in sorted(ids_clientes):
@@ -3016,12 +3044,13 @@ with st.container(key="historico_discreto"):
                             "Valor (R$)": float(cobranca.get("value") or 0),
                             "Vencimento": str(cobranca.get("dueDate") or "")[:10],
                             "Situação": traduzir_status_asaas(cobranca.get("status")),
+                            "Nota solicitada": "Sim" if "|NFSE|" in referencia else "Não",
                             "ID Asaas": str(cobranca.get("id") or ""),
                             "Boleto": str(cobranca.get("bankSlipUrl") or cobranca.get("invoiceUrl") or ""),
                         })
                     tabela_historico = pd.DataFrame(linhas, columns=[
                         "Emissão", "BOX", "Franqueado", "Descrição", "Valor (R$)",
-                        "Vencimento", "Situação", "ID Asaas", "Boleto",
+                        "Vencimento", "Situação", "Nota solicitada", "ID Asaas", "Boleto",
                     ])
                     # Ordem numérica crescente dos BOX (7, 38, 71, 250).
                     # BOX sem número identificado ficam ao final.
@@ -3057,8 +3086,80 @@ with st.container(key="historico_discreto"):
                     })
                 st.caption(
                     "O total soma cobranças registradas, independentemente de estarem "
-                    "pagas, vencidas ou canceladas. Confira a coluna Situação."
+                    "pagas, vencidas ou canceladas. Confira a coluna Situação. "
+                    "Nota solicitada indica apenas a opção marcada ao criar o boleto, "
+                    "não significa nota emitida."
                 )
+                st.markdown("#### Conferir emissão de nota fiscal (somente leitura)")
+                st.caption(
+                    "Selecione uma cobrança e consulte as notas vinculadas no Asaas. "
+                    "Essa operação não cria boletos, não emite notas e não reenvia webhooks."
+                )
+                opcoes_nfse = {
+                    str(linha["ID Asaas"]): (
+                        f"BOX {linha['BOX']} | {linha['ID Asaas']} | "
+                        f"R$ {float(linha['Valor (R$)']):.2f} | "
+                        f"{linha['Situação']}"
+                    )
+                    for _, linha in tabela.iterrows()
+                    if str(linha["ID Asaas"]).startswith("pay_")
+                }
+                if opcoes_nfse:
+                    selecionado_nfse = st.selectbox(
+                        "Cobrança para consultar",
+                        options=list(opcoes_nfse),
+                        format_func=lambda codigo: opcoes_nfse[codigo],
+                        key="nfse_status_pagamento",
+                    )
+                    if st.button("Consultar status da NFS-e", key="nfse_status_consultar"):
+                        try:
+                            with st.spinner("Consultando notas no Asaas, sem alterações..."):
+                                notas_nfse = consultar_nfse_asaas_por_cobranca(selecionado_nfse)
+                            st.session_state["nfse_ultima_consulta"] = {
+                                "empresa": EMPRESA_SELECIONADA,
+                                "pagamento": selecionado_nfse,
+                                "notas": notas_nfse,
+                                "erro": None,
+                            }
+                        except (requests.RequestException, ValueError, RuntimeError) as erro_nfse:
+                            st.session_state["nfse_ultima_consulta"] = {
+                                "empresa": EMPRESA_SELECIONADA,
+                                "pagamento": selecionado_nfse,
+                                "notas": [],
+                                "erro": str(erro_nfse),
+                            }
+                    resultado_nfse = st.session_state.get("nfse_ultima_consulta")
+                    if (
+                        resultado_nfse
+                        and resultado_nfse.get("empresa") == EMPRESA_SELECIONADA
+                        and resultado_nfse.get("pagamento") == selecionado_nfse
+                    ):
+                        if resultado_nfse.get("erro"):
+                            st.error(
+                                "Não foi possível confirmar a NFS-e no Asaas: "
+                                + resultado_nfse["erro"]
+                            )
+                        elif not resultado_nfse["notas"]:
+                            st.warning(
+                                "Nenhuma nota fiscal encontrada no Asaas para esta cobrança. "
+                                "Se a opção de nota estava marcada e o pagamento foi recebido, "
+                                "verifique a entrega do webhook e a conciliação antes de solicitar emissão."
+                            )
+                        else:
+                            for nota_nfse in resultado_nfse["notas"]:
+                                st.write(
+                                    "Nota fiscal:",
+                                    str(nota_nfse.get("id") or "ID não informado"),
+                                    "| Status Asaas:",
+                                    str(nota_nfse.get("status") or "Não informado"),
+                                )
+                                if nota_nfse.get("status") in ("ERROR", "CANCELED"):
+                                    st.warning(
+                                        "A nota apresenta erro ou cancelamento. "
+                                        "Verifique os detalhes no painel Asaas antes de qualquer reenvio."
+                                    )
+                else:
+                    st.info("Nenhuma cobrança válida para consulta de NFS-e neste período.")
 
             st.markdown("**Conferir BOX que deveriam receber boleto**")
             esperados_texto = st.text_area(
