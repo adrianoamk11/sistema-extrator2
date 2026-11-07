@@ -217,3 +217,12 @@ if os.environ.get("FISCAL_V2_NBS_CHECK") == "SIM":
     import json
     resultado_nbs=diagnosticar_catalogo()
     app_v2.logger.warning("Fiscal V2 catalogo NBS: %s",json.dumps(resultado_nbs,ensure_ascii=False))
+
+
+if os.environ.get("FISCAL_V2_NOTAS_RECENTES") == "SIM":
+    import json
+    from fiscal_v2_notas_recentes import auditar_notas_recentes
+    app_v2.logger.warning(
+        "Fiscal V2 auditoria NFS-e recente: %s",
+        json.dumps(auditar_notas_recentes(), ensure_ascii=False),
+    )
