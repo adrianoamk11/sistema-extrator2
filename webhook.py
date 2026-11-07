@@ -148,6 +148,31 @@ def inicio():
     return "Webhook Lider funcionando", 200
 
 
+@app.post("/webhook/asaas/v2")
+def webhook_asaas_v2():
+    """Rota V2 preparada no volume persistente; inativa por padrão.
+
+    Não executa emissão fiscal nesta rota. O fluxo antigo permanece intocado.
+    """
+    if os.environ.get("FISCAL_V2_RECEPCAO_REAL") != "SIM":
+        return jsonify({"erro": "nao habilitado"}), 404
+
+    from fiscal_v2_webhook import diagnostico_persistencia, receber_evento
+
+    db_path = os.environ.get("FISCAL_V2_EVENT_DB", "/var/data/fiscal_v2.sqlite3")
+    if diagnostico_persistencia(db_path) != "OK":
+        app.logger.error("Fiscal V2: disco persistente indisponivel")
+        return jsonify({"erro": "armazenamento indisponivel"}), 503
+
+    resposta, codigo = receber_evento(
+        request.get_json(silent=True),
+        request.headers.get("asaas-access-token"),
+        os.environ.get("FISCAL_V2_WEBHOOK_TOKEN"),
+        db_path,
+    )
+    return jsonify(resposta), codigo
+
+
 @app.post("/webhook/asaas")
 def webhook_asaas():
     token_recebido = request.headers.get("asaas-access-token")
