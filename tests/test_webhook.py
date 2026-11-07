@@ -115,6 +115,19 @@ class WebhookTests(unittest.TestCase):
                 self.assertEqual(self.enviar().status_code, 503)
         self.post.assert_not_called()
 
+    def test_codigo_nbs_canonicamente_pontuado(self):
+        self.assertEqual(webhook.normalizar_nbs("111100000"), "1.1110.00.00")
+        self.assertEqual(webhook.normalizar_nbs("1.1110.00.00"), "1.1110.00.00")
+        for invalido in ("", "11110000", "1.1110.00", "abc", "1.1110.00.000"):
+            with self.subTest(codigo=invalido):
+                with self.assertRaises(ValueError):
+                    webhook.normalizar_nbs(invalido)
+
+    def test_emissao_aceita_nbs_ja_pontuado(self):
+        with patch.object(webhook, "NFSE_NBS_CODE", "1.1110.00.00"):
+            self.assertEqual(self.enviar().status_code, 200)
+        self.assertEqual(self.post.call_args.kwargs["json"]["taxes"]["nbsCode"], "1.1110.00.00")
+
     def test_emissao_e_reentrega(self):
         self.assertEqual(self.enviar().json["nota"]["status"], "SCHEDULED")
         self.assertEqual(self.get.call_args.kwargs["params"]["payment"], "pay_teste")
@@ -125,7 +138,7 @@ class WebhookTests(unittest.TestCase):
         self.assertEqual(payload["externalReference"], "lider-nfse-pay_teste")
         self.assertEqual(payload["payment"], "pay_teste")
         self.assertEqual(payload["value"], 100)
-        self.assertEqual(payload["taxes"], {"retainIss": False, "iss": 2.0, "nbsCode": "111100000"})
+        self.assertEqual(payload["taxes"], {"retainIss": False, "iss": 2.0, "nbsCode": "1.1110.00.00"})
         self.assertIs(payload["updatePayment"], False)
         self.get.return_value = resposta(pagina({"payment": "pay_teste"}))
         self.assertEqual(self.enviar().status_code, 200)
