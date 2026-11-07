@@ -45,14 +45,61 @@ if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
 
 if not st.session_state.autenticado:
-    # Centraliza e limita a largura da tela de acesso em computadores.
-    esquerda, login_coluna, direita = st.columns([1, 1.15, 1])
+    # Apresentação visual; a validação das credenciais permanece inalterada.
+    st.markdown("""
+    <style>
+    [data-testid="stAppViewContainer"] {
+        background: linear-gradient(135deg,#E9F7EE 0%,#F4F9FF 54%,#FFF4DB 100%);
+    }
+    [data-testid="stMainBlockContainer"] {
+        max-width: 1060px;
+        padding-top: 12vh !important;
+    }
+    div[data-testid="stForm"] {
+        background: #FFFFFF;
+        border: 1px solid #DFEAE4;
+        border-radius: 19px;
+        padding: 1.8rem;
+        box-shadow: 0 15px 46px rgba(22,67,45,.1);
+    }
+    div[data-testid="stFormSubmitButton"] button {
+        background: #177A45 !important;
+        border-color: #177A45 !important;
+        color: white !important;
+        border-radius: 10px !important;
+        font-weight: 700 !important;
+        min-height: 44px;
+    }
+    div[data-testid="stFormSubmitButton"] button:hover {
+        background: #126638 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    coluna_marca, login_coluna = st.columns([1, 1], gap="large")
+    with coluna_marca:
+        logo_login = Path(__file__).resolve().parent / "logo_lider.png"
+        if logo_login.exists():
+            st.image(str(logo_login), width=315)
+        st.markdown("""
+        <div style="padding-top:1rem">
+          <div style="font-size:.81rem;letter-spacing:.1em;color:#177A45;font-weight:800">
+            GESTÃO FINANCEIRA
+          </div>
+          <div style="font-size:2.2rem;font-weight:800;color:#143F2C;line-height:1.2;margin-top:.6rem">
+            Extrator de<br>Faturamento
+          </div>
+          <p style="color:#60776A;margin-top:1rem;font-size:1rem">
+            Um espaço organizado para seus extratos, cobranças e relatórios.
+          </p>
+        </div>
+        """, unsafe_allow_html=True)
     with login_coluna:
-        st.title("Acesso ao sistema")
+        st.subheader("Acesso ao sistema")
+        st.caption("Entre com suas credenciais para continuar.")
         with st.form("formulario_login"):
             usuario = st.text_input("Usuário", key="login_usuario")
             senha = st.text_input("Senha", type="password", key="login_senha")
-            entrar = st.form_submit_button("Entrar")
+            entrar = st.form_submit_button("Entrar", use_container_width=True)
 
         if entrar:
             if (
@@ -65,22 +112,125 @@ if not st.session_state.autenticado:
             else:
                 st.error("Usuário ou senha incorretos.")
 
-        st.caption(
-            "Para preencher usuário e senha mais rapidamente nas próximas visitas, "
-            "use o gerenciador de senhas do navegador."
-        )
-
     st.stop()
+# ============================================
+# CAMADA VISUAL — sem alterar regras financeiras
+# ============================================
 st.markdown("""
 <style>
-/* Encosta o conteúdo no topo da página */
-[data-testid="stAppViewContainer"] .main .block-container {
-    padding-top: 0rem !important;
-    margin-top: 0rem !important;
+:root {
+  --lider-verde: #177A45;
+  --lider-escuro: #143F2C;
+  --lider-azul: #2563EB;
+  --lider-amarelo: #E5A800;
+  --lider-laranja: #D97706;
 }
+[data-testid="stHeader"] { background: rgba(255,255,255,.82); }
 [data-testid="stMainBlockContainer"] {
-    padding-top: 0rem !important;
-    margin-top: 0rem !important;
+  max-width: 1500px;
+  padding: 1rem 2.5rem 4rem !important;
+}
+[data-testid="stSidebar"] {
+  background: linear-gradient(180deg,#E8F5ED 0%,#F1F7FC 60%,#FFF8E7 100%) !important;
+  border-right: 1px solid #D7E7DF;
+}
+[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {
+  padding-top: 2rem !important;
+}
+[data-testid="stSidebar"] [data-testid="stImage"] {
+  margin: 0 0 .5rem !important;
+}
+.lider-sidebar-caption {
+  font-size: .76rem;
+  color: #557063;
+  letter-spacing: .06em;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: .5rem .5rem .7rem;
+}
+.lider-nav {
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+  margin-bottom: .5rem;
+}
+.lider-nav a {
+  display: block;
+  border-radius: 11px;
+  font-size: .94rem;
+  font-weight: 650;
+  padding: .78rem 1rem;
+  text-decoration: none !important;
+  transition: transform .12s,filter .12s;
+}
+.lider-nav a:hover { filter: brightness(.97); transform: translateX(2px); }
+.lider-nav .inicio { background: #D2F2DE; color: #14532D !important; }
+.lider-nav .extratos { background: #DCEAFF; color: #1D4ED8 !important; }
+.lider-nav .historico { background: #FFEDD5; color: #9A3412 !important; }
+[data-testid="stSidebar"] .stButton button {
+  background: #FFF0BF !important;
+  color: #8C5600 !important;
+  border: 1px solid #F4D783 !important;
+  border-radius: 11px !important;
+  font-weight: 700 !important;
+  min-height: 44px;
+}
+[data-testid="stSidebar"] .stButton button:hover {
+  background: #FFE4A1 !important;
+  border-color: #E5A800 !important;
+}
+.lider-hero {
+  background: linear-gradient(105deg,#143F2C 0%,#177A45 67%,#219B64 100%);
+  border-radius: 18px;
+  color: white;
+  padding: 1.5rem 1.9rem;
+  margin: .35rem 0 1.1rem;
+  box-shadow: 0 10px 24px rgba(20,63,44,.13);
+}
+.lider-hero h1 {
+  color: white !important;
+  font-size: clamp(1.45rem,2.5vw,2.1rem);
+  font-weight: 760;
+  margin: 0 0 .3rem;
+  line-height: 1.2;
+}
+.lider-hero p { color: #D9FBE7; font-size: .92rem; margin: 0; }
+.lider-section-title {
+  color: #173D2B;
+  font-weight: 750;
+  font-size: 1.12rem;
+  margin: 1.4rem 0 .65rem;
+}
+[data-testid="stFileUploaderDropzone"] {
+  background: #F0F7FF !important;
+  border: 2px dashed #8EB9F8 !important;
+  border-radius: 15px !important;
+  padding: 1.2rem !important;
+}
+[data-testid="stFileUploaderDropzone"]:hover { background: #E7F1FF !important; }
+div[data-testid="stVerticalBlockBorderWrapper"] > div[style*="border"] {
+  border-radius: 14px !important;
+}
+div[data-testid="stButton"] button {
+  border-radius: 10px !important;
+  font-weight: 650 !important;
+}
+div[data-testid="stButton"] button[kind="primary"] {
+  background: #177A45 !important;
+  color: white !important;
+  border-color: #177A45 !important;
+}
+div[data-testid="stButton"] button[kind="primary"]:hover {
+  background: #126538 !important;
+}
+div[data-baseweb="select"] > div,
+div[data-baseweb="input"] > div {
+  border-radius: 10px !important;
+}
+[data-testid="stAlert"] { border-radius: 11px !important; }
+@media(max-width: 900px) {
+  [data-testid="stMainBlockContainer"] { padding: .7rem 1rem 3rem !important; }
+  .lider-hero { padding: 1.2rem; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -88,36 +238,28 @@ st.markdown("""
 BASE_DIR = Path(__file__).resolve().parent
 LOGO_PATH = BASE_DIR / "logo_lider.png"
 
-# ============================================================
-# CABEÇALHO
-# ============================================================
+# O arquivo da logomarca original é reutilizado sem alterações.
+with st.sidebar:
+    if LOGO_PATH.exists():
+        st.image(str(LOGO_PATH), use_container_width=True)
+    st.markdown(
+        '<div class="lider-sidebar-caption">Navegação</div>'
+        '<nav class="lider-nav">'
+        '<a class="inicio" href="#inicio">⌂ &nbsp; Início</a>'
+        '<a class="extratos" href="#extratos">▤ &nbsp; Extratos</a>'
+        '<a class="historico" href="#historico">◷ &nbsp; Histórico</a>'
+        '</nav>',
+        unsafe_allow_html=True,
+    )
 
-if LOGO_PATH.exists():
-    st.image(str(LOGO_PATH), width=360)
-
-# Reduz aproximadamente pela metade o espaço entre a logo e o título.
 st.markdown(
-    """
-    <meta name="google" content="notranslate">
-    <style>
-    html, body, [data-testid="stAppViewContainer"], [data-testid="stAppViewContainer"] * {
-        -webkit-translate: none !important;
-    }
-    .notranslate {
-        translate: no !important;
-    }
-    div[data-testid="stImage"] {
-        margin-bottom: -105px !important;
-    }
-    </style>
-    """,
+    '<meta name="google" content="notranslate">'
+    '<div id="inicio" class="lider-hero">'
+    '<h1>Extrator de Faturamento</h1>'
+    '<p>LÍDER Aluguel de Motos &nbsp;·&nbsp; PDF, Excel (.xlsx/.xls) e CSV</p>'
+    '</div>',
     unsafe_allow_html=True,
 )
-
-st.title("Extrator de Faturamento")
-st.caption("LÍDER Aluguel de Motos • PDF, Excel (.xlsx/.xls) e CSV")
-
-st.divider()
 
 # ============================================================
 # CONFIGURAÇÕES
@@ -129,21 +271,18 @@ PERCENTUAL_ROYALTIES = 0.04
 # ASAAS - SELEÇÃO DA EMPRESA
 # ============================================================
 
-st.write("Selecione a empresa que deseja utilizar:")
-
 if "mostrar_boleto_avulso" not in st.session_state:
     st.session_state.mostrar_boleto_avulso = False
 
-col_empresa, _, col_atalho_boleto = st.columns([1, 4, 1])
-
-with col_empresa:
+# Os controles originais foram apenas posicionados no menu lateral.
+with st.sidebar:
+    st.markdown('<div class="lider-sidebar-caption">Empresa</div>', unsafe_allow_html=True)
     EMPRESA_SELECIONADA = st.selectbox(
         "Empresa",
         ["Lider Franquia", "Lider Serviços"],
         label_visibility="collapsed"
     )
-
-with col_atalho_boleto:
+    st.markdown('<div class="lider-sidebar-caption">Cobranças</div>', unsafe_allow_html=True)
     if st.button(
         "💳 Boleto avulso",
         type="secondary",
@@ -153,6 +292,8 @@ with col_atalho_boleto:
         st.session_state.mostrar_boleto_avulso = (
             not st.session_state.mostrar_boleto_avulso
         )
+
+st.markdown('<div class="lider-section-title">Processamento de extratos</div>', unsafe_allow_html=True)
 
 # ============================================================
 # IDENTIDADE VISUAL POR EMPRESA
@@ -2256,6 +2397,7 @@ def clientes_historico_asaas(ids_clientes):
 if "uploader_key" not in st.session_state:
     st.session_state.uploader_key = 0
 
+st.markdown('<div id="extratos"></div>', unsafe_allow_html=True)
 arquivos = st.file_uploader(
     "Carregue os extratos",
     type=["pdf", "xlsx", "xls", "csv"],
@@ -2970,6 +3112,7 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
+st.markdown('<div id="historico"></div>', unsafe_allow_html=True)
 with st.container(key="historico_discreto"):
     with st.expander("📚 Histórico mensal de boletos", expanded=False):
         st.caption(
