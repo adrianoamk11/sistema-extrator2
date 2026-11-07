@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import fitz
+from busca_clientes_cidade import procurar_clientes_por_cidade
 from extratos_bancos_pdf import extrair_pdf_bancario
 import re
 import unicodedata
@@ -656,9 +657,27 @@ def emitir_boleto_asaas(
     valor_cobranca,
     vencimento,
     descricao_boleto,
-    emitir_nota=False
+    emitir_nota=False,
+    cliente_selecionado_id=None,
 ):
-    cliente, numero_box = localizar_cliente_asaas_por_box(nome_arquivo)
+    if cliente_selecionado_id is None:
+        cliente, numero_box = localizar_cliente_asaas_por_box(nome_arquivo)
+    else:
+        # Busca avulsa por cidade: recupera o cadastro indicado, sem
+        # selecionar automaticamente um pagador só pelo nome da cidade.
+        identificador = str(cliente_selecionado_id).strip()
+        if not re.fullmatch(r"cus_[A-Za-z0-9]+", identificador):
+            raise RuntimeError("Identificador de cliente Asaas inválido.")
+        resposta_cliente = requests.get(
+            f"{ASAAS_BASE_URL}/customers/{identificador}",
+            headers=cabecalhos_asaas(),
+            timeout=30,
+        )
+        resposta_cliente.raise_for_status()
+        cliente = resposta_cliente.json()
+        if cliente.get("id") != identificador:
+            raise RuntimeError("O Asaas retornou um cadastro diferente do selecionado.")
+        numero_box = extrair_numero_box(str(cliente.get("name") or ""))
     customer_id = cliente.get("id")
     nome_cliente = cliente.get("name", "")
 
