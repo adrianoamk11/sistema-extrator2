@@ -1,6 +1,7 @@
 """Testa deduplicação sem importar Streamlit e sem chamar a API do Asaas."""
 import ast
 from datetime import date
+from contextlib import nullcontext
 from pathlib import Path
 from unittest.mock import Mock
 import pytest
@@ -16,6 +17,9 @@ def carregar_funcao_boleto(busca):
         "padronizar_notificacoes_asaas": lambda _: None,
         "criar_referencia_externa": lambda *args: "lider-royalties-mesma-operacao",
         "buscar_cobranca_existente": busca,
+        "operacao_financeira_unica": lambda *_: nullcontext(),
+        "resposta_inconclusiva": lambda *_: False,
+        "marcar_resultado_inconclusivo": Mock(),
         "formatar_moeda": str,
         "ASAAS_BASE_URL": "https://asaas.invalid/v3",
         "cabecalhos_asaas": lambda: {},

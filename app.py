@@ -3,6 +3,11 @@ import pandas as pd
 import fitz
 import time
 from st_keyup import st_keyup
+from conciliacao_fiscal import consultar_nfse_por_pagamento
+from operacao_financeira import (
+    operacao_financeira_unica, marcar_resultado_inconclusivo,
+    resposta_inconclusiva,
+)
 from recorrencia_avulsa import (
     criar_recorrencia,
     listar_recorrencias_extrator,
@@ -398,86 +403,30 @@ def extrair_numero_box(texto):
 
 
 def localizar_cliente_asaas_por_box(nome_arquivo):
-    """
-    Localiza o cliente do Asaas usando somente o número do BOX
-    encontrado no nome do arquivo.
-
-    Exemplo:
-    Arquivo: 'Extrato BOX 25 Julho.xlsx'
-    Cliente Asaas: 'mendel box 025 zona norte'
-
-    Ambos correspondem ao BOX 25.
-    """
+    """Busca o BOX usando a lista de clientes mantida em cache por empresa."""
     numero_box = extrair_numero_box(Path(nome_arquivo).stem)
-
     if numero_box is None:
         raise RuntimeError(
             "Não encontrei o número do BOX no nome do arquivo. "
             "Renomeie o arquivo incluindo, por exemplo, 'BOX 25'."
         )
 
-    encontrados = []
-    offset = 0
-    limite = 100
-
-    while True:
-        resposta = requests.get(
-            f"{ASAAS_BASE_URL}/customers",
-            headers=cabecalhos_asaas(),
-            params={
-                "offset": offset,
-                "limit": limite,
-            },
-            timeout=30,
-        )
-
-        if not resposta.ok:
-            try:
-                detalhe = resposta.json()
-            except Exception:
-                detalhe = resposta.text
-
-            raise RuntimeError(
-                f"Erro ao consultar clientes no Asaas "
-                f"(HTTP {resposta.status_code}): {detalhe}"
-            )
-
-        corpo = resposta.json()
-        clientes = corpo.get("data", [])
-
-        for cliente in clientes:
-            nome_asaas = str(cliente.get("name", ""))
-            box_cliente = extrair_numero_box(nome_asaas)
-
-            if box_cliente == numero_box:
-                encontrados.append(cliente)
-
-        if not corpo.get("hasMore"):
-            break
-
-        offset += limite
-
+    encontrados = [
+        cliente for cliente in clientes_avulsos_em_cache()
+        if extrair_numero_box(str(cliente.get("name") or "")) == numero_box
+    ]
     if len(encontrados) == 1:
         return encontrados[0], numero_box
-
-    if len(encontrados) == 0:
+    if not encontrados:
         raise RuntimeError(
             f"Não encontrei no Asaas nenhum cliente com BOX {numero_box}. "
-            f"Confira se o cadastro do cliente contém 'BOX {numero_box}' "
-            f"no campo Nome."
+            "Confira o número e o cadastro do cliente."
         )
-
-    nomes = " | ".join(
-        str(cliente.get("name", ""))
-        for cliente in encontrados[:5]
-    )
-
+    nomes = " | ".join(str(c.get("name") or "") for c in encontrados[:5])
     raise RuntimeError(
         f"Encontrei {len(encontrados)} clientes com BOX {numero_box}: {nomes}. "
-        f"Para evitar cobrança no cliente errado, a emissão foi bloqueada. "
-        f"Deixe apenas um cadastro correspondente a esse BOX."
+        "Para evitar cobrar a pessoa errada, selecione o cadastro correto."
     )
-
 
 
 def recuperar_notificacoes_cliente(customer_id):
@@ -620,6 +569,17 @@ def padronizar_notificacoes_asaas(customer_id):
 
         atualizacoes.append(config)
 
+    # O padrão já está aplicado? Evita PUT desnecessário em cada boleto.
+    if all(
+        all(
+            original.get(campo) == valor
+            for campo, valor in desejada.items()
+            if campo != "id"
+        )
+        for original, desejada in zip(notificacoes, atualizacoes)
+    ):
+        return True
+
     payload = {
         "customer": customer_id,
         "notifications": atualizacoes,
@@ -655,15 +615,31 @@ def criar_referencia_externa(nome_arquivo, valor, vencimento, descricao=""):
     return f"lider-royalties-{digest}"
 
 def buscar_cobranca_existente(external_reference):
+    """Somente leitura: impede reutilizar cobrança errada ou ambígua."""
     resposta = requests.get(
         f"{ASAAS_BASE_URL}/payments",
         headers=cabecalhos_asaas(),
-        params={"externalReference": external_reference},
+        params={"externalReference": external_reference, "limit": 100},
         timeout=30,
     )
     resposta.raise_for_status()
-    dados = resposta.json().get("data", [])
-    return dados[0] if dados else None
+    corpo = resposta.json()
+    if not isinstance(corpo, dict) or not isinstance(corpo.get("data"), list):
+        raise RuntimeError("Resposta inválida ao conciliar cobrança no Asaas.")
+    # A referência completa precisa corresponder; não usar primeira cobrança
+    # de uma lista que possa conter filtros aplicados de forma inesperada.
+    itens = corpo["data"]
+    if any(
+        not isinstance(p, dict) or p.get("externalReference") != external_reference
+        for p in itens
+    ):
+        raise RuntimeError("A consulta retornou cobrança com referência divergente.")
+    if corpo.get("hasMore") or len(itens) > 1:
+        raise RuntimeError(
+            "Foram encontradas cobranças repetidas com a mesma referência. "
+            "Concilie manualmente no Asaas antes de emitir novamente."
+        )
+    return itens[0] if itens else None
 
 def emitir_boleto_asaas(
     nome_arquivo,
@@ -701,10 +677,6 @@ def emitir_boleto_asaas(
             f"mas o Asaas não retornou um ID válido."
         )
 
-    # Antes de emitir a cobrança, aplica automaticamente
-    # o padrão de notificações definido pela Líder.
-    padronizar_notificacoes_asaas(customer_id)
-
     descricao_final = str(descricao_boleto or "").strip()
 
     if not descricao_final:
@@ -724,98 +696,125 @@ def emitir_boleto_asaas(
     if emitir_nota:
         external_reference = f"{referencia_base}|NFSE|"
 
-    # Não criar outro boleto se a mesma operação já foi cobrada com a
-    # opção de nota fiscal diferente. A cobrança existente deve ser conciliada.
-    referencia_alternativa = (
-        referencia_base if emitir_nota else f"{referencia_base}|NFSE|"
-    )
-    # Compatibilidade com boletos avulsos já criados pela busca por cidade
-    # na versão anterior: a referência usava CLIENTE {id}, mesmo com BOX.
-    # Consulta somente leitura; evita duplicidade ao alternar modos de busca.
-    if cliente_selecionado_id is not None and numero_box is not None:
-        referencia_legada = criar_referencia_externa(
-            f"CLIENTE {customer_id}.txt",
-            valor_cobranca,
-            vencimento,
-            descricao_final,
+    chave_operacao_financeira = (ASAAS_BASE_URL, referencia_base)
+    # A busca por cobrança existente e a criação ficam sob um único bloqueio
+    # por processo. As chaves do Asaas e seus webhooks não são modificados.
+    with operacao_financeira_unica(chave_operacao_financeira):
+        # Não criar outro boleto se a mesma operação já foi cobrada com a
+        # opção de nota fiscal diferente. A cobrança existente deve ser conciliada.
+        referencia_alternativa = (
+            referencia_base if emitir_nota else f"{referencia_base}|NFSE|"
         )
-        if referencia_legada != referencia_base:
-            existente_legado = buscar_cobranca_existente(referencia_legada)
-            if existente_legado:
-                return {
-                    "novo": False,
-                    "clienteNome": cliente.get("name"),
-                    "clienteId": customer_id,
-                    "box": numero_box,
-                    "id": existente_legado.get("id"),
-                    "invoiceUrl": existente_legado.get("invoiceUrl"),
-                    "bankSlipUrl": existente_legado.get("bankSlipUrl"),
-                    "status": existente_legado.get("status"),
-                    "externalReference": referencia_legada,
-                }
+        # Compatibilidade com boletos avulsos já criados pela busca por cidade
+        # na versão anterior: a referência usava CLIENTE {id}, mesmo com BOX.
+        # Consulta somente leitura; evita duplicidade ao alternar modos de busca.
+        if cliente_selecionado_id is not None and numero_box is not None:
+            referencia_legada = criar_referencia_externa(
+                f"CLIENTE {customer_id}.txt",
+                valor_cobranca,
+                vencimento,
+                descricao_final,
+            )
+            if referencia_legada != referencia_base:
+                existente_legado = buscar_cobranca_existente(referencia_legada)
+                if existente_legado:
+                    return {
+                        "novo": False,
+                        "clienteNome": cliente.get("name"),
+                        "clienteId": customer_id,
+                        "box": numero_box,
+                        "id": existente_legado.get("id"),
+                        "invoiceUrl": existente_legado.get("invoiceUrl"),
+                        "bankSlipUrl": existente_legado.get("bankSlipUrl"),
+                        "status": existente_legado.get("status"),
+                        "externalReference": referencia_legada,
+                    }
 
-    cobranca_alternativa = buscar_cobranca_existente(referencia_alternativa)
-    if cobranca_alternativa:
-        raise RuntimeError(
-            "Já existe uma cobrança para esta operação no Asaas "
-            f"({cobranca_alternativa.get('id', 'ID não informado')}). "
-            "A opção de nota fiscal é diferente. Não foi criado outro boleto; "
-            "concilie a cobrança existente antes de prosseguir."
-        )
+        cobranca_alternativa = buscar_cobranca_existente(referencia_alternativa)
+        if cobranca_alternativa:
+            raise RuntimeError(
+                "Já existe uma cobrança para esta operação no Asaas "
+                f"({cobranca_alternativa.get('id', 'ID não informado')}). "
+                "A opção de nota fiscal é diferente. Não foi criado outro boleto; "
+                "concilie a cobrança existente antes de prosseguir."
+            )
 
-    existente = buscar_cobranca_existente(external_reference)
-    if existente:
-        return {
-            "novo": False,
-            "clienteNome": cliente.get("name"),
-            "clienteId": customer_id,
-            "box": numero_box,
-            "id": existente.get("id"),
-            "invoiceUrl": existente.get("invoiceUrl"),
-            "bankSlipUrl": existente.get("bankSlipUrl"),
-            "status": existente.get("status"),
+        existente = buscar_cobranca_existente(external_reference)
+        if existente:
+            return {
+                "novo": False,
+                "clienteNome": cliente.get("name"),
+                "clienteId": customer_id,
+                "box": numero_box,
+                "id": existente.get("id"),
+                "invoiceUrl": existente.get("invoiceUrl"),
+                "bankSlipUrl": existente.get("bankSlipUrl"),
+                "status": existente.get("status"),
+                "externalReference": external_reference,
+            }
+
+
+        payload = {
+            "customer": customer_id,
+            "billingType": "BOLETO",
+            "value": round(float(valor_cobranca), 2),
+            "dueDate": vencimento.isoformat(),
+            "description": descricao_final[:500],
             "externalReference": external_reference,
         }
 
+        # O padrão de notificações é reaplicado só se diferente do atual.
+        padronizar_notificacoes_asaas(customer_id)
 
-    payload = {
-        "customer": customer_id,
-        "billingType": "BOLETO",
-        "value": round(float(valor_cobranca), 2),
-        "dueDate": vencimento.isoformat(),
-        "description": descricao_final[:500],
-        "externalReference": external_reference,
-    }
-
-    resposta = requests.post(
-        f"{ASAAS_BASE_URL}/payments",
-        headers=cabecalhos_asaas(),
-        json=payload,
-        timeout=30,
-    )
-
-    if not resposta.ok:
         try:
-            detalhe = resposta.json()
-        except Exception:
-            detalhe = resposta.text
-        raise RuntimeError(
-            f"Asaas retornou HTTP {resposta.status_code}: {detalhe}"
-        )
+            resposta = requests.post(
+                f"{ASAAS_BASE_URL}/payments",
+                headers=cabecalhos_asaas(),
+                json=payload,
+                timeout=30,
+            )
+        except requests.RequestException as exc:
+            marcar_resultado_inconclusivo(chave_operacao_financeira)
+            raise RuntimeError(
+                "Não foi possível confirmar se o Asaas criou a cobrança. "
+                "Confira a referência no Asaas; não repita até conciliar."
+            ) from exc
 
-    dados = resposta.json()
+        if not resposta.ok:
+            if resposta_inconclusiva(resposta.status_code):
+                marcar_resultado_inconclusivo(chave_operacao_financeira)
+            raise RuntimeError(
+                f"Asaas retornou HTTP {resposta.status_code}. "
+                "Verifique o resultado e o cadastro diretamente no Asaas "
+                "antes de tentar novamente."
+            )
 
-    return {
-        "novo": True,
-        "clienteNome": cliente.get("name"),
-        "clienteId": customer_id,
-        "box": numero_box,
-        "id": dados.get("id"),
-        "invoiceUrl": dados.get("invoiceUrl"),
-        "bankSlipUrl": dados.get("bankSlipUrl"),
-        "status": dados.get("status"),
-        "externalReference": external_reference,
-    }
+        try:
+            dados = resposta.json()
+        except ValueError as exc:
+            marcar_resultado_inconclusivo(chave_operacao_financeira)
+            raise RuntimeError(
+                "Asaas respondeu sem confirmação verificável. "
+                "Confira a cobrança no provedor antes de repetir."
+            ) from exc
+        if not isinstance(dados, dict) or not str(dados.get("id") or "").startswith("pay_"):
+            marcar_resultado_inconclusivo(chave_operacao_financeira)
+            raise RuntimeError(
+                "O Asaas não confirmou o identificador da cobrança. "
+                "É necessária conciliação antes de nova emissão."
+            )
+
+        return {
+            "novo": True,
+            "clienteNome": cliente.get("name"),
+            "clienteId": customer_id,
+            "box": numero_box,
+            "id": dados.get("id"),
+            "invoiceUrl": dados.get("invoiceUrl"),
+            "bankSlipUrl": dados.get("bankSlipUrl"),
+            "status": dados.get("status"),
+            "externalReference": external_reference,
+        }
 
 PALAVRAS_FATURAMENTO = [
     "cobranca recebida",
@@ -2582,12 +2581,29 @@ def consultar_historico_asaas(ano, mes):
         if offset > 100000:
             raise RuntimeError("Consulta muito extensa. Contate o suporte.")
 
+    # Identifica também as cobranças geradas pelo Asaas para assinaturas
+    # mensais originadas neste Extrator (o ID fica no campo 'subscription').
+    subscription_ids = {
+        str(p.get("subscription")) for p in pagamentos if p.get("subscription")
+    }
+    assinaturas_extrator = set()
+    if subscription_ids:
+        assinaturas = listar_recorrencias_extrator(
+            ASAAS_BASE_URL, cabecalhos_asaas(), get=requests.get,
+        )
+        assinaturas_extrator = {
+            assinatura["id"] for assinatura in assinaturas
+        }
+
     # Referência criada pela rotina de emissão deste aplicativo.
-    # Não classifica cobranças manuais ou de outros sistemas como emitidas aqui.
+    # As cobranças das recorrências são correlacionadas por subscription.
     registros = []
     for pagamento in pagamentos:
         referencia = str(pagamento.get("externalReference") or "")
-        if not referencia.startswith("lider-royalties-"):
+        if (
+            not referencia.startswith("lider-royalties-")
+            and str(pagamento.get("subscription") or "") not in assinaturas_extrator
+        ):
             continue
         # Não filtrar por billingType: a cobrança emitida pelo extrator
         # pode ser quitada por outra modalidade disponibilizada pelo Asaas.
@@ -2601,19 +2617,17 @@ def consultar_historico_asaas(ano, mes):
 
 
 def clientes_historico_asaas(ids_clientes):
-    nomes = {}
-    for identificador in sorted(ids_clientes):
-        resposta = requests.get(
-            f"{ASAAS_BASE_URL}/customers/{identificador}",
-            headers=cabecalhos_asaas(),
-            timeout=30,
-        )
-        if resposta.ok:
-            nomes[identificador] = str(resposta.json().get("name") or "")
-        else:
-            nomes[identificador] = "Cliente não localizado"
-    return nomes
-
+    """Nomes reutilizados da lista em cache: evita uma chamada por boleto."""
+    clientes = clientes_avulsos_em_cache()
+    nomes = {
+        str(cliente["id"]): str(cliente.get("name") or "")
+        for cliente in clientes
+        if cliente.get("id")
+    }
+    return {
+        identificador: nomes.get(identificador, "Cliente não localizado")
+        for identificador in ids_clientes
+    }
 
 
 if st.session_state.pagina_lider == "Extratos":
@@ -3209,7 +3223,20 @@ if st.session_state.pagina_lider == "Extratos":
                         disabled=valor_final_boleto <= 0
                     )
         
+                    assinatura_boleto_atual = (
+                        EMPRESA_SELECIONADA,
+                        arquivo.name,
+                        hashlib.sha256(arquivo.getvalue()).hexdigest(),
+                        round(float(valor_final_boleto), 2),
+                        vencimento.isoformat(),
+                        descricao_boleto,
+                        bool(emitir_nota_apos_pagamento),
+                    )
+                    chave_resultado = f"resultado_boleto_{indice}"
+                    chave_assinatura = f"assinatura_resultado_boleto_{indice}"
                     if clicou_emitir_boleto:
+                        st.session_state.pop(chave_resultado, None)
+                        st.session_state.pop(chave_assinatura, None)
                         try:
                             with st.spinner("Gerando boleto no Asaas..."):
                                 boleto = emitir_boleto_asaas(
@@ -3220,16 +3247,15 @@ if st.session_state.pagina_lider == "Extratos":
                                     descricao_boleto,
                                     emitir_nota_apos_pagamento
                                 )
-
-                            st.session_state[f"resultado_boleto_{indice}"] = boleto
-
+                            st.session_state[chave_resultado] = boleto
+                            st.session_state[chave_assinatura] = assinatura_boleto_atual
                         except Exception as erro_boleto:
-                            st.error(
-                                f"Não foi possível emitir o boleto: {erro_boleto}"
-                            )
+                            st.error(f"Não foi possível emitir o boleto: {erro_boleto}")
 
-                    boleto_salvo = st.session_state.get(
-                        f"resultado_boleto_{indice}"
+                    boleto_salvo = (
+                        st.session_state.get(chave_resultado)
+                        if st.session_state.get(chave_assinatura) == assinatura_boleto_atual
+                        else None
                     )
 
                     if boleto_salvo:
@@ -3460,3 +3486,61 @@ if st.session_state.pagina_lider == "Histórico":
                 )
             else:
                 st.info("Selecione o mês e clique em Consultar para carregar o histórico.")
+
+# Consulta de NFS-e estritamente somente leitura, para conciliação fiscal.
+# Nenhum evento é reenviado; nenhuma nota é criada/cancelada aqui.
+if (st.session_state.pagina_lider == "Histórico"
+        and EMPRESA_SELECIONADA == "Lider Franquia"):
+    with st.expander("Conferir NFS-e de uma cobrança (somente consulta)", expanded=False):
+        st.caption(
+            "Informe o identificador pay_ do Asaas. A consulta não emite, "
+            "cancela nem reenvia nota fiscal; pendências precisam de conciliação."
+        )
+        pagamento_conciliacao = st.text_input(
+            "ID da cobrança",
+            placeholder="pay_...",
+            key="pagamento_conciliacao_nfse",
+        ).strip()
+        if st.button("Consultar cobrança e notas", key="verificar_nfse_sem_emissao"):
+            try:
+                with st.spinner("Consultando pagamento e NFS-e no Asaas..."):
+                    resultado_nfse = consultar_nfse_por_pagamento(
+                        ASAAS_BASE_URL, cabecalhos_asaas(),
+                        pagamento_conciliacao, get=requests.get,
+                    )
+                st.session_state["resultado_conciliacao_nfse"] = resultado_nfse
+                st.session_state["consulta_conciliacao_nfse"] = (
+                    EMPRESA_SELECIONADA, pagamento_conciliacao,
+                )
+            except Exception as erro_nfse:
+                st.session_state.pop("resultado_conciliacao_nfse", None)
+                st.session_state.pop("consulta_conciliacao_nfse", None)
+                st.error(f"Não foi possível conciliar a nota fiscal: {erro_nfse}")
+        if st.session_state.get("consulta_conciliacao_nfse") == (
+            EMPRESA_SELECIONADA, pagamento_conciliacao,
+        ):
+            resultado_nfse = st.session_state["resultado_conciliacao_nfse"]
+            st.write(f'Situação da cobrança: **{resultado_nfse["payment_status"]}**')
+            if not resultado_nfse["fiscal_solicitada_pelo_extrator"]:
+                st.info(
+                    "A cobrança não possui a marca de emissão automática de NFS-e "
+                    "do Extrator. Confira as regras de faturamento aplicáveis."
+                )
+            notas_nfse = resultado_nfse["notas"]
+            if notas_nfse:
+                st.dataframe(pd.DataFrame(notas_nfse), hide_index=True,
+                             use_container_width=True)
+                if any(n["status"] not in ("AUTHORIZED", "SYNCHRONIZED")
+                       for n in notas_nfse):
+                    st.warning(
+                        "Existe nota pendente, em erro ou em situação que exige "
+                        "verificação no Asaas antes de tomar qualquer ação."
+                    )
+            elif resultado_nfse["fiscal_solicitada_pelo_extrator"]:
+                st.warning(
+                    "A API não localizou uma NFS-e vinculada a esta cobrança. "
+                    "Não repita a emissão sem verificar registros anteriores "
+                    "e conciliar com o Asaas."
+                )
+            else:
+                st.caption("Nenhuma nota fiscal vinculada a esta cobrança.")
