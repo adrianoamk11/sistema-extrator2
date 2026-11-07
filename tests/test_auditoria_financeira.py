@@ -197,3 +197,37 @@ def test_notificacoes_ja_padronizadas_nao_regravadas():
     func = _funcao_app("padronizar_notificacoes_asaas", escopo)
     assert func("cus_Ab123") is True
     req.put.assert_not_called()
+
+
+def test_referencia_ambigua_impede_emitir_nova_cobranca():
+    referencia = "lider-royalties-abc123"
+    resposta = _resposta({
+        "data": [
+            {"id": "pay_1", "externalReference": referencia},
+            {"id": "pay_2", "externalReference": referencia},
+        ],
+        "hasMore": False,
+    })
+    escopo = {
+        "requests": Mock(get=Mock(return_value=resposta)),
+        "ASAAS_BASE_URL": "https://asaas.invalid/v3",
+        "cabecalhos_asaas": lambda: {},
+    }
+    consulta = _funcao_app("buscar_cobranca_existente", escopo)
+    with pytest.raises(RuntimeError, match="repetidas"):
+        consulta(referencia)
+
+
+def test_referencia_divergente_nao_reutiliza_cobranca_errada():
+    resposta = _resposta({
+        "data": [{"id": "pay_OUTRO", "externalReference": "ref-errada"}],
+        "hasMore": False,
+    })
+    escopo = {
+        "requests": Mock(get=Mock(return_value=resposta)),
+        "ASAAS_BASE_URL": "https://asaas.invalid/v3",
+        "cabecalhos_asaas": lambda: {},
+    }
+    consulta = _funcao_app("buscar_cobranca_existente", escopo)
+    with pytest.raises(RuntimeError, match="divergente"):
+        consulta("ref-esperada")
