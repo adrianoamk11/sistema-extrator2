@@ -2121,6 +2121,26 @@ st.markdown(
 
 
 
+# Página inicial independente, sem criar métricas ou consultas financeiras.
+if st.session_state.pagina_lider == "Início":
+    st.subheader("Bem-vindo ao Extrator Líder")
+    st.caption("Acesse as funções existentes pelos atalhos abaixo.")
+    inicio_extratos, inicio_historico = st.columns(2)
+    with inicio_extratos:
+        with st.container(border=True):
+            st.markdown("### 📘 Extratos")
+            st.write("Importe, confira e processe seus arquivos financeiros.")
+            if st.button("Abrir extratos", key="inicio_abrir_extratos", use_container_width=True):
+                st.session_state.pagina_lider = "Extratos"
+                st.rerun()
+    with inicio_historico:
+        with st.container(border=True):
+            st.markdown("### 🕘 Histórico")
+            st.write("Consulte cobranças anteriores diretamente no Asaas.")
+            if st.button("Consultar histórico", key="inicio_abrir_historico", use_container_width=True):
+                st.session_state.pagina_lider = "Histórico"
+                st.rerun()
+
 # ============================================================
 # BOLETO AVULSO
 # ============================================================
@@ -2478,7 +2498,7 @@ def clientes_historico_asaas(ids_clientes):
 
 
 
-if st.session_state.pagina_lider in ("Início", "Extratos"):
+if st.session_state.pagina_lider == "Extratos":
     if "uploader_key" not in st.session_state:
         st.session_state.uploader_key = 0
 
