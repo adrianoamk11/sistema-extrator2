@@ -715,6 +715,31 @@ def emitir_boleto_asaas(
     referencia_alternativa = (
         referencia_base if emitir_nota else f"{referencia_base}|NFSE|"
     )
+    # Compatibilidade com boletos avulsos já criados pela busca por cidade
+    # na versão anterior: a referência usava CLIENTE {id}, mesmo com BOX.
+    # Consulta somente leitura; evita duplicidade ao alternar modos de busca.
+    if cliente_selecionado_id is not None and numero_box is not None:
+        referencia_legada = criar_referencia_externa(
+            f"CLIENTE {customer_id}.txt",
+            valor_cobranca,
+            vencimento,
+            descricao_final,
+        )
+        if referencia_legada != referencia_base:
+            existente_legado = buscar_cobranca_existente(referencia_legada)
+            if existente_legado:
+                return {
+                    "novo": False,
+                    "clienteNome": cliente.get("name"),
+                    "clienteId": customer_id,
+                    "box": numero_box,
+                    "id": existente_legado.get("id"),
+                    "invoiceUrl": existente_legado.get("invoiceUrl"),
+                    "bankSlipUrl": existente_legado.get("bankSlipUrl"),
+                    "status": existente_legado.get("status"),
+                    "externalReference": referencia_legada,
+                }
+
     cobranca_alternativa = buscar_cobranca_existente(referencia_alternativa)
     if cobranca_alternativa:
         raise RuntimeError(
