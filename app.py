@@ -615,15 +615,31 @@ def criar_referencia_externa(nome_arquivo, valor, vencimento, descricao=""):
     return f"lider-royalties-{digest}"
 
 def buscar_cobranca_existente(external_reference):
+    """Somente leitura: impede reutilizar cobrança errada ou ambígua."""
     resposta = requests.get(
         f"{ASAAS_BASE_URL}/payments",
         headers=cabecalhos_asaas(),
-        params={"externalReference": external_reference},
+        params={"externalReference": external_reference, "limit": 100},
         timeout=30,
     )
     resposta.raise_for_status()
-    dados = resposta.json().get("data", [])
-    return dados[0] if dados else None
+    corpo = resposta.json()
+    if not isinstance(corpo, dict) or not isinstance(corpo.get("data"), list):
+        raise RuntimeError("Resposta inválida ao conciliar cobrança no Asaas.")
+    # A referência completa precisa corresponder; não usar primeira cobrança
+    # de uma lista que possa conter filtros aplicados de forma inesperada.
+    itens = corpo["data"]
+    if any(
+        not isinstance(p, dict) or p.get("externalReference") != external_reference
+        for p in itens
+    ):
+        raise RuntimeError("A consulta retornou cobrança com referência divergente.")
+    if corpo.get("hasMore") or len(itens) > 1:
+        raise RuntimeError(
+            "Foram encontradas cobranças repetidas com a mesma referência. "
+            "Concilie manualmente no Asaas antes de emitir novamente."
+        )
+    return itens[0] if itens else None
 
 def emitir_boleto_asaas(
     nome_arquivo,
