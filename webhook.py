@@ -192,8 +192,12 @@ def webhook_asaas():
         app.logger.error("Falha na reserva de NFS-e: %s", type(exc).__name__)
         return jsonify({"ok": False, "nota": "reserva indisponivel"}), 503
     if not reservada:
-        app.logger.warning("NFS-e aguardando conciliacao: %s", payment_id)
-        return jsonify({"ok": False, "nota": "tentativa anterior pendente de conciliacao"}), 503
+        # A tentativa anterior ja foi registrada em disco. Repetir POST /invoices
+        # pode gerar NFS-e duplicada em caso de timeout ou resposta ambigua.
+        # Acknowledge da entrega do webhook evita penalizar toda a fila Asaas;
+        # a pendencia continua persistida para conciliacao manual.
+        app.logger.warning("NFS-e aguardando conciliacao manual: %s", payment_id)
+        return jsonify({"ok": True, "nota": "pendente de conciliacao manual"}), 200
 
     payload_nota = {
         "payment": payment_id,
@@ -231,6 +235,7 @@ def webhook_asaas():
                 registrar_rejeicao_asaas(payment_id, resposta.status_code, detalhes)
             except (ValueError, sqlite3.Error):
                 app.logger.error("Falha ao persistir rejeicao de NFS-e: %s", payment_id)
+                return jsonify({"ok": False, "nota": "falha ao registrar rejeicao"}), 503
             app.logger.error(
                 "Asaas recusou NFS-e da cobrança %s (HTTP %s): %s",
                 payment_id, resposta.status_code, detalhes,
@@ -240,6 +245,11 @@ def webhook_asaas():
                 "Resposta incerta na criacao de NFS-e da cobrança %s: HTTP %s",
                 payment_id, resposta.status_code,
             )
+        # Rejeicao definitiva foi persistida; nao adianta reenviar o mesmo
+        # evento, que bloquearia a fila e nao corrigiria o dado fiscal.
+        # Respostas 5xx permanecem incertas e sao tratadas com cautela.
+        if 400 <= resposta.status_code < 500:
+            return jsonify({"ok": True, "nota": "rejeitada pelo Asaas; conciliacao manual necessaria", "status_asaas": resposta.status_code}), 200
         return jsonify({"ok": False, "nota": "requer conciliacao", "status_asaas": resposta.status_code}), 503
 
     try:
