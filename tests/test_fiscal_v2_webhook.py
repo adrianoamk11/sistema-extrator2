@@ -104,3 +104,26 @@ def test_verificacao_sandbox_recusa_credencial_invalida(monkeypatch):
     monkeypatch.setenv("ASAAS_SANDBOX_API_KEY", "chave-ficticia")
     monkeypatch.setattr(requests, "get", Mock(return_value=Mock(status_code=401)))
     assert fiscal_v2_webhook.verificar_conexao_sandbox() == "NAO_AUTORIZADO"
+
+
+def test_preflight_fiscal_info_ausente_nao_emite_nada(monkeypatch):
+    import requests
+    import fiscal_v2_webhook
+    from unittest.mock import Mock
+    monkeypatch.setenv("ASAAS_SANDBOX_API_KEY", "somente-teste")
+    get = Mock(side_effect=[Mock(status_code=404), Mock(status_code=200)])
+    monkeypatch.setattr(requests, "get", get)
+    assert fiscal_v2_webhook.verificar_prontidao_fiscal_sandbox() == {
+        "fiscal_info": "NAO_CONFIGURADO", "notas": "OK"
+    }
+    assert get.call_count == 2
+    assert all(
+        c.args[0].startswith("https://api-sandbox.asaas.com/v3/")
+        for c in get.call_args_list
+    )
+
+
+def test_preflight_nunca_faz_get_sem_chave(monkeypatch):
+    import fiscal_v2_webhook
+    monkeypatch.delenv("ASAAS_SANDBOX_API_KEY", raising=False)
+    assert fiscal_v2_webhook.verificar_prontidao_fiscal_sandbox()["fiscal_info"] == "CHAVE_AUSENTE"
