@@ -3,6 +3,7 @@ import pandas as pd
 import fitz
 import time
 from st_keyup import st_keyup
+from conciliacao_fiscal import consultar_nfse_por_pagamento
 from operacao_financeira import (
     operacao_financeira_unica, marcar_resultado_inconclusivo,
     resposta_inconclusiva,
@@ -3469,3 +3470,61 @@ if st.session_state.pagina_lider == "Histórico":
                 )
             else:
                 st.info("Selecione o mês e clique em Consultar para carregar o histórico.")
+
+# Consulta de NFS-e estritamente somente leitura, para conciliação fiscal.
+# Nenhum evento é reenviado; nenhuma nota é criada/cancelada aqui.
+if (st.session_state.pagina_lider == "Histórico"
+        and EMPRESA_SELECIONADA == "Lider Franquia"):
+    with st.expander("Conferir NFS-e de uma cobrança (somente consulta)", expanded=False):
+        st.caption(
+            "Informe o identificador pay_ do Asaas. A consulta não emite, "
+            "cancela nem reenvia nota fiscal; pendências precisam de conciliação."
+        )
+        pagamento_conciliacao = st.text_input(
+            "ID da cobrança",
+            placeholder="pay_...",
+            key="pagamento_conciliacao_nfse",
+        ).strip()
+        if st.button("Consultar cobrança e notas", key="verificar_nfse_sem_emissao"):
+            try:
+                with st.spinner("Consultando pagamento e NFS-e no Asaas..."):
+                    resultado_nfse = consultar_nfse_por_pagamento(
+                        ASAAS_BASE_URL, cabecalhos_asaas(),
+                        pagamento_conciliacao, get=requests.get,
+                    )
+                st.session_state["resultado_conciliacao_nfse"] = resultado_nfse
+                st.session_state["consulta_conciliacao_nfse"] = (
+                    EMPRESA_SELECIONADA, pagamento_conciliacao,
+                )
+            except Exception as erro_nfse:
+                st.session_state.pop("resultado_conciliacao_nfse", None)
+                st.session_state.pop("consulta_conciliacao_nfse", None)
+                st.error(f"Não foi possível conciliar a nota fiscal: {erro_nfse}")
+        if st.session_state.get("consulta_conciliacao_nfse") == (
+            EMPRESA_SELECIONADA, pagamento_conciliacao,
+        ):
+            resultado_nfse = st.session_state["resultado_conciliacao_nfse"]
+            st.write(f'Situação da cobrança: **{resultado_nfse["payment_status"]}**')
+            if not resultado_nfse["fiscal_solicitada_pelo_extrator"]:
+                st.info(
+                    "A cobrança não possui a marca de emissão automática de NFS-e "
+                    "do Extrator. Confira as regras de faturamento aplicáveis."
+                )
+            notas_nfse = resultado_nfse["notas"]
+            if notas_nfse:
+                st.dataframe(pd.DataFrame(notas_nfse), hide_index=True,
+                             use_container_width=True)
+                if any(n["status"] not in ("AUTHORIZED", "SYNCHRONIZED")
+                       for n in notas_nfse):
+                    st.warning(
+                        "Existe nota pendente, em erro ou em situação que exige "
+                        "verificação no Asaas antes de tomar qualquer ação."
+                    )
+            elif resultado_nfse["fiscal_solicitada_pelo_extrator"]:
+                st.warning(
+                    "A API não localizou uma NFS-e vinculada a esta cobrança. "
+                    "Não repita a emissão sem verificar registros anteriores "
+                    "e conciliar com o Asaas."
+                )
+            else:
+                st.caption("Nenhuma nota fiscal vinculada a esta cobrança.")
