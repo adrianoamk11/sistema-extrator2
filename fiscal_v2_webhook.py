@@ -164,3 +164,10 @@ def verificar_prontidao_fiscal_sandbox():
 
 if os.environ.get("FISCAL_V2_PREFLIGHT") == "SIM":
     verificar_prontidao_fiscal_sandbox()
+
+
+if os.environ.get("FISCAL_V2_PROD_CHECK") == "SIM":
+    from fiscal_v2_production_readonly import diagnosticar_producao
+    # Resultado apenas de códigos HTTP; não registrar qualquer dado da conta.
+    for item, situacao in diagnosticar_producao().items():
+        app_v2.logger.warning("Fiscal V2 produção leitura: %s = %s", item, situacao)
