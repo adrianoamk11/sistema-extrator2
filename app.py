@@ -2133,80 +2133,117 @@ if st.session_state.pagina_lider == "Boleto avulso" and st.session_state.mostrar
             "Esta cobrança não gera nota fiscal."
         )
 
-        col_box, col_buscar = st.columns([2, 1])
-
-        numero_box_avulso = col_box.number_input(
-            "Número do BOX",
-            min_value=1,
-            step=1,
-            value=None,
-            placeholder="Ex.: 25",
-            key="box_boleto_avulso"
+        modo_busca_avulso = st.radio(
+            "Localizar o cliente por",
+            ["BOX", "Cidade"],
+            horizontal=True,
+            key="modo_busca_cliente_avulso",
         )
-
-        buscar_cliente_avulso = col_buscar.button(
-            "🔎 Buscar cliente",
-            use_container_width=True,
-            key="buscar_cliente_boleto_avulso"
-        )
-
-        # Se a empresa ou o BOX mudar, uma identificação antiga não pode
-        # ser usada para uma nova cobrança.
-        assinatura_busca_atual = (
-            EMPRESA_SELECIONADA,
-            int(numero_box_avulso) if numero_box_avulso is not None else None
-        )
-
-        if (
-            st.session_state.get("assinatura_cliente_avulso")
-            != assinatura_busca_atual
-        ):
-            st.session_state.pop("cliente_avulso_encontrado", None)
-
-        if buscar_cliente_avulso:
-            if numero_box_avulso is None:
-                st.warning("Informe o número do BOX.")
-            else:
-                try:
-                    cliente_avulso, box_confirmado = localizar_cliente_asaas_por_box(
-                        f"BOX {int(numero_box_avulso)}.txt"
-                    )
-
-                    st.session_state["cliente_avulso_encontrado"] = {
-                        "id": cliente_avulso.get("id"),
-                        "name": cliente_avulso.get("name", ""),
-                        "box": box_confirmado,
-                    }
-                    st.session_state["assinatura_cliente_avulso"] = (
-                        assinatura_busca_atual
-                    )
-
-                except Exception as erro_cliente:
-                    st.session_state.pop("cliente_avulso_encontrado", None)
-                    st.error(
-                        f"Não foi possível localizar o cliente: {erro_cliente}"
-                    )
-
-        cliente_avulso_salvo = st.session_state.get(
-            "cliente_avulso_encontrado"
-        )
-
-        cliente_confirmado = (
-            cliente_avulso_salvo is not None
-            and st.session_state.get("assinatura_cliente_avulso")
-            == assinatura_busca_atual
-        )
-
-        if cliente_confirmado:
-            st.success(
-                f"Cliente encontrado: "
-                f"{cliente_avulso_salvo.get('name', '')} "
-                f"(BOX {cliente_avulso_salvo.get('box', '')})"
+        col_busca, col_buscar = st.columns([2, 1])
+        numero_box_avulso = None
+        cidade_avulsa = ""
+        if modo_busca_avulso == "BOX":
+            numero_box_avulso = col_busca.number_input(
+                "Número do BOX", min_value=1, step=1, value=None,
+                placeholder="Ex.: 25", key="box_boleto_avulso"
             )
         else:
-            st.info(
-                "Informe o BOX e clique em “Buscar cliente” antes de emitir."
+            cidade_avulsa = col_busca.text_input(
+                "Cidade do cadastro",
+                placeholder="Ex.: Balneário Camboriú, Itapema, Jundiaí",
+                key="cidade_boleto_avulso",
             )
+        buscar_cliente_avulso = col_buscar.button(
+            "🔎 Buscar cliente", use_container_width=True,
+            key="buscar_cliente_boleto_avulso"
+        )
+        assinatura_busca_atual = (
+            EMPRESA_SELECIONADA, modo_busca_avulso,
+            (int(numero_box_avulso) if numero_box_avulso is not None else None)
+            if modo_busca_avulso == "BOX" else normalizar(cidade_avulsa),
+        )
+        if st.session_state.get("assinatura_cliente_avulso") != assinatura_busca_atual:
+            st.session_state.pop("cliente_avulso_encontrado", None)
+        if st.session_state.get("assinatura_lista_cidade_avulso") != assinatura_busca_atual:
+            st.session_state.pop("clientes_cidade_avulso", None)
+
+        if buscar_cliente_avulso:
+            st.session_state.pop("cliente_avulso_encontrado", None)
+            st.session_state.pop("resultado_boleto_avulso", None)
+            if modo_busca_avulso == "BOX" and numero_box_avulso is None:
+                st.warning("Informe o número do BOX.")
+            elif modo_busca_avulso == "Cidade" and len(normalizar(cidade_avulsa)) < 3:
+                st.warning("Informe pelo menos três letras da cidade.")
+            else:
+                try:
+                    if modo_busca_avulso == "BOX":
+                        cliente_avulso, box_confirmado = localizar_cliente_asaas_por_box(
+                            f"BOX {int(numero_box_avulso)}.txt"
+                        )
+                        st.session_state["cliente_avulso_encontrado"] = {
+                            "id": cliente_avulso.get("id"),
+                            "name": cliente_avulso.get("name", ""),
+                            "box": box_confirmado,
+                        }
+                        st.session_state["assinatura_cliente_avulso"] = assinatura_busca_atual
+                    else:
+                        clientes_cidade = procurar_clientes_por_cidade(
+                            ASAAS_BASE_URL, cabecalhos_asaas(), cidade_avulsa
+                        )
+                        st.session_state["clientes_cidade_avulso"] = clientes_cidade
+                        st.session_state["assinatura_lista_cidade_avulso"] = assinatura_busca_atual
+                        st.session_state.pop("cliente_cidade_escolhido", None)
+                        if not clientes_cidade:
+                            st.warning("Não encontrei cadastro com essa cidade no Asaas.")
+                except Exception as erro_cliente:
+                    st.session_state.pop("clientes_cidade_avulso", None)
+                    st.session_state.pop("cliente_avulso_encontrado", None)
+                    st.error(f"Não foi possível localizar o cliente: {erro_cliente}")
+
+        if (
+            modo_busca_avulso == "Cidade"
+            and st.session_state.get("assinatura_lista_cidade_avulso") == assinatura_busca_atual
+            and st.session_state.get("clientes_cidade_avulso")
+        ):
+            candidatos = st.session_state["clientes_cidade_avulso"]
+            opcoes = {c["id"]: c for c in candidatos}
+            escolhido = st.selectbox(
+                "Selecione o cadastro correto antes de emitir",
+                list(opcoes),
+                index=None,
+                placeholder="Escolha um cliente entre os resultados",
+                format_func=lambda codigo: (
+                    f'{opcoes[codigo]["name"]} — '
+                    f'{opcoes[codigo].get("cityName") or "cidade no nome"} '
+                    f'({codigo})'
+                ),
+                key="cliente_cidade_escolhido",
+            )
+            if escolhido in opcoes:
+                selecionado = opcoes[escolhido]
+                st.session_state["cliente_avulso_encontrado"] = {
+                    "id": selecionado["id"], "name": selecionado["name"],
+                    "box": extrair_numero_box(selecionado["name"]),
+                }
+                st.session_state["assinatura_cliente_avulso"] = assinatura_busca_atual
+            else:
+                st.session_state.pop("cliente_avulso_encontrado", None)
+
+        cliente_avulso_salvo = st.session_state.get("cliente_avulso_encontrado")
+        cliente_confirmado = bool(
+            cliente_avulso_salvo
+            and st.session_state.get("assinatura_cliente_avulso") == assinatura_busca_atual
+            and cliente_avulso_salvo.get("id")
+        )
+        if cliente_confirmado:
+            st.success(
+                f'Cliente selecionado: {cliente_avulso_salvo.get("name", "")} '
+                f'(BOX {cliente_avulso_salvo.get("box") or "não informado"})'
+            )
+        elif modo_busca_avulso == "BOX":
+            st.info("Informe o BOX e clique em Buscar cliente antes de emitir.")
+        else:
+            st.info("Pesquise a cidade e selecione o cadastro correto antes de emitir.")
 
         descricao_avulsa = st.text_area(
             "Descrição do boleto",
@@ -2256,19 +2293,28 @@ if st.session_state.pagina_lider == "Boleto avulso" and st.session_state.mostrar
                 with st.spinner("Gerando boleto avulso no Asaas..."):
                     # Usa a mesma rotina de localização, notificações e
                     # proteção contra duplicidade do fluxo já existente.
+                    referencia_cliente = (
+                        f"BOX {int(numero_box_avulso)}.txt"
+                        if modo_busca_avulso == "BOX"
+                        else f'CLIENTE {cliente_avulso_salvo["id"]}.txt'
+                    )
                     boleto_avulso = emitir_boleto_asaas(
-                        f"BOX {int(numero_box_avulso)}.txt",
+                        referencia_cliente,
                         0.0,
                         float(valor_avulso),
                         vencimento_avulso,
                         str(descricao_avulsa).strip(),
-                        False
+                        False,
+                        cliente_selecionado_id=(
+                            cliente_avulso_salvo["id"] if modo_busca_avulso == "Cidade"
+                            else None
+                        ),
                     )
 
                 st.session_state["resultado_boleto_avulso"] = boleto_avulso
                 st.session_state["assinatura_resultado_boleto_avulso"] = (
-                    EMPRESA_SELECIONADA,
-                    int(numero_box_avulso),
+                    EMPRESA_SELECIONADA, modo_busca_avulso,
+                    cliente_avulso_salvo["id"],
                     round(float(valor_avulso), 2),
                     vencimento_avulso.isoformat(),
                     str(descricao_avulsa).strip(),
@@ -2281,10 +2327,10 @@ if st.session_state.pagina_lider == "Boleto avulso" and st.session_state.mostrar
                 )
 
         assinatura_resultado_atual = None
-        if numero_box_avulso is not None:
+        if cliente_confirmado:
             assinatura_resultado_atual = (
-                EMPRESA_SELECIONADA,
-                int(numero_box_avulso),
+                EMPRESA_SELECIONADA, modo_busca_avulso,
+                cliente_avulso_salvo["id"],
                 round(float(valor_avulso), 2),
                 vencimento_avulso.isoformat(),
                 str(descricao_avulsa).strip(),
