@@ -39,7 +39,7 @@ def normalizar_nbs(codigo):
     valor = str(codigo or "").strip()
     if re.fullmatch(r"[0-9]{9}", valor):
         valor = f"{valor[0]}.{valor[1:5]}.{valor[5:7]}.{valor[7:9]}"
-    if not re.fullmatch(r"[0-9]\\.[0-9]{4}\\.[0-9]{2}\\.[0-9]{2}", valor):
+    if not re.fullmatch(r"[0-9]\.[0-9]{4}\.[0-9]{2}\.[0-9]{2}", valor):
         raise ValueError("Codigo NBS invalido")
     return valor
 
