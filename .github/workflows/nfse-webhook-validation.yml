@@ -23,8 +23,8 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install app and test dependencies
-        run: python -m pip install flask requests pandas openpyxl streamlit pytest pymupdf
+        run: python -m pip install flask requests pandas openpyxl streamlit pytest pymupdf streamlit-keyup==1.0.0
       - name: Verify syntax
-        run: python -m compileall -q webhook.py app.py tests
+        run: python -m compileall -q webhook.py app.py busca_clientes_cidade.py tests && python -c 'from st_keyup import st_keyup'
       - name: Run regression tests
         run: python -m pytest tests -q
