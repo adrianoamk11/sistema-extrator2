@@ -171,3 +171,11 @@ if os.environ.get("FISCAL_V2_PROD_CHECK") == "SIM":
     # Resultado apenas de códigos HTTP; não registrar qualquer dado da conta.
     for item, situacao in diagnosticar_producao().items():
         app_v2.logger.warning("Fiscal V2 produção leitura: %s = %s", item, situacao)
+
+
+if os.environ.get("FISCAL_V2_CONCILIAR_961543418") == "SIM":
+    from fiscal_v2_cobranca_961543418 import investigar
+    # Logs de conciliação apenas no serviço de testes isolado.
+    import json
+    relatorio = investigar(os.environ.get("ASAAS_PRODUCAO_CONSULTA_KEY", "").strip())
+    app_v2.logger.warning("Fiscal V2 fatura 961543418: %s", json.dumps(relatorio))
