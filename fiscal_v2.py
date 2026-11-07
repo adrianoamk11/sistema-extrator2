@@ -14,7 +14,7 @@ import requests
 
 MARCADOR_NFSE = "|NFSE|"
 PAGAMENTO_RECEBIDO = frozenset({"RECEIVED", "CONFIRMED", "RECEIVED_IN_CASH"})
-ESTADOS_NOTA_CONCLUIDA = frozenset({"AUTHORIZED", "SYNCHRONIZED"})
+ESTADOS_NOTA_CONCLUIDA = frozenset({"AUTHORIZED"})
 
 
 class FalhaConciliacao(RuntimeError):
@@ -118,8 +118,8 @@ def classificar_pagamento(pagamento, notas):
         invoice_id = str(nota.get("id") or "") or None
         if status_nota in ESTADOS_NOTA_CONCLUIDA:
             situacao = "REGISTRADA_NO_ASAAS"
-        elif status_nota == "SCHEDULED":
-            situacao = "AGENDADA_NO_ASAAS"
+        elif status_nota in ("SCHEDULED", "SYNCHRONIZED"):
+            situacao = "AGUARDANDO_AUTORIZACAO"
         elif status_nota in ("ERROR", "CANCELED", "CANCELLED"):
             situacao = "ERRO_OU_CANCELAMENTO"
         else:
