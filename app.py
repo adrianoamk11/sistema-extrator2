@@ -2400,83 +2400,88 @@ def exibir_boleto_avulso():
                         use_container_width=True,
                     )
 
-        with st.expander("Recorrências mensais — consultar e cancelar", expanded=False):
-            st.caption(
-                "A consulta mostra apenas as recorrências de boletos mensais "
-                "criadas por este Extrator na empresa selecionada."
-            )
-            if st.button(
-                "Atualizar recorrências", key="atualizar_recorrencias_avulsas",
-            ):
-                st.session_state.pop("cache_lista_recorrencias", None)
-            chave_cache = (EMPRESA_SELECIONADA, ASAAS_BASE_URL)
-            cache = st.session_state.get("cache_lista_recorrencias")
-            if not cache or cache.get("chave") != chave_cache or (
-                time.monotonic() - cache.get("quando", 0) > 120
-            ):
-                try:
-                    with st.spinner("Consultando recorrências no Asaas..."):
-                        lista = listar_recorrencias_extrator(
-                            ASAAS_BASE_URL, cabecalhos_asaas(),
-                            get=requests.get, status="ACTIVE",
-                        )
-                    st.session_state["cache_lista_recorrencias"] = {
-                        "chave": chave_cache, "quando": time.monotonic(),
-                        "lista": lista,
-                    }
-                except Exception as erro_lista:
-                    st.error(f"Falha ao consultar recorrências: {erro_lista}")
-                    lista = []
-            else:
-                lista = cache["lista"]
-            if not lista:
-                st.caption("Nenhuma recorrência ativa encontrada nesta empresa.")
-            else:
-                st.caption(f"{len(lista)} recorrência(s) ativa(s).")
-                opcoes_rec = {r["id"]: r for r in lista}
-                rec_id = st.selectbox(
-                    "Selecione a recorrência a consultar",
-                    list(opcoes_rec),
-                    index=None,
-                    placeholder="Escolha uma assinatura ativa",
-                    format_func=lambda ident: (
-                        f'{opcoes_rec[ident]["description"]} — '
-                        f'R$ {float(opcoes_rec[ident]["value"] or 0):.2f} — '
-                        f'{opcoes_rec[ident]["nextDueDate"]} ({ident})'
-                    ),
-                    key="recorrencia_avulsa_selecionada",
+        if st.toggle(
+            "Exibir e gerenciar recorrências ativas",
+            key="abrir_lista_recorrencias_avulsas",
+            value=False,
+        ):
+            with st.expander("Recorrências mensais — consultar e cancelar", expanded=False):
+                st.caption(
+                    "A consulta mostra apenas as recorrências de boletos mensais "
+                    "criadas por este Extrator na empresa selecionada."
                 )
-                if rec_id in opcoes_rec:
-                    rec = opcoes_rec[rec_id]
-                    st.write(f'Cliente Asaas: **{rec["customer"]}**')
-                    st.write(f'Descrição: **{rec["description"]}**')
-                    st.write(f'Próximo vencimento: **{rec["nextDueDate"]}**')
-                    st.warning(
-                        "Suspender interrompe novas cobranças. "
-                        "Boletos já emitidos permanecem no Asaas."
-                    )
-                    confirma = st.checkbox(
-                        "Confirmo a suspensão de novas cobranças desta recorrência",
-                        key="confirmar_suspensao_recorrencia_avulsa",
-                    )
-                    if st.button(
-                        "Suspender recorrência", type="secondary",
-                        disabled=not confirma,
-                        key="suspender_recorrencia_avulsa",
-                    ):
-                        try:
-                            with st.spinner("Suspendendo novas cobranças..."):
-                                _, mudou = suspender_recorrencia(
-                                    ASAAS_BASE_URL, cabecalhos_asaas(),
-                                    rec_id, get=requests.get, put=requests.put,
-                                )
-                            st.session_state.pop("cache_lista_recorrencias", None)
-                            st.success(
-                                "Recorrência suspensa; novas cobranças interrompidas."
-                                if mudou else "Essa recorrência já estava suspensa."
+                if st.button(
+                    "Atualizar recorrências", key="atualizar_recorrencias_avulsas",
+                ):
+                    st.session_state.pop("cache_lista_recorrencias", None)
+                chave_cache = (EMPRESA_SELECIONADA, ASAAS_BASE_URL)
+                cache = st.session_state.get("cache_lista_recorrencias")
+                if not cache or cache.get("chave") != chave_cache or (
+                    time.monotonic() - cache.get("quando", 0) > 120
+                ):
+                    try:
+                        with st.spinner("Consultando recorrências no Asaas..."):
+                            lista = listar_recorrencias_extrator(
+                                ASAAS_BASE_URL, cabecalhos_asaas(),
+                                get=requests.get, status="ACTIVE",
                             )
-                        except Exception as erro_suspensao:
-                            st.error(f"Falha ao suspender: {erro_suspensao}")
+                        st.session_state["cache_lista_recorrencias"] = {
+                            "chave": chave_cache, "quando": time.monotonic(),
+                            "lista": lista,
+                        }
+                    except Exception as erro_lista:
+                        st.error(f"Falha ao consultar recorrências: {erro_lista}")
+                        lista = []
+                else:
+                    lista = cache["lista"]
+                if not lista:
+                    st.caption("Nenhuma recorrência ativa encontrada nesta empresa.")
+                else:
+                    st.caption(f"{len(lista)} recorrência(s) ativa(s).")
+                    opcoes_rec = {r["id"]: r for r in lista}
+                    rec_id = st.selectbox(
+                        "Selecione a recorrência a consultar",
+                        list(opcoes_rec),
+                        index=None,
+                        placeholder="Escolha uma assinatura ativa",
+                        format_func=lambda ident: (
+                            f'{opcoes_rec[ident]["description"]} — '
+                            f'R$ {float(opcoes_rec[ident]["value"] or 0):.2f} — '
+                            f'{opcoes_rec[ident]["nextDueDate"]} ({ident})'
+                        ),
+                        key="recorrencia_avulsa_selecionada",
+                    )
+                    if rec_id in opcoes_rec:
+                        rec = opcoes_rec[rec_id]
+                        st.write(f'Cliente Asaas: **{rec["customer"]}**')
+                        st.write(f'Descrição: **{rec["description"]}**')
+                        st.write(f'Próximo vencimento: **{rec["nextDueDate"]}**')
+                        st.warning(
+                            "Suspender interrompe novas cobranças. "
+                            "Boletos já emitidos permanecem no Asaas."
+                        )
+                        confirma = st.checkbox(
+                            "Confirmo a suspensão de novas cobranças desta recorrência",
+                            key=f"confirmar_suspensao_recorrencia_avulsa_{rec_id}",
+                        )
+                        if st.button(
+                            "Suspender recorrência", type="secondary",
+                            disabled=not confirma,
+                            key="suspender_recorrencia_avulsa",
+                        ):
+                            try:
+                                with st.spinner("Suspendendo novas cobranças..."):
+                                    _, mudou = suspender_recorrencia(
+                                        ASAAS_BASE_URL, cabecalhos_asaas(),
+                                        rec_id, get=requests.get, put=requests.put,
+                                    )
+                                st.session_state.pop("cache_lista_recorrencias", None)
+                                st.success(
+                                    "Recorrência suspensa; novas cobranças interrompidas."
+                                    if mudou else "Essa recorrência já estava suspensa."
+                                )
+                            except Exception as erro_suspensao:
+                                st.error(f"Falha ao suspender: {erro_suspensao}")
 
 
 if (st.session_state.pagina_lider == "Boleto avulso"
