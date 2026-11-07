@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import fitz
+from extratos_bancos_pdf import extrair_pdf_bancario
 import re
 import unicodedata
 import requests
@@ -1192,11 +1193,15 @@ def _ler_pdf_imagem_asaas(documento):
 
 def ler_pdf(arquivo):
     with fitz.open(stream=arquivo.getvalue(), filetype="pdf") as documento:
-        texto_total = sum(len(pagina.get_text().strip()) for pagina in documento)
-        if texto_total:
-            registros = _ler_pdf_digital(documento)
-        else:
-            registros = _ler_pdf_imagem_asaas(documento)
+        # Prioriza leitores conhecidos e preserva integralmente o leitor anterior
+        # para qualquer outro PDF, inclusive os digitalizados.
+        registros = extrair_pdf_bancario(documento)
+        if registros is None:
+            texto_total = sum(len(pagina.get_text().strip()) for pagina in documento)
+            if texto_total:
+                registros = _ler_pdf_digital(documento)
+            else:
+                registros = _ler_pdf_imagem_asaas(documento)
 
     if not registros:
         raise ValueError(
