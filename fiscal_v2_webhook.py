@@ -125,3 +125,42 @@ def verificar_conexao_sandbox():
 # O endpoint de webhook continua desligado e a verificação não emite NFS-e.
 if os.environ.get("FISCAL_V2_CONEXAO_CHECK") == "SIM":
     verificar_conexao_sandbox()
+
+def verificar_prontidao_fiscal_sandbox():
+    """Consulta configuração fiscal e acesso às notas; sem modificar a conta."""
+    import requests
+
+    chave = os.environ.get("ASAAS_SANDBOX_API_KEY", "").strip()
+    if not chave:
+        app_v2.logger.warning("Fiscal V2 preflight: CHAVE_AUSENTE")
+        return {"fiscal_info": "CHAVE_AUSENTE", "notas": "CHAVE_AUSENTE"}
+    headers = {
+        "access_token": chave, "Accept": "application/json",
+        "User-Agent": "LiderFiscalV2Sandbox/1.0",
+    }
+    resultados = {}
+    for item, caminho in (
+        ("fiscal_info", "/fiscalInfo/"),
+        ("notas", "/invoices?limit=1"),
+    ):
+        try:
+            resposta = requests.get(
+                "https://api-sandbox.asaas.com/v3" + caminho,
+                headers=headers, timeout=12, allow_redirects=False
+            )
+            codigo = resposta.status_code
+            situacao = (
+                "OK" if codigo == 200 else
+                "NAO_CONFIGURADO" if item == "fiscal_info" and codigo == 404 else
+                "ACESSO_NEGADO" if codigo in (401, 403) else
+                "HTTP_" + str(codigo)
+            )
+        except requests.RequestException:
+            situacao = "SEM_RESPOSTA"
+        resultados[item] = situacao
+        app_v2.logger.warning("Fiscal V2 preflight: %s = %s", item, situacao)
+    return resultados
+
+
+if os.environ.get("FISCAL_V2_PREFLIGHT") == "SIM":
+    verificar_prontidao_fiscal_sandbox()
