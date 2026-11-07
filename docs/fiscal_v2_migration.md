@@ -34,3 +34,15 @@
 - endpoint Asaas correto e webhook entregando eventos;
 - comprovação em homologação de NFS-e criada sem duplicatas;
 - monitoramento e rollback preparados.
+
+
+## Decisão de infraestrutura — 06/11/2026
+
+- O serviço existente `sistema-extrator2` usa disco persistente montado em `/var/data` (1 GB).
+- O serviço isolado `sistema-extrator-fiscal-v2-sandbox` é gratuito e **não possui disco persistente**.
+- A V2 rejeita novas entregas com HTTP 503 caso o banco não esteja num volume comprovadamente persistente. Em produção, isso só deve acontecer antes de configurar o armazenamento: **não ativar a fila do Asaas enquanto não estiver pronto**.
+- Alternativa sem novo custo: integrar a V2 ao serviço atual, usando banco separado em `/var/data/fiscal_v2.sqlite3`, mantendo roteamento legado e emissão V2 desativada. Exige revisão do código e deploy controlado, sem trocar imediatamente a URL configurada no Asaas.
+- Alternativa isolada: contratar plano com disco persistente ou banco de dados durável próprio, mediante aprovação de custo.
+- Antes do corte: validar cópias de segurança do SQLite, leitura das tentativas antigas `nfse_tentativas`, indisponibilidade de eventos perdidos, critérios de retenção LGPD, credenciais e operação dos webhooks.
+- A fatura 961543418 tem cobrança `pay_bnepyq5l8qnh4y3t` paga e nenhuma nota vinculada na API. **Não emitir automaticamente**, pois o sistema legado pode ter reserva local/resultado anterior incerto.
+- O Asaas retém webhooks por até 14 dias: corrigir endpoint, revisar os eventos da fila e então remover penalização/reativar, sem simplesmente ignorar eventos para retornar 200.
