@@ -8,6 +8,12 @@ import hashlib
 import re
 from datetime import date
 
+from operacao_financeira import (
+    operacao_financeira_unica,
+    marcar_resultado_inconclusivo,
+    resposta_inconclusiva,
+)
+
 
 PREFIXO = "lider-avulso-mensal-"
 
@@ -106,57 +112,78 @@ def criar_recorrencia(
     referencia = referencia_recorrencia(
         customer_id, valor, primeiro_vencimento, descricao,
     )
-    existente = localizar_recorrencia(base_url, headers, referencia, get)
-    if existente:
-        if str(existente.get("customer") or "") != customer_id:
-            raise RuntimeError("Recorrência conflitante vinculada a outro cliente.")
-        return existente, False
-
-    # Verificação adicional: impede nova recorrência ativa equivalente
-    # após edição da data inicial, evitando cobrança mensal duplicada.
-    ativas = _listar(
-        base_url, headers, {"customer": customer_id, "status": "ACTIVE"}, get,
+    # Mantém consultas de deduplicação e POST serializados por cliente,
+    # valor e descrição, mesmo quando a data inicial foi alterada.
+    chave_operacao_financeira = (
+        base_url.rstrip("/"), "recorrencia", customer_id,
+        valor, descricao.casefold(),
     )
-    for assinatura in ativas:
-        if (assinatura.get("cycle") == "MONTHLY"
-                and assinatura.get("billingType") == "BOLETO"
-                and str(assinatura.get("description") or "").strip() == descricao
-                and round(float(assinatura.get("value") or 0), 2) == valor
-                and str(assinatura.get("externalReference") or "").startswith(PREFIXO)):
-            raise RuntimeError(
-                "Este cliente já possui recorrência mensal ativa de mesmo valor "
-                "e descrição criada pelo Extrator. Confira as recorrências ativas."
-            )
+    with operacao_financeira_unica(chave_operacao_financeira):
+        existente = localizar_recorrencia(base_url, headers, referencia, get)
+        if existente:
+            if str(existente.get("customer") or "") != customer_id:
+                raise RuntimeError("Recorrência conflitante vinculada a outro cliente.")
+            if existente.get("status") != "ACTIVE":
+                raise RuntimeError(
+                    "Esta recorrência já existe, mas está suspensa ou expirada. "
+                    "Confira-a no Asaas; nenhuma nova assinatura foi criada."
+                )
+            return existente, False
 
-    # Chamada de escrita só depois de conciliação de registros existentes.
-    payload = {
-        "customer": customer_id,
-        "billingType": "BOLETO",
-        "value": valor,
-        "nextDueDate": primeiro_vencimento.isoformat(),
-        "cycle": "MONTHLY",
-        "description": descricao,
-        "externalReference": referencia,
-    }
-    try:
-        resposta = post(
-            base_url.rstrip("/") + "/subscriptions",
-            headers=headers, json=payload, timeout=30,
+        # Verificação adicional: impede nova recorrência ativa equivalente
+        # após edição da data inicial, evitando cobrança mensal duplicada.
+        ativas = _listar(
+            base_url, headers, {"customer": customer_id, "status": "ACTIVE"}, get,
         )
-    except Exception as exc:
-        # Timeout após envio pode significar assinatura criada.
-        raise RuntimeError(
-            "Não foi possível confirmar a criação. Antes de tentar novamente, "
-            "consulte as recorrências no Asaas para evitar duplicidade."
-        ) from exc
-    dados = _requisicao_status(resposta, "criar recorrência")
-    if (not str(dados.get("id") or "").startswith("sub_")
-            or str(dados.get("customer") or "") != customer_id):
-        raise RuntimeError(
-            "O Asaas não confirmou os dados da recorrência. "
-            "Confira a lista antes de repetir a operação."
-        )
-    return dados, True
+        for assinatura in ativas:
+            if (assinatura.get("cycle") == "MONTHLY"
+                    and assinatura.get("billingType") == "BOLETO"
+                    and str(assinatura.get("description") or "").strip() == descricao
+                    and round(float(assinatura.get("value") or 0), 2) == valor
+                    and str(assinatura.get("externalReference") or "").startswith(PREFIXO)):
+                raise RuntimeError(
+                    "Este cliente já possui recorrência mensal ativa de mesmo valor "
+                    "e descrição criada pelo Extrator. Confira as recorrências ativas."
+                )
+
+        # Chamada de escrita só depois de conciliação de registros existentes.
+        payload = {
+            "customer": customer_id,
+            "billingType": "BOLETO",
+            "value": valor,
+            "nextDueDate": primeiro_vencimento.isoformat(),
+            "cycle": "MONTHLY",
+            "description": descricao,
+            "externalReference": referencia,
+        }
+        try:
+            resposta = post(
+                base_url.rstrip("/") + "/subscriptions",
+                headers=headers, json=payload, timeout=30,
+            )
+        except Exception as exc:
+            # Timeout após envio pode significar assinatura criada.
+            marcar_resultado_inconclusivo(chave_operacao_financeira)
+            raise RuntimeError(
+                "Não foi possível confirmar a criação. Antes de tentar novamente, "
+                "consulte as recorrências no Asaas para evitar duplicidade."
+            ) from exc
+        if resposta_inconclusiva(resposta.status_code):
+            marcar_resultado_inconclusivo(chave_operacao_financeira)
+        try:
+            dados = _requisicao_status(resposta, "criar recorrência")
+        except RuntimeError as exc:
+            if resposta.ok:
+                marcar_resultado_inconclusivo(chave_operacao_financeira)
+            raise
+        if (not str(dados.get("id") or "").startswith("sub_")
+                or str(dados.get("customer") or "") != customer_id):
+            marcar_resultado_inconclusivo(chave_operacao_financeira)
+            raise RuntimeError(
+                "O Asaas não confirmou os dados da recorrência. "
+                "Confira a lista antes de repetir a operação."
+            )
+        return dados, True
 
 
 def listar_recorrencias_extrator(base_url, headers, get, status=None):
