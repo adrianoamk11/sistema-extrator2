@@ -1,0 +1,15 @@
+{
+  "name": "vistoria-cloud-gmail",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "pg": "8.16.3"
+  }
+}
